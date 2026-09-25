@@ -104,3 +104,18 @@ def historico_usuario(uid: int, limite: int = 20,
             .limit(limite).all())
     return [{"id": r.id, "data_hora": r.data_hora.isoformat(),
              "ip": r.ip, "dispositivo": r.dispositivo, "sucesso": r.sucesso} for r in rows]
+
+
+@router.get("/status")
+def status_publico(db: Session = Depends(get_db)):
+    """Info pública da tela de login — sem autenticação."""
+    from sqlalchemy import func
+    total_usuarios = db.query(models.Usuario).filter(models.Usuario.ativo.is_(True)).count()
+    total_lanc = db.query(func.count(models.Lancamento.id)).scalar() or 0
+    return {
+        "sistema": "Tomelin Gestão Financeira",
+        "versao": "1.0",
+        "usuarios_ativos": total_usuarios,
+        "total_lancamentos": total_lanc,
+        "online": True,
+    }

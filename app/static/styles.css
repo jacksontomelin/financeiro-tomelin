@@ -625,3 +625,119 @@ html.dark .familia-card { background: var(--card); }
 html.dark .familia-nome { color: var(--ink); }
 html.dark .familia-papel.admin { background: #305C7430; color: #AFC2D6; }
 html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); }
+
+/* ============================================================
+   LOGIN SPLIT-SCREEN (foto + formulário)
+   ============================================================ */
+.login-split {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+/* ---- Lado esquerdo: foto ---- */
+.login-photo {
+  flex: 1;
+  min-height: 100dvh;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: none; /* esconde no mobile */
+}
+@media(min-width:768px){ .login-photo { display: flex; } }
+
+.login-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(8,45,81,.85) 0%, rgba(47,129,122,.65) 100%);
+}
+.login-photo-content {
+  position: relative;
+  z-index: 2;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  justify-content: center;
+  width: 100%;
+}
+.lp-logo .login-lockup { height: 56px; width: auto; filter: brightness(0) invert(1); }
+
+.lp-tagline { }
+.lp-t1 { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: var(--gold); }
+.lp-t2 { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: rgba(255,255,255,.7); }
+
+.lp-cards { display: flex; flex-direction: column; gap: 12px; }
+.lp-card {
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: #fff;
+  font-size: 13.5px;
+  backdrop-filter: blur(4px);
+}
+.lp-card-ic { font-size: 22px; flex-shrink: 0; }
+
+.lp-status {
+  font-size: 12px;
+  color: rgba(255,255,255,.65);
+  padding: 8px 14px;
+  background: rgba(255,255,255,.08);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+/* ---- Lado direito: formulário ---- */
+.login-form-side {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: var(--card);
+}
+@media(min-width:768px){ .login-form-side { padding: 48px 44px; } }
+
+.login-form-wrap { width: 100%; max-width: 380px; }
+
+.lf-saudacao { font-size: 13px; color: var(--teal); font-weight: 600; margin-bottom: 4px; }
+.lf-titulo { font-size: 26px; font-weight: 800; color: var(--navy); margin: 0 0 6px; }
+.lf-sub { font-size: 13.5px; color: var(--ink-2); margin: 0 0 20px; }
+
+.lf-ultimo-acesso {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--steel);
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px;
+  margin-bottom: 18px;
+}
+.lf-ultimo-acesso svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.btn-login { width: 100%; justify-content: center; padding: 13px; font-size: 15px; margin-top: 4px; }
+
+.btn-ver-senha {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--ink-3); padding: 4px;
+  margin-top: 10px;
+}
+.btn-ver-senha svg { width: 18px; height: 18px; }
+
+.lf-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 28px; padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-3);
+}
+
+/* mobile: centralizado sem foto */
+@media(max-width:767px){
+  .login-split { justify-content: center; background: var(--card); }
+  .login-form-side { max-width: 100%; }
+}
+
+/* dark mode */
+html.dark .login-form-side { background: var(--card); }
+html.dark .lf-titulo { color: var(--ink); }

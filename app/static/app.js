@@ -239,34 +239,75 @@ async function fazerLogin(e) {
   }
 }
 
+function toggleSenha() {
+  const i = document.getElementById("l-senha");
+  if (i) i.type = i.type === "password" ? "text" : "password";
+}
+
+function _statusLogin() {
+  fetch("/api/auth/status").then(r => r.json()).then(d => {
+    const el = document.getElementById("lp-status");
+    if (el) el.innerHTML = "🟢 Sistema online &nbsp;·&nbsp; " + d.total_lancamentos + " lançamentos registrados";
+  }).catch(() => {});
+}
+
 function renderLogin() {
-  root().innerHTML = `
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="login-logo">
-        ${LOGO_LOCKUP}
-        <div class="login-slogan">
-          <span>UNINDO TUDO</span>
-          <span class="login-slogan-sep">·</span>
-          <span>CONTROLANDO TUDO</span>
-        </div>
-      </div>
-      <form onsubmit="fazerLogin(event)">
-        <div class="campo">
-          <label>E-mail</label>
-          <input id="l-email" type="email" autocomplete="username" placeholder="voce@tomelin.com.br" required>
-        </div>
-        <div class="campo">
-          <label>Senha</label>
-          <input id="l-senha" type="password" autocomplete="current-password" placeholder="••••••••" required>
-        </div>
-        <div id="l-erro" class="login-erro hidden"></div>
-        <button id="l-btn" type="submit" class="btn btn-primary" style="justify-content:center;padding:12px">Entrar</button>
-      </form>
-      ${_ultimoAcesso()}
-      <div class="login-hint">Gestão Financeira · Dev Jackson Tomelin</div>
-    </div>
-  </div>`;
+  // imagens financeiras gratuitas do Unsplash (sem API key)
+  const IMGS = [
+    "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80",
+    "https://images.unsplash.com/photo-1607863680198-23d4b2565df0?w=900&q=80",
+    "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=80",
+    "https://images.unsplash.com/photo-1579621970588-a35d0e7ab9b6?w=900&q=80",
+    "https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?w=900&q=80",
+  ];
+  const img = IMGS[Math.floor(Math.random() * IMGS.length)];
+  const ua = _ultimoAcesso();
+
+  root().innerHTML =
+    '<div class="login-split">' +
+      // lado esquerdo — foto + info
+      '<div class="login-photo" style="background-image:url(\'' + img + '\')">' +
+        '<div class="login-photo-overlay"></div>' +
+        '<div class="login-photo-content">' +
+          '<div class="lp-logo">' + LOGO_LOCKUP + '</div>' +
+          '<div class="lp-tagline">' +
+            '<div class="lp-t1">UNINDO TUDO</div>' +
+            '<div class="lp-t2">CONTROLANDO TUDO</div>' +
+          '</div>' +
+          '<div class="lp-cards">' +
+            '<div class="lp-card"><span class="lp-card-ic">💰</span><div><b>Controle total</b><br>Receitas, despesas e patrimônio</div></div>' +
+            '<div class="lp-card"><span class="lp-card-ic">🏠</span><div><b>Para toda família</b><br>Cada membro com seu acesso</div></div>' +
+            '<div class="lp-card"><span class="lp-card-ic">📊</span><div><b>Relatórios em PDF</b><br>Balancete e patrimônio</div></div>' +
+          '</div>' +
+          '<div id="lp-status" class="lp-status">⏳ Verificando sistema...</div>' +
+        '</div>' +
+      '</div>' +
+      // lado direito — formulário
+      '<div class="login-form-side">' +
+        '<div class="login-form-wrap">' +
+          '<div class="lf-saudacao">Bem-vindo de volta 👋</div>' +
+          '<h2 class="lf-titulo">Acesse sua conta</h2>' +
+          '<p class="lf-sub">Sistema de gestão financeira da família Tomelin</p>' +
+          (ua ? '<div class="lf-ultimo-acesso">' + icon("clock") + ' ' + ua + '</div>' : '') +
+          '<form onsubmit="fazerLogin(event)" autocomplete="on">' +
+            '<div class="campo"><label>E-mail</label>' +
+              '<input id="l-email" type="email" autocomplete="username" placeholder="voce@tomelin.com.br" required></div>' +
+            '<div class="campo" style="position:relative"><label>Senha</label>' +
+              '<input id="l-senha" type="password" autocomplete="current-password" placeholder="••••••••" required>' +
+              '<button type="button" class="btn-ver-senha" onclick="toggleSenha()" title="Mostrar senha">' + icon("eye") + '</button></div>' +
+            '<div id="l-erro" class="login-erro hidden"></div>' +
+            '<button id="l-btn" type="submit" class="btn btn-primary btn-login">' +
+              '<span id="l-btn-txt">Entrar</span></button>' +
+          '</form>' +
+          '<div class="lf-footer">' +
+            '<div class="lf-dev">Dev <b>Jackson Tomelin</b> · UniController</div>' +
+            '<div class="lf-version">v1.0 · 2026</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  _statusLogin();
 }
 
 /* ============================================================
@@ -1729,6 +1770,7 @@ Object.assign(window, {
   formContato, salvarContato, excluirContato, filtroContato, renderContatos,
   testarWhatsapp, State,
   toggleTema, temaAtual, aplicarTema,
+  toggleSenha,
   abrirPDF, reciboWhats,
   formVeiculo, salvarVeiculo, excluirVeiculo, atualizarFipe,
   addExtra, renderExtras, toggleTipoValor, toggleFin, aplicarPeriodo,
