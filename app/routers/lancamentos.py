@@ -71,7 +71,7 @@ def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
     l = models.Lancamento(**payload)
     db.add(l); db.commit(); db.refresh(l)
     if l.data_pagamento:
-        _auto_recibo(l)
+        _auto_recibo(l, db=db)
     return _out(l)
 
 
@@ -85,7 +85,7 @@ def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db))
         setattr(l, k, v)
     db.commit(); db.refresh(l)
     if l.data_pagamento and not era_pago:
-        _auto_recibo(l)
+        _auto_recibo(l, db=db)
     return _out(l)
 
 
@@ -102,7 +102,7 @@ def dar_baixa(lid: int, dados: schemas.BaixaIn, db: Session = Depends(get_db)):
     if dados.multa is not None:
         l.multa = dados.multa
     db.commit(); db.refresh(l)
-    _auto_recibo(l)
+    _auto_recibo(l, db=db)
     return _out(l)
 
 
@@ -134,7 +134,8 @@ def _ctx(l):
 def _auto_recibo(l: models.Lancamento):
     """Dispara o recibo no WhatsApp automaticamente quando a conta fica paga."""
     from ..config import settings
-    if not (settings.RECIBO_WHATSAPP_AUTO and settings.WHATSAPP_ATIVO):
+    from ..cfg import get_bool
+    if not (get_bool(db_or_none(l), 'RECIBO_WHATSAPP_AUTO', settings.RECIBO_WHATSAPP_AUTO) and get_bool(db_or_none(l), 'WHATSAPP_ATIVO', settings.WHATSAPP_ATIVO)):
         return
     if not l.data_pagamento:
         return

@@ -360,6 +360,7 @@ async function setView(id) {
     else if (id === "veiculos") await viewVeiculos(v);
     else if (id === "relatorios") await viewRelatorios(v);
     else if (id === "whatsapp") await viewWhatsapp(v);
+    else if (id === "configuracoes") await viewConfiguracoes(v);
   } catch (e) {
     v.innerHTML = `<div class="empty" style="padding:60px">${icon("alert")}<p>${e.message}</p></div>`;
   }
@@ -1102,7 +1103,7 @@ async function viewWhatsapp(v) {
             <tr><td style="padding:7px 0;color:var(--ink-3)">Resumo semanal</td><td style="text-align:right">${st.resumo_semanal ? "Ativo (seg.)" : "Desativado"}</td></tr>
           </tbody>
         </table>
-        <div class="login-hint" style="margin-top:12px">Configure pelo painel do Coolify nas variáveis <b>WHATSAPP_API_URL</b>, <b>WHATSAPP_GRUPO</b> e <b>WHATSAPP_ATIVO=true</b>. O envio usa o mesmo gateway do seu whatsapp.jackson.</div>
+        <div class="login-hint" style="margin-top:12px">Configure em <b>Configurações</b> no menu lateral — WhatsApp, FIPE, alertas e PDFs, tudo pelo sistema.</div>
       </div>
 
       <div class="card card-pad">
@@ -1385,6 +1386,115 @@ function _ultimoAcesso() {
   } catch { return ""; }
 }
 
+/* ============================================================
+   VIEW: CONFIGURAÇÕES (tudo pelo sistema, igual ao Sentinela)
+   ============================================================ */
+const CFG_GRUPOS = [
+  {
+    titulo: "WhatsApp", ic: "whatsapp", cor: "i-green",
+    desc: "Configure o gateway WhatsApp (zap.unicontroller.com.br) e os alertas automáticos.",
+    chaves: ["WHATSAPP_ATIVO","WHATSAPP_API_URL","WHATSAPP_API_TOKEN","WHATSAPP_GRUPO","WHATSAPP_ENDPOINT_ENVIAR","RECIBO_WHATSAPP_AUTO"],
+  },
+  {
+    titulo: "Alertas automáticos", ic: "alert", cor: "i-gold",
+    desc: "Horários e regras dos alertas de vencimento, resumo semanal e fechamento do dia.",
+    chaves: ["ALERTA_HORA","ALERTA_DIAS_ANTES","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FECHAMENTO_HORA"],
+  },
+  {
+    titulo: "FIPEConsulta", ic: "car", cor: "i-navy",
+    desc: "Integração com sua API FIPEConsulta para atualização automática do valor dos veículos.",
+    chaves: ["FIPE_ATIVO","FIPE_API_URL","FIPE_API_TOKEN","FIPE_ENDPOINT"],
+  },
+  {
+    titulo: "PDFs e recibos", ic: "doc", cor: "i-gold",
+    desc: "Nome e dados da empresa que aparecem no cabeçalho e rodapé dos PDFs gerados.",
+    chaves: ["EMPRESA_NOME","EMPRESA_DOC","EMPRESA_CIDADE"],
+  },
+];
+const BOOL_CHAVES = new Set(["WHATSAPP_ATIVO","RECIBO_WHATSAPP_AUTO","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FIPE_ATIVO"]);
+const INT_CHAVES  = new Set(["ALERTA_HORA","ALERTA_DIAS_ANTES","FECHAMENTO_HORA"]);
+const PASS_CHAVES = new Set(["WHATSAPP_API_TOKEN","FIPE_API_TOKEN"]);
+
+async function viewConfiguracoes(v) {
+  const cfgs = await api("/api/configuracoes");
+  const map = Object.fromEntries(cfgs.map(c => [c.chave, c]));
+
+  function campo(c) {
+    const isPass = PASS_CHAVES.has(c.chave);
+    const isBool = BOOL_CHAVES.has(c.chave);
+    const isInt  = INT_CHAVES.has(c.chave);
+    const val = c.valor || "";
+    if (isBool) return `
+      <div class="cfg-row">
+        <label class="cfg-label">${c.descricao}</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label class="toggle"><input type="checkbox" id="cfg-${c.chave}" ${val==="true"||val==="1" ? "checked" : ""}>
+            <span class="toggle-sl"></span></label>
+          <span class="meta" id="cfg-lbl-${c.chave}">${val==="true"||val==="1" ? "Ativado" : "Desativado"}</span>
+        </div>
+      </div>`;
+    return `
+      <div class="cfg-row">
+        <label class="cfg-label">${c.descricao}</label>
+        <input class="cfg-input" id="cfg-${c.chave}" type="${isPass ? 'password' : isInt ? 'number' : 'text'}"
+          value="${val}" placeholder="${c.chave}" autocomplete="off">
+      </div>`;
+  }
+
+  v.innerHTML = `
+    <div class="toolbar">
+      <h2 style="margin:0;color:var(--navy)">Configurações do sistema</h2>
+      <div class="grow"></div>
+      <button class="btn btn-primary" onclick="salvarConfiguracoes()">${icon("check")}Salvar tudo</button>
+    </div>
+    <div class="cfg-grid">
+      ${CFG_GRUPOS.map(g => `
+        <div class="card card-pad">
+          <div class="card-h">
+            <span class="card-ico ${g.cor}">${icon(g.ic)}</span>
+            <div class="grow"><h3>${g.titulo}</h3><div class="sub">${g.desc}</div></div>
+            ${g.titulo === "WhatsApp" ? `<button class="btn btn-ghost btn-sm" onclick="testarWhatsappCfg()">${icon("whatsapp")}Testar</button>` : ""}
+          </div>
+          <div class="cfg-campos">
+            ${g.chaves.map(k => campo(map[k] || {chave:k,valor:"",descricao:k})).join("")}
+          </div>
+        </div>`).join("")}
+    </div>
+    <div class="card card-pad" style="margin-top:4px">
+      <div class="meta">💡 As configurações são salvas no banco de dados e valem imediatamente — sem reiniciar o sistema. Variáveis de ambiente no Coolify servem de fallback caso uma chave não esteja salva aqui.</div>
+    </div>`;
+
+  // toggle label ao clicar
+  document.querySelectorAll(".toggle input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const lbl = document.getElementById("cfg-lbl-" + inp.id.replace("cfg-",""));
+      if (lbl) lbl.textContent = inp.checked ? "Ativado" : "Desativado";
+    });
+  });
+}
+
+async function salvarConfiguracoes() {
+  const dados = {};
+  CFG_GRUPOS.forEach(g => g.chaves.forEach(k => {
+    const el = document.getElementById("cfg-" + k);
+    if (!el) return;
+    dados[k] = BOOL_CHAVES.has(k) ? String(el.checked) : el.value;
+  }));
+  try {
+    await api("/api/configuracoes", { method: "POST", body: JSON.stringify(dados) });
+    toast("Configurações salvas!", "ok");
+  } catch(e) { toast(e.message, "err"); }
+}
+
+async function testarWhatsappCfg() {
+  // salva primeiro, depois testa
+  await salvarConfiguracoes();
+  try {
+    const r = await api("/api/configuracoes/whatsapp/testar");
+    toast(r.enviado ? "Mensagem enviada no grupo!" : "Falha — verifique URL, token e grupo.", r.enviado ? "ok" : "err");
+  } catch(e) { toast(e.message, "err"); }
+}
+
 async function render() {
   aplicarTema(temaAtual());
   if (!State.token) { renderLogin(); return; }
@@ -1412,6 +1522,7 @@ Object.assign(window, {
   abrirPDF, reciboWhats,
   formVeiculo, salvarVeiculo, excluirVeiculo, atualizarFipe,
   addExtra, renderExtras, toggleTipoValor, toggleFin, aplicarPeriodo,
+  salvarConfiguracoes, testarWhatsappCfg,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

@@ -178,3 +178,13 @@ class Veiculo(Base):
     def patrimonio_liquido(self):
         """Valor do bem menos o que ainda falta pagar."""
         return (self.valor_atual or 0) - self.saldo_financiamento
+
+
+class Configuracao(Base):
+    """Chave-valor para configurações do sistema editáveis pela interface."""
+    __tablename__ = "configuracoes"
+    chave = Column(String(80), primary_key=True)
+    valor = Column(Text, nullable=True)
+    descricao = Column(String(255), nullable=True)
+    atualizado_em = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

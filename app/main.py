@@ -18,6 +18,7 @@ def _migrar(engine):
         "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS logo TEXT",
         # veiculos (tabela criada pelo create_all, mas garante colunas extras)
         "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
+
     ]
     with engine.connect() as conn:
         for sql in migrações:
@@ -40,7 +41,7 @@ import pytz
 from .config import settings
 from .database import Base, engine
 from . import seed, whatsapp
-from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes
 from .routers import whatsapp as whatsapp_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -55,6 +56,10 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _migrar(engine)
     seed.seed()
+    # garante configurações padrão no banco
+    from .database import SessionLocal as _SL
+    from . import cfg as _cfg
+    _db = _SL(); _cfg.seed_defaults(_db); _db.close()
 
     # alerta diário de vencimentos
     scheduler.add_job(whatsapp.job_alerta_vencimentos,
@@ -79,7 +84,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
-          relatorios.router, whatsapp_router.router):
+          relatorios.router, configuracoes.router, whatsapp_router.router):
     app.include_router(r)
 
 
