@@ -278,6 +278,7 @@ const NAV = [
   { id: "contatos", nome: "Contatos", ic: "users", sub: "Recebo de · Pago para" },
   { sec: "Integrações" },
   { id: "whatsapp", nome: "WhatsApp", ic: "whatsapp", sub: "Alertas e comandos no grupo de controle" },
+  { id: "configuracoes", nome: "Configurações", ic: "cog", sub: "WhatsApp, FIPE, alertas, PDFs" },
 ];
 const META = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n]));
 
@@ -662,12 +663,12 @@ async function recarregarTabela() {
     const catCor = (State.cats.find(c => c.id === l.categoria_id) || {}).cor || "#7E8C9A";
     const podeBaixar = l.status !== "pago";
     return `<tr>
-      <td><div style="display:flex;align-items:center;gap:10px">${l.contato_logo ? avatarLogo(l.contato_logo, l.contato_nome || l.descricao, 30) : ""}<div><div class="cell-desc">${l.descricao}</div>${l.conta_nome ? `<div class="cell-sub">${l.conta_nome}</div>` : ""}</div></div></td>
-      <td>${l.categoria_nome ? `<span class="cat-chip"><span class="dot" style="background:${catCor}"></span>${l.categoria_nome}</span>` : "—"}</td>
-      ${tf ? "" : `<td><span class="tag ${rec ? 'rec' : 'desp'}">${rec ? 'Receita' : 'Despesa'}</span></td>`}
-      <td>${dataBR(l.vencimento)}</td>
-      <td><span class="tag ${l.status}">${l.status === 'pago' ? 'Pago' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span></td>
-      <td class="num ${rec ? 'val-rec' : 'val-desp'}">${rec ? '+' : '−'} ${money(l.valor)}</td>
+      <td><div style="display:flex;align-items:center;gap:10px">${l.contato_logo ? avatarLogo(l.contato_logo, l.contato_nome || l.descricao, 30) : ""}<div><div class="cell-desc">${l.descricao}</div>${l.conta_nome ? `<div class="cell-sub">${l.conta_nome}</div>` : ""}${l.status || l.data_vencimento || l.categoria_nome ? `<div class="mob-meta"><span class="tag ${l.status}">${l.status === 'pago' ? 'Pago' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>${l.data_vencimento ? `<span class="mob-sub">${dataBR(l.data_vencimento)}</span>` : ""}${l.categoria_nome ? `<span class="mob-sub">${l.categoria_nome}</span>` : ""}</div>` : ""}</div></div></td>
+      <td class="hide-mob">${l.categoria_nome ? `<span class="cat-chip"><span class="dot" style="background:${catCor}"></span>${l.categoria_nome}</span>` : "—"}</td>
+      ${tf ? "" : `<td class="hide-mob"><span class="tag ${rec ? 'rec' : 'desp'}">${rec ? 'Receita' : 'Despesa'}</span></td>`}
+      <td class="hide-mob">${dataBR(l.data_vencimento)}</td>
+      <td class="hide-mob"><span class="tag ${l.status}">${l.status === 'pago' ? 'Pago' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span></td>
+      <td class="num ${rec ? 'val-rec' : 'val-desp'}"><span class="hide-mob">${rec ? '+' : '−'} </span>${money(l.valor)}</td>
       <td>
         <div style="display:flex;gap:5px;justify-content:flex-end">
           ${podeBaixar ? `<button class="btn-icon" title="Dar baixa" onclick='formBaixa(${JSON.stringify(l)})'>${icon("check")}</button>`

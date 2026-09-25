@@ -299,6 +299,33 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:520px){
   .toolbar input.search-i{min-width:0;width:100%}
   .toolbar .search{flex:1}
+  /* toolbar: botões empilham */
+  .toolbar{flex-wrap:wrap;gap:8px}
+  .toolbar .btn{font-size:12px;padding:7px 10px}
+  /* tabela: esconde colunas menos importantes, mostra só desc+valor+ações */
+  .tbl-wrap table thead th:nth-child(2),
+  .tbl-wrap table tbody td:nth-child(2),
+  .tbl-wrap table thead th:nth-child(3),
+  .tbl-wrap table tbody td:nth-child(3){display:none}
+  /* ações em coluna mais estreita */
+  .tbl-wrap table thead th:last-child,
+  .tbl-wrap table tbody td:last-child{min-width:80px}
+  /* cards de KPI: valor menor */
+  .kpi .val{font-size:22px}
+  /* cards de juros/patrimônio: layout compacto */
+  .grid-2 .card-pad .card-h{flex-wrap:wrap}
+  .grid-2 .card-pad .meta{font-size:11px;line-height:1.5}
+  .grid-2 .card-pad .val.mono-num{font-size:20px !important}
+  /* filtros de status (Todos/Pendentes/Atrasados/Pagos) */
+  .tabs{flex-wrap:wrap;gap:4px}
+  .tabs .tab{font-size:12px;padding:5px 10px}
+  /* modal full-width */
+  .modal{max-width:100% !important;border-radius:var(--r-lg) var(--r-lg) 0 0;margin-top:auto}
+  .modal-wrap{align-items:flex-end}
+  /* configurações */
+  .cfg-grid{grid-template-columns:1fr}
+  .cfg-row{flex-direction:column;align-items:flex-start;gap:6px}
+  .cfg-input{width:100%;flex:none}
 }
 /* respeita quem prefere menos movimento */
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
@@ -407,4 +434,92 @@ html.dark .cfg-input { background: var(--card); border-color: var(--line); }
 @media (max-width: 600px) {
   .cfg-grid { grid-template-columns: 1fr; }
   .cfg-input { width: 140px; flex: 0 0 140px; }
+}
+
+/* ---------- Utilitários mobile ---------- */
+.hide-mob { }
+.show-mob { display:none }
+@media(max-width:820px){
+  .hide-mob { display:none !important }
+  .show-mob { display:flex !important }
+}
+
+/* ---------- Tabela mobile: fix overflow de valor e ações ---------- */
+@media(max-width:820px){
+  .tbl-wrap table { table-layout: fixed; width: 100%; }
+  .tbl-wrap table thead th:first-child,
+  .tbl-wrap table tbody td:first-child { width: auto; }
+  .tbl-wrap table thead th:nth-child(5),
+  .tbl-wrap table tbody td:nth-child(5) { width: 90px; text-align: right; padding-right: 6px; }
+  .tbl-wrap table thead th:last-child,
+  .tbl-wrap table tbody td:last-child { width: 72px; padding: 4px 4px; }
+  .tbl-wrap table tbody td:last-child .btn-icon { padding: 4px; }
+  .tbl-wrap table tbody td:last-child .btn-icon svg { width: 14px; height: 14px; }
+  /* esconde botões de recibo/whatsapp no mobile, mantém editar e excluir */
+  .tbl-wrap table tbody td:last-child .btn-icon:nth-child(1),
+  .tbl-wrap table tbody td:last-child .btn-icon:nth-child(2) { display: none; }
+  .content { padding: 14px 10px 80px; }
+}
+
+/* ---------- Tabela → Cards no mobile ---------- */
+@media(max-width:820px){
+  .tbl-wrap table,
+  .tbl-wrap thead,
+  .tbl-wrap tbody,
+  .tbl-wrap th,
+  .tbl-wrap td,
+  .tbl-wrap tr { display: block; }
+  .tbl-wrap thead { display: none; }
+  .tbl-wrap tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    gap: 6px;
+  }
+  /* linha 1: descrição full */
+  .tbl-wrap tbody td:first-child { font-weight: 600; padding: 0; border: none; }
+  /* linha 2: status + valor lado a lado (hide-mob oculta cat/venc/sit — mantemos só o td de valor e ações) */
+  .tbl-wrap tbody td.hide-mob { display: none !important; }
+  .tbl-wrap tbody td:nth-child(5) {
+    padding: 0; border: none;
+    font-size: 16px; font-weight: 700;
+    text-align: left;
+  }
+  /* ações: linha separada */
+  .tbl-wrap tbody td:last-child {
+    padding: 4px 0 0; border-top: 1px solid var(--line); border-radius: 0;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .tbl-wrap tbody td:last-child .btn-icon { padding: 6px 10px; }
+  /* oculta recibo/whatsapp, mantém editar+excluir */
+  .tbl-wrap tbody td:last-child .btn-icon:nth-child(1),
+  .tbl-wrap tbody td:last-child .btn-icon:nth-child(2) { display: none; }
+  /* sub-info inline */
+  .cell-sub { font-size: 11.5px; color: var(--ink-2); font-weight: 400; }
+}
+
+/* ---------- Fix: esconde td vazio de vencimento no card mobile ---------- */
+@media(max-width:820px){
+  /* td de vencimento (3ª col) — aparece como bloco vazio sem hide-mob */
+  .tbl-wrap tbody td:nth-child(4) { display: none !important; }
+  /* tag de status fica no td da situação que mostramos via show-mob inline */
+  .tbl-wrap tbody td:nth-child(5) { padding-top: 0; }
+}
+
+/* ---------- Remove o traço (—) do td de vencimento nos cards mobile ---------- */
+@media(max-width:820px){
+  /* o td de situação (4ª col) estava sendo exibido como "—" */
+  .tbl-wrap tbody td:nth-child(4),
+  .tbl-wrap tbody td:nth-child(3) { display: none !important; }
+}
+
+/* ---------- mob-meta: status + data dentro do card mobile ---------- */
+.mob-meta { display: none; margin-top: 5px; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mob-sub  { font-size: 11.5px; color: var(--ink-2); }
+@media(max-width:820px){
+  .mob-meta { display: flex; }
 }
