@@ -215,6 +215,7 @@ async function fazerLogin(e) {
     const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, senha }) });
     State.token = r.token; State.nome = r.nome; State.email = r.email;
     localStorage.setItem("tom_token", r.token);
+    localStorage.setItem("tom_ultimo_acesso", new Date().toISOString());
     localStorage.setItem("tom_nome", r.nome);
     localStorage.setItem("tom_email", r.email);
     await render();
@@ -230,7 +231,11 @@ function renderLogin() {
     <div class="login-card">
       <div class="login-logo">
         ${LOGO_LOCKUP}
-        <span>UNINDO TUDO · CONTROLANDO TUDO</span>
+        <div class="login-slogan">
+          <span>UNINDO TUDO</span>
+          <span class="login-slogan-sep">·</span>
+          <span>CONTROLANDO TUDO</span>
+        </div>
       </div>
       <form onsubmit="fazerLogin(event)">
         <div class="campo">
@@ -244,6 +249,7 @@ function renderLogin() {
         <div id="l-erro" class="login-erro hidden"></div>
         <button id="l-btn" type="submit" class="btn btn-primary" style="justify-content:center;padding:12px">Entrar</button>
       </form>
+      ${_ultimoAcesso()}
       <div class="login-hint">Gestão Financeira · Dev Jackson Tomelin</div>
     </div>
   </div>`;
@@ -1352,6 +1358,27 @@ async function viewRelatorios(v) {
 function aplicarPeriodo() {
   PERIODO.de = $("#r-de").value; PERIODO.ate = $("#r-ate").value;
   setView("relatorios");
+}
+
+function _ultimoAcesso() {
+  const raw = localStorage.getItem("tom_ultimo_acesso");
+  if (!raw) return "";
+  try {
+    const d = new Date(raw);
+    const agora = new Date();
+    const diffMin = Math.floor((agora - d) / 60000);
+    let quando;
+    if (diffMin < 1) quando = "agora mesmo";
+    else if (diffMin < 60) quando = `há ${diffMin} min`;
+    else if (diffMin < 1440) quando = `há ${Math.floor(diffMin / 60)}h`;
+    else {
+      const dias = Math.floor(diffMin / 1440);
+      quando = dias === 1 ? "há 1 dia" : `há ${dias} dias`;
+    }
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const data = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return `<div class="login-last">🕐 Último acesso: ${data} às ${hora} (${quando})</div>`;
+  } catch { return ""; }
 }
 
 async function render() {
