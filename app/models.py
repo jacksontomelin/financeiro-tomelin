@@ -24,6 +24,8 @@ class Usuario(Base):
     senha_hash = Column(String(255), nullable=False)
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
+    ultimo_acesso = Column(DateTime, nullable=True)       # gravado a cada login
+    ultimo_acesso_ip = Column(String(60), nullable=True)  # IP do último acesso
 
 
 class Conta(Base):

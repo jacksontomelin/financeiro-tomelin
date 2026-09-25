@@ -3,6 +3,8 @@
    ============================================================ */
 const State = {
   token: localStorage.getItem("tom_token") || null,
+  ultimo_acesso: null,
+  ultimo_acesso_ip: null,
   nome: localStorage.getItem("tom_nome") || "",
   email: localStorage.getItem("tom_email") || "",
   view: "dashboard",
@@ -214,8 +216,9 @@ async function fazerLogin(e) {
   try {
     const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, senha }) });
     State.token = r.token; State.nome = r.nome; State.email = r.email;
+    State.ultimo_acesso = r.ultimo_acesso || null;
+    State.ultimo_acesso_ip = r.ultimo_acesso_ip || null;
     localStorage.setItem("tom_token", r.token);
-    localStorage.setItem("tom_ultimo_acesso", new Date().toISOString());
     localStorage.setItem("tom_nome", r.nome);
     localStorage.setItem("tom_email", r.email);
     await render();
@@ -1361,7 +1364,7 @@ function aplicarPeriodo() {
 }
 
 function _ultimoAcesso() {
-  const raw = localStorage.getItem("tom_ultimo_acesso");
+  const raw = State.ultimo_acesso;
   if (!raw) return "";
   try {
     const d = new Date(raw);
@@ -1377,7 +1380,8 @@ function _ultimoAcesso() {
     }
     const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const data = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    return `<div class="login-last">🕐 Último acesso: ${data} às ${hora} (${quando})</div>`;
+    const ip = State.ultimo_acesso_ip ? ` · ${State.ultimo_acesso_ip}` : "";
+    return `<div class="login-last">🕐 Último acesso: ${data} às ${hora} (${quando})${ip}</div>`;
   } catch { return ""; }
 }
 

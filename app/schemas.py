@@ -15,6 +15,8 @@ class TokenOut(BaseModel):
     token: str
     nome: str
     email: str
+    ultimo_acesso: Optional[datetime] = None
+    ultimo_acesso_ip: Optional[str] = None
 
 
 # ---------- Conta ----------
