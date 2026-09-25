@@ -1,55 +1,29 @@
-version: '3.8'
-
 services:
   app:
     build: .
     container_name: tomelin-app
     restart: unless-stopped
-    
     environment:
-      # banco — se Postgres rodando em outro container/VPS, mude isso:
-      # postgresql+psycopg2://user:password@host:5432/dbname
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://tomelin:tomelin@localhost:5432/tomelin}
-
-      # segurança / admin (TROQUE em produção)
-      SECRET_KEY: ${SECRET_KEY:-troque-esta-chave-por-uma-aleatoria-bem-grande}
-      TOKEN_HORAS: ${TOKEN_HORAS:-72}
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
       ADMIN_NOME: ${ADMIN_NOME:-Jackson Tomelin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tomelin.com.br}
       ADMIN_SENHA: ${ADMIN_SENHA:-tomelin123}
-
-      # WhatsApp (estilo Sentinela — usa seu gateway whatsapp.jackson)
       WHATSAPP_ATIVO: ${WHATSAPP_ATIVO:-false}
       WHATSAPP_API_URL: ${WHATSAPP_API_URL:-}
       WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
       WHATSAPP_GRUPO: ${WHATSAPP_GRUPO:-}
-      WHATSAPP_ENDPOINT_ENVIAR: ${WHATSAPP_ENDPOINT_ENVIAR:-/api/enviar}
       RECIBO_WHATSAPP_AUTO: ${RECIBO_WHATSAPP_AUTO:-true}
-
-      # alertas automáticos
       ALERTA_HORA: ${ALERTA_HORA:-8}
       ALERTA_DIAS_ANTES: ${ALERTA_DIAS_ANTES:-3}
       RESUMO_SEMANAL: ${RESUMO_SEMANAL:-true}
       FECHAMENTO_DIARIO: ${FECHAMENTO_DIARIO:-true}
       FECHAMENTO_HORA: ${FECHAMENTO_HORA:-20}
       TIMEZONE: ${TIMEZONE:-America/Sao_Paulo}
-
-      # FIPE (tecnologia própria FIPEConsulta)
       FIPE_ATIVO: ${FIPE_ATIVO:-false}
       FIPE_API_URL: ${FIPE_API_URL:-}
       FIPE_API_TOKEN: ${FIPE_API_TOKEN:-}
-      FIPE_ENDPOINT: ${FIPE_ENDPOINT:-/api/fipe/{codigo}}
-
-      # dados para PDFs
-      EMPRESA_NOME: ${EMPRESA_NOME:-Tomelin — Gestão Financeira da Família}
-      EMPRESA_DOC: ${EMPRESA_DOC:-}
+      EMPRESA_NOME: ${EMPRESA_NOME:-Tomelin Gestão Financeira}
       EMPRESA_CIDADE: ${EMPRESA_CIDADE:-Blumenau/SC}
-    
     ports:
       - "8000:8000"
-    
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
