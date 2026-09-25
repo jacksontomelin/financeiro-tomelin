@@ -17,6 +17,7 @@ class TokenOut(BaseModel):
     email: str
     ultimo_acesso: Optional[datetime] = None
     ultimo_acesso_ip: Optional[str] = None
+    emoji: Optional[str] = None
 
 
 # ---------- Conta ----------

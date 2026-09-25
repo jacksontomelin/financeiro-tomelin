@@ -188,3 +188,12 @@ class Configuracao(Base):
     descricao = Column(String(255), nullable=True)
     atualizado_em = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+
+class UsuarioAvatar(Base):
+    """Avatar/cor personalizada por usuário (perfil visual)."""
+    __tablename__ = "usuario_avatares"
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+    emoji = Column(String(8), default="👤")
+    cor = Column(String(9), default="#305C74")
+    papel = Column(String(20), default="membro")  # admin | membro

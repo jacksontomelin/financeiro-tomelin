@@ -18,6 +18,7 @@ def _migrar(engine):
         "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS logo TEXT",
         # veiculos (tabela criada pelo create_all, mas garante colunas extras)
         "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
+        """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT '👤', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
 
     ]
     with engine.connect() as conn:
@@ -41,7 +42,7 @@ import pytz
 from .config import settings
 from .database import Base, engine
 from . import seed, whatsapp
-from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios
 from .routers import whatsapp as whatsapp_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -84,7 +85,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
-          relatorios.router, configuracoes.router, whatsapp_router.router):
+          relatorios.router, configuracoes.router, usuarios.router, whatsapp_router.router):
     app.include_router(r)
 
 

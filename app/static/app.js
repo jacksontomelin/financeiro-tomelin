@@ -5,6 +5,8 @@ const State = {
   token: localStorage.getItem("tom_token") || null,
   ultimo_acesso: null,
   ultimo_acesso_ip: null,
+  emoji: localStorage.getItem("tom_emoji") || "👤",
+  uid: null,
   nome: localStorage.getItem("tom_nome") || "",
   email: localStorage.getItem("tom_email") || "",
   view: "dashboard",
@@ -76,6 +78,12 @@ const P = {
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   car: '<path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13M5 13h14v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><circle cx="7.5" cy="15.5" r=".6"/><circle cx="16.5" cy="15.5" r=".6"/>',
   receipt: '<path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h6"/>',
+  cog: '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
   send: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
@@ -218,7 +226,10 @@ async function fazerLogin(e) {
     State.token = r.token; State.nome = r.nome; State.email = r.email;
     State.ultimo_acesso = r.ultimo_acesso || null;
     State.ultimo_acesso_ip = r.ultimo_acesso_ip || null;
+    State.emoji = r.emoji || "👤";
+    State.uid = r.id || null;
     localStorage.setItem("tom_token", r.token);
+    localStorage.setItem("tom_emoji", r.emoji || "👤");
     localStorage.setItem("tom_nome", r.nome);
     localStorage.setItem("tom_email", r.email);
     await render();
@@ -278,6 +289,7 @@ const NAV = [
   { id: "contatos", nome: "Contatos", ic: "users", sub: "Recebo de · Pago para" },
   { sec: "Integrações" },
   { id: "whatsapp", nome: "WhatsApp", ic: "whatsapp", sub: "Alertas e comandos no grupo de controle" },
+  { id: "usuarios", nome: "Família", ic: "users", sub: "Maisa, Jackson e membros da família" },
   { id: "configuracoes", nome: "Configurações", ic: "cog", sub: "WhatsApp, FIPE, alertas, PDFs" },
 ];
 const META = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n]));
@@ -361,6 +373,7 @@ async function setView(id) {
     else if (id === "veiculos") await viewVeiculos(v);
     else if (id === "relatorios") await viewRelatorios(v);
     else if (id === "whatsapp") await viewWhatsapp(v);
+    else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
   } catch (e) {
     v.innerHTML = `<div class="empty" style="padding:60px">${icon("alert")}<p>${e.message}</p></div>`;
@@ -473,11 +486,12 @@ async function viewDashboard(v) {
     api("/api/relatorios/juros"),
     api("/api/relatorios/patrimonio"),
   ]);
-  const kpiCard = (cls, ic, lab, val, meta) => `
+  const kpiCard = (cls, ic, lab, val, meta, extra='') => `
     <div class="kpi ${cls}">
       <div class="lab"><span class="i i-${cls}">${icon(ic)}</span>${lab}</div>
       <div class="val mono-num">${val}</div>
       <div class="meta">${meta}</div>
+      ${extra}
     </div>`;
 
   const lista = (arr, vazio) => arr.length ? arr.map(l => {
@@ -494,9 +508,19 @@ async function viewDashboard(v) {
   }).join("") : `<div class="empty">${icon("checkCircle")}<p>${vazio}</p></div>`;
 
   const saldoPos = k.saldo >= 0;
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   v.innerHTML = `
+    <div class="dash-boas-vindas">
+      <div class="bv-avatar">${State.emoji || "👤"}</div>
+      <div class="bv-text">
+        <h2>${saudacao}, ${State.nome ? State.nome.split(" ")[0] : "Jackson"}! 👋</h2>
+        <p>Aqui está o resumo financeiro da família Tomelin hoje.</p>
+      </div>
+      <div class="bv-deco">${SVG_HOUSE}</div>
+    </div>
     <div class="kpi-grid">
-      ${kpiCard("navy", "cash", "Saldo atual", money(k.saldo), saldoPos ? "Somando todas as contas" : "Atenção: saldo negativo")}
+      ${kpiCard("navy", "cash", "Saldo atual", money(k.saldo), saldoPos ? "Somando todas as contas" : "Atenção: saldo negativo", `<div class="kpi-deco"><svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="45" cy="45" r="30" fill="white" opacity=".5"/><circle cx="45" cy="45" r="20" fill="white" opacity=".4"/><text x="45" y="52" text-anchor="middle" font-size="20" fill="white" opacity=".7" font-family="serif">$</text></svg></div>`)}
       ${kpiCard("green", "trendUp", "Receitas do mês", money(k.receitas_mes), "Competência no mês corrente")}
       ${kpiCard("gold", "arrowUp", "Despesas do mês", money(k.despesas_mes), "Competência no mês corrente")}
       ${kpiCard("teal", "clock", "A pagar", money(k.a_pagar), k.pagar_vencido > 0 ? `${money(k.pagar_vencido)} já vencido` : "Nenhum vencido")}
@@ -1496,6 +1520,135 @@ async function testarWhatsappCfg() {
   } catch(e) { toast(e.message, "err"); }
 }
 
+
+/* ============================================================
+   VIEW: FAMÍLIA (usuários com emoji e cor)
+   ============================================================ */
+const EMOJIS_FAM = ['👨', '👩', '👦', '👧', '🧑', '👴', '👵', '🤴', '👸', '🧔', '💼', '🏠', '⭐', '❤️', '🌟', '🦁', '🐯', '🦊', '🐶', '🐱', '🌈', '🎯', '🚀', '💎'];
+const CORES_FAM  = ['#082D51', '#2F817A', '#C9A94E', '#B4503E', '#305C74', '#3E9079', '#38648A', '#256B64', '#5E9B86', '#7F3F98', '#E67E22', '#2ECC71'];
+let FORM_EMOJI = "👤", FORM_COR = "#305C74";
+
+async function viewUsuarios(v) {
+  const us = await api("/api/usuarios");
+  v.innerHTML = `
+    <div class="toolbar">
+      <div>
+        <h2 style="margin:0;color:var(--navy)">Família Tomelin</h2>
+        <div class="sub">Membros com acesso ao sistema</div>
+      </div>
+      <div class="grow"></div>
+      <button class="btn btn-primary" onclick="formUsuario(null)">${icon("users")}Novo membro</button>
+    </div>
+    <div class="familia-grid">
+      ${us.map(u => `
+        <div class="familia-card">
+          <div class="familia-avatar" style="background:${u.cor}">
+            <span style="font-size:28px">${u.emoji}</span>
+          </div>
+          <div class="familia-nome">${u.nome}</div>
+          <div class="familia-email">${u.email}</div>
+          <span class="familia-papel ${u.papel}">${u.papel === "admin" ? "👑 Admin" : "👤 Membro"}</span>
+          <div class="familia-acesso">${u.ultimo_acesso
+            ? "Último acesso: " + new Date(u.ultimo_acesso).toLocaleDateString("pt-BR")
+            : "Nunca acessou"}</div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick='formUsuario(${JSON.stringify(u)})'>${icon("edit")}Editar</button>
+            ${u.id !== State.uid ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirUsuario(${u.id})">Excluir</button>` : '<span class="meta">Você</span>'}
+          </div>
+        </div>`).join("")}
+    </div>
+    <div class="dica azul" style="margin-top:16px">
+      ${icon("shield")}<div><b>Dica:</b> Cada membro tem e-mail e senha próprios. O papel <b>Admin</b> permite criar usuários e alterar configurações do sistema.</div>
+    </div>`;
+}
+
+function formUsuario(u) {
+  const e = u || {};
+  FORM_EMOJI = e.emoji || "👤";
+  FORM_COR   = e.cor   || "#305C74";
+  abrirModal(`
+    <div class="modal" style="max-width:520px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("users")}</span>
+        <h3>${u ? "Editar membro" : "Novo membro da família"}</h3>
+        <button onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b"><div class="frm">
+        <div class="campo full" style="align-items:center;justify-content:center;display:flex;flex-direction:column;gap:8px">
+          <div id="fam-av-prev" class="familia-avatar" style="background:${FORM_COR};width:72px;height:72px;font-size:34px">${FORM_EMOJI}</div>
+          <div class="sub">Escolha emoji e cor</div>
+        </div>
+        <div class="campo full">
+          <label>Emoji</label>
+          <div class="emoji-grid" id="emoji-grid">
+            ${EMOJIS_FAM.map(em => `<div class="emoji-opt${em===FORM_EMOJI?" sel":""}" onclick="selecionarEmoji('${em}')">${em}</div>`).join("")}
+          </div>
+        </div>
+        <div class="campo full">
+          <label>Cor</label>
+          <div class="cor-grid" id="cor-grid">
+            ${CORES_FAM.map(c => `<div class="cor-opt${c===FORM_COR?" sel":""}" style="background:${c}" onclick="selecionarCor('${c}')"></div>`).join("")}
+          </div>
+        </div>
+        <div class="campo"><label>Nome</label><input id="fu-nome" value="${e.nome||""}" placeholder="Ex.: Maisa Tomelin"></div>
+        <div class="campo"><label>E-mail</label><input id="fu-email" type="email" value="${e.email||""}"></div>
+        <div class="campo"><label>Senha ${u?"(deixe em branco para manter)":""}</label><input id="fu-senha" type="password" placeholder="${u?"Nova senha (opcional)":"Senha"}"></div>
+        <div class="campo">
+          <label>Papel</label>
+          <select id="fu-papel">
+            <option value="membro" ${e.papel!=="admin"?"selected":""}>👤 Membro</option>
+            <option value="admin"  ${e.papel==="admin" ?"selected":""}>👑 Admin</option>
+          </select>
+        </div>
+        <div class="campo full">
+          <label><input type="checkbox" id="fu-ativo" ${e.ativo!==false?"checked":""}> Ativo (pode fazer login)</label>
+        </div>
+      </div></div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarUsuario(${u?e.id:"null"})">Salvar membro</button>
+      </div>
+    </div>`, "lg");
+}
+
+function selecionarEmoji(em) {
+  FORM_EMOJI = em;
+  document.querySelectorAll(".emoji-opt").forEach(el => el.classList.toggle("sel", el.textContent.trim() === em));
+  const prev = document.getElementById("fam-av-prev");
+  if (prev) prev.textContent = em;
+}
+
+function selecionarCor(cor) {
+  FORM_COR = cor;
+  document.querySelectorAll(".cor-opt").forEach(el => el.classList.toggle("sel", el.style.background === cor || el.style.backgroundColor === cor));
+  const prev = document.getElementById("fam-av-prev");
+  if (prev) prev.style.background = cor;
+}
+
+async function salvarUsuario(id) {
+  const body = {
+    nome: $("#fu-nome").value.trim(),
+    email: $("#fu-email").value.trim(),
+    senha: $("#fu-senha").value || undefined,
+    papel: $("#fu-papel").value,
+    ativo: $("#fu-ativo").checked,
+    emoji: FORM_EMOJI,
+    cor: FORM_COR,
+  };
+  if (!body.nome || !body.email) return toast("Nome e e-mail obrigatórios", "err");
+  try {
+    if (id) await api(`/api/usuarios/${id}`, { method:"PUT", body:JSON.stringify(body) });
+    else     await api("/api/usuarios",         { method:"POST", body:JSON.stringify(body) });
+    fecharModal(); toast("Membro salvo!", "ok"); setView("usuarios");
+  } catch(e) { toast(e.message,"err"); }
+}
+
+async function excluirUsuario(id) {
+  if (!confirm("Remover este membro do sistema?")) return;
+  try { await api(`/api/usuarios/${id}`, {method:"DELETE"}); toast("Removido","ok"); setView("usuarios"); }
+  catch(e) { toast(e.message,"err"); }
+}
+
 async function render() {
   aplicarTema(temaAtual());
   if (!State.token) { renderLogin(); return; }
@@ -1524,6 +1677,7 @@ Object.assign(window, {
   formVeiculo, salvarVeiculo, excluirVeiculo, atualizarFipe,
   addExtra, renderExtras, toggleTipoValor, toggleFin, aplicarPeriodo,
   salvarConfiguracoes, testarWhatsappCfg,
+  formUsuario, salvarUsuario, excluirUsuario, selecionarEmoji, selecionarCor,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

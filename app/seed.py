@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 from .database import SessionLocal
 from .config import settings
 from . import models
+# UsuarioAvatar importado via models
 from .models import TipoMov
 from .security import hash_senha
 

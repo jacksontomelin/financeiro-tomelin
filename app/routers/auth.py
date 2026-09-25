@@ -27,12 +27,18 @@ def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db
     u.ultimo_acesso_ip = ip
     db.commit()
 
+    try:
+        av = db.get(models.UsuarioAvatar, u.id)
+    except Exception:
+        av = None
     return schemas.TokenOut(
         token=security.cria_token(u),
+        id=u.id,
         nome=u.nome,
         email=u.email,
         ultimo_acesso=penultimo,
         ultimo_acesso_ip=penultimo_ip,
+        emoji=av.emoji if av else "👤",
     )
 
 
