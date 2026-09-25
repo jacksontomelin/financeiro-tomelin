@@ -689,6 +689,7 @@ async function viewLancamentos(v, tipoFixo) {
       <div class="grow"></div>
       <button class="btn btn-ghost" onclick="exportarCSV('${tipoFixo || ''}')">${icon("download")}Exportar</button>
       <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">${icon("plus")}Novo ${tipoFixo === 'receita' ? 'recebimento' : tipoFixo === 'despesa' ? 'pagamento' : 'lançamento'}</button>
+      <button class="btn btn-ghost" onclick="abrirLeitorNFe()">${icon("receipt")}Ler Nota Fiscal</button>
     </div>
     <div class="card"><div class="tbl-wrap"><table id="tbl">
       <thead><tr>
@@ -761,7 +762,8 @@ function exportarCSV(tf) {
 }
 
 /* ---------- form lançamento ---------- */
-function formLancamento(l, tipo) {
+function formLancamento(l, tipo, pre) {
+  if (pre && !l) l = pre; // pré-preenchimento vindo da NF-e
   const ed = !!l;
   const cats = State.cats.filter(c => c.tipo === (l ? l.tipo : tipo));
   abrirModal(`
@@ -1746,6 +1748,152 @@ async function excluirUsuario(id) {
   catch(e) { toast(e.message,"err"); }
 }
 
+
+/* ============================================================
+   LEITOR DE NF-e / NFC-e POR QR CODE
+   ============================================================ */
+
+async function abrirLeitorNFe() {
+  abrirModal(`
+    <div class="modal" style="max-width:520px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("receipt")}</span>
+        <h3>Ler Nota Fiscal (NF-e / NFC-e)</h3>
+        <button onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b">
+        <div class="dica azul" style="margin-bottom:16px">
+          ${icon("alert")}
+          <div>Cole a <b>URL do QR code</b> da nota ou a <b>chave de acesso</b> (44 dígitos) impressa no cupom fiscal.</div>
+        </div>
+
+        <div class="campo full">
+          <label>URL do QR code ou chave de acesso</label>
+          <textarea id="nfe-url" rows="4" placeholder="https://sat.sef.sc.gov.br/nfce/consulta?p=...&#10;&#10;ou cole a chave de acesso de 44 dígitos:" style="font-family:monospace;font-size:13px;resize:vertical"></textarea>
+        </div>
+
+        <div id="nfe-preview" style="display:none"></div>
+        <div id="nfe-erro" class="login-erro hidden"></div>
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-gold" id="nfe-btn-consultar" onclick="consultarNFe()">
+          ${icon("search")}Consultar nota
+        </button>
+      </div>
+    </div>`, "lg");
+}
+
+async function consultarNFe() {
+  const url = (document.getElementById("nfe-url")?.value || "").trim();
+  if (!url) { toast("Cole a URL ou a chave de acesso da nota", "err"); return; }
+
+  const btn = document.getElementById("nfe-btn-consultar");
+  const erro = document.getElementById("nfe-erro");
+  const prev = document.getElementById("nfe-preview");
+  if (erro) { erro.textContent = ""; erro.classList.add("hidden"); }
+  if (prev) prev.style.display = "none";
+  if (btn) { btn.disabled = true; btn.innerHTML = icon("refresh") + " Consultando..."; }
+
+  try {
+    const d = await api("/api/nfe/consultar", {
+      method: "POST",
+      body: JSON.stringify({ url })
+    });
+    _renderPreviewNFe(d);
+  } catch(e) {
+    if (erro) { erro.textContent = e.message; erro.classList.remove("hidden"); }
+    toast("Erro ao consultar NF-e", "err");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = icon("search") + " Consultar nota"; }
+  }
+}
+
+let _nfeDados = null;
+
+function _renderPreviewNFe(d) {
+  _nfeDados = d;
+  const prev = document.getElementById("nfe-preview");
+  if (!prev) return;
+
+  const itens = (d.itens || []);
+  const itensHtml = itens.length
+    ? `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr style="background:var(--bg);position:sticky;top:0">
+            <th style="padding:8px 10px;text-align:left;color:var(--ink-2);font-weight:600">Item</th>
+            <th style="padding:8px 10px;text-align:right;color:var(--ink-2);font-weight:600">Valor</th>
+          </tr></thead>
+          <tbody>
+            ${itens.map(i => `<tr style="border-top:1px solid var(--line)">
+              <td style="padding:7px 10px;color:var(--ink)">${i.descricao}</td>
+              <td style="padding:7px 10px;text-align:right;color:var(--ink);font-family:monospace">${money(i.valor)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+       </div>`
+    : `<div class="dica ouro" style="margin-top:8px">${icon("alert")} <span>O portal não retornou a lista de itens — apenas o valor total está disponível.</span></div>`;
+
+  prev.style.display = "block";
+  prev.innerHTML = `
+    <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span class="card-ico i-green" style="width:36px;height:36px">${icon("checkCircle")}</span>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--ink)">${d.emitente || "Emitente não identificado"}</div>
+          <div style="font-size:12px;color:var(--ink-2)">${d.cnpj_emitente || ""} ${d.uf ? "· " + d.uf : ""}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:monospace">${money(d.valor_total || 0)}</div>
+          <div style="font-size:11px;color:var(--ink-2)">${d.data_emissao ? "Emissão: " + dataBR(d.data_emissao) : ""}${d.numero_nota ? " · NF " + d.numero_nota : ""}</div>
+        </div>
+      </div>
+
+      ${d.categoria_sugerida ? `<div style="margin-bottom:8px"><span style="font-size:12px;color:var(--ink-2)">Categoria sugerida: </span><span class="tag" style="background:${d.categoria_sugerida.cor}20;color:${d.categoria_sugerida.cor};border:1px solid ${d.categoria_sugerida.cor}44">${d.categoria_sugerida.nome}</span></div>` : ""}
+
+      <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:6px">${itens.length ? itens.length + " itens encontrados:" : ""}</div>
+      ${itensHtml}
+    </div>
+
+    <div class="dica verde" style="margin-bottom:0">
+      ${icon("checkCircle")}
+      <div>Tudo certo! Clique em <b>Cadastrar lançamento</b> para criar a despesa com esses dados.</div>
+    </div>`;
+
+  // Troca botões
+  const footer = prev.closest(".modal")?.querySelector(".modal-f");
+  if (footer) {
+    footer.innerHTML = `
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="consultarNFe()">${icon("refresh")}Nova consulta</button>
+      <button class="btn btn-primary" onclick="cadastrarDaNFe()">${icon("check")}Cadastrar lançamento</button>`;
+  }
+}
+
+async function cadastrarDaNFe() {
+  if (!_nfeDados) return;
+  const d = _nfeDados;
+  fecharModal();
+
+  // Monta o pré-preenchimento
+  const pre = {
+    descricao: d.descricao_sugerida || d.emitente || "Compra NF-e",
+    valor: d.valor_total || 0,
+    tipo: "despesa",
+    data_vencimento: d.data_emissao || new Date().toISOString().slice(0,10),
+    data_competencia: d.data_emissao || new Date().toISOString().slice(0,10),
+    status: "pago",
+    data_pagamento: d.data_emissao || new Date().toISOString().slice(0,10),
+    obs: d.obs || "",
+    contato_id: d.contato_id_sugerido || null,
+    categoria_id: d.categoria_sugerida?.id || null,
+  };
+
+  // Abre o form de lançamento pré-preenchido com os dados da NF-e
+  formLancamento(null, "despesa", pre);
+  toast("Dados da NF-e carregados! Confira e salve o lançamento.", "ok");
+}
+
 async function render() {
   aplicarTema(temaAtual());
   if (!State.token) { renderLogin(); return; }
@@ -1777,6 +1925,7 @@ Object.assign(window, {
   salvarConfiguracoes, testarWhatsappCfg,
   formUsuario, salvarUsuario, excluirUsuario, selecionarEmoji, selecionarCor,
   verHistoricoLogin, meuHistoricoLogin,
+  abrirLeitorNFe, consultarNFe, cadastrarDaNFe,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 
