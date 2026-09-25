@@ -320,6 +320,7 @@ function renderApp() {
           <div class="nm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${State.nome || "Usuário"}</div>
           <div class="em" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${State.email}</div>
         </div>
+        <button title="Meu histórico de logins" onclick="meuHistoricoLogin()" style="padding:6px">${icon("clock")}</button>
         <button title="Sair" onclick="logout()">${icon("logout")}</button>
       </div>
     </aside>
@@ -1625,6 +1626,61 @@ function selecionarCor(cor) {
   if (prev) prev.style.background = cor;
 }
 
+
+async function verHistoricoLogin(uid, nome) {
+  const endpoint = uid === State.uid ? "/api/auth/historico" : `/api/auth/historico/${uid}`;
+  let rows;
+  try { rows = await api(endpoint + "?limite=30"); }
+  catch(e) { toast(e.message, "err"); return; }
+
+  const linhas = rows.length ? rows.map(r => {
+    const dt = new Date(r.data_hora);
+    const data = dt.toLocaleDateString("pt-BR");
+    const hora = dt.toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"});
+    const agora = new Date();
+    const diffMin = Math.round((agora - dt) / 60000);
+    const quando = diffMin < 1 ? "agora" : diffMin < 60 ? `${diffMin}min atrás`
+      : diffMin < 1440 ? `${Math.floor(diffMin/60)}h atrás`
+      : `${Math.floor(diffMin/1440)}d atrás`;
+    const ok = r.sucesso;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+      <span style="font-size:20px">${ok ? "✅" : "❌"}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${r.dispositivo || "—"}</div>
+        <div style="font-size:11.5px;color:var(--ink-2)">${data} às ${hora} · ${r.ip || "—"}</div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-3);white-space:nowrap">${quando}</div>
+    </div>`;
+  }).join("") : `<div class="empty" style="padding:30px">${icon("clock")}<p>Nenhum login registrado.</p></div>`;
+
+  const falhas = rows.filter(r => !r.sucesso).length;
+  const aviso = falhas > 0
+    ? `<div class="dica vermelho" style="margin-bottom:12px">${icon("alert")}<div><b>${falhas} tentativa(s) com senha errada</b> nos últimos acessos.</div></div>`
+    : `<div class="dica verde" style="margin-bottom:12px">${icon("checkCircle")}<div>Nenhuma tentativa suspeita nos últimos logins.</div></div>`;
+
+  abrirModal(`
+    <div class="modal" style="max-width:480px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("clock")}</span>
+        <h3>Histórico de logins — ${nome}</h3>
+        <button onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b">
+        ${aviso}
+        <div style="max-height:400px;overflow-y:auto">
+          ${linhas}
+        </div>
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>
+      </div>
+    </div>`, "lg");
+}
+
+async function meuHistoricoLogin() {
+  verHistoricoLogin(State.uid, State.nome || "Meu histórico");
+}
+
 async function salvarUsuario(id) {
   const body = {
     nome: $("#fu-nome").value.trim(),
@@ -1678,6 +1734,7 @@ Object.assign(window, {
   addExtra, renderExtras, toggleTipoValor, toggleFin, aplicarPeriodo,
   salvarConfiguracoes, testarWhatsappCfg,
   formUsuario, salvarUsuario, excluirUsuario, selecionarEmoji, selecionarCor,
+  verHistoricoLogin, meuHistoricoLogin,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

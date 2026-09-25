@@ -19,6 +19,8 @@ def _migrar(engine):
         # veiculos (tabela criada pelo create_all, mas garante colunas extras)
         "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
         """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT '👤', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
+        """CREATE TABLE IF NOT EXISTS login_historico (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, data_hora TIMESTAMP DEFAULT NOW(), ip VARCHAR(60), dispositivo VARCHAR(200), sucesso BOOLEAN DEFAULT TRUE)""",
+        "CREATE INDEX IF NOT EXISTS ix_login_hist_uid ON login_historico(usuario_id)",
 
     ]
     with engine.connect() as conn:

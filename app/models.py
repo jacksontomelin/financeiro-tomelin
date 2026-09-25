@@ -197,3 +197,14 @@ class UsuarioAvatar(Base):
     emoji = Column(String(8), default="👤")
     cor = Column(String(9), default="#305C74")
     papel = Column(String(20), default="membro")  # admin | membro
+
+
+class LoginHistorico(Base):
+    """Histórico completo de logins por usuário."""
+    __tablename__ = "login_historico"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
+    data_hora = Column(DateTime, default=datetime.utcnow, nullable=False)
+    ip = Column(String(60), nullable=True)
+    dispositivo = Column(String(200), nullable=True)  # user-agent resumido
+    sucesso = Column(Boolean, default=True)           # False = senha errada
