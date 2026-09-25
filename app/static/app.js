@@ -138,7 +138,7 @@ function campoLogo(hint) {
       <div id="logo-prev" class="lg-av lg-big"></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
         <input type="file" accept="image/*" onchange="escolherLogo(this)">
-        <input id="logo-url" placeholder="ou cole a URL do logo" oninput="logoURLInput(this.value)">
+        <input id="logo-url" placeholder="URL da imagem" oninput="logoURLInput(this.value)">
       </div>
       <button class="btn-icon" title="Remover logo" onclick="limparLogo()">${icon("trash")}</button>
     </div>
@@ -291,7 +291,7 @@ function renderLogin() {
           (ua ? '<div class="lf-ultimo-acesso">' + icon("clock") + ' ' + ua + '</div>' : '') +
           '<form onsubmit="fazerLogin(event)" autocomplete="on">' +
             '<div class="campo"><label>E-mail</label>' +
-              '<input id="l-email" type="email" autocomplete="username" placeholder="voce@tomelin.com.br" required></div>' +
+              '<input id="l-email" type="email" autocomplete="username" placeholder="seu@email.com.br" required></div>' +
             '<div class="campo" style="position:relative"><label>Senha</label>' +
               '<input id="l-senha" type="password" autocomplete="current-password" placeholder="••••••••" required>' +
               '<button type="button" class="btn-ver-senha" onclick="toggleSenha()" title="Mostrar senha">' + icon("eye") + '</button></div>' +
@@ -771,7 +771,7 @@ function formLancamento(l, tipo) {
         <button onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <input type="hidden" id="f-tipo" value="${tipo}">
-        <div class="campo full"><label>Descrição</label><input id="f-desc" value="${ed ? l.descricao : ''}" placeholder="Ex.: Imposto DAS, Cliente Auto Center..."></div>
+        <div class="campo full"><label>Descrição</label><input id="f-desc" value="${ed ? l.descricao : ''}" placeholder="Descrição do lançamento"></div>
         <div class="campo"><label>Valor (R$)</label><input id="f-valor" type="number" step="0.01" value="${ed ? l.valor : ''}" placeholder="0,00"></div>
         <div class="campo"><label>Categoria</label><select id="f-cat"><option value="">—</option>${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
         <div class="campo"><label>Vencimento</label><input id="f-venc" type="date" value="${ed && l.vencimento ? l.vencimento.split('T')[0] : hojeISO()}"></div>
@@ -936,15 +936,15 @@ function formConta(c) {
     <div class="modal">
       <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${c ? "Editar conta" : "Nova conta"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="c-nome" value="${e.nome || ""}" placeholder="Ex: Sicoob, Caixa, Dinheiro"></div>
+        <div class="campo full"><label>Nome</label><input id="c-nome" value="${e.nome || ""}" placeholder="Nome da conta"></div>
         <div class="campo"><label>Tipo</label><select id="c-tipo">
           <option value="banco"${e.tipo === "banco" ? " selected" : ""}>Conta bancária</option>
           <option value="carteira"${e.tipo === "carteira" ? " selected" : ""}>Carteira / dinheiro</option>
         </select></div>
-        <div class="campo"><label>Banco (opcional)</label><input id="c-banco" value="${e.banco || ""}" placeholder="Ex: Sicoob"></div>
+        <div class="campo"><label>Banco (opcional)</label><input id="c-banco" value="${e.banco || ""}" placeholder="Nome do banco"></div>
         <div class="campo"><label>Saldo inicial</label><input id="c-saldo" type="number" step="0.01" value="${e.saldo_inicial ?? 0}"></div>
         <div class="campo"><label>Cor</label><input id="c-cor" type="color" value="${e.cor || "#305C74"}"></div>
-        ${campoLogo("Logo do banco/cartão (ex.: Sicoob, Nubank, Itaú). PNG/JPG.")}
+        ${campoLogo("Logo do banco ou cartão. PNG ou JPG.")}
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
@@ -1012,7 +1012,7 @@ function formCategoria(c, tipoPad) {
     <div class="modal">
       <div class="modal-h"><span class="card-ico i-navy">${icon("tag")}</span><h3>${c ? "Editar categoria" : "Nova categoria"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="k-nome" value="${e.nome || ""}" placeholder="Ex: Honorários, Aluguel"></div>
+        <div class="campo full"><label>Nome</label><input id="k-nome" value="${e.nome || ""}" placeholder="Nome da categoria"></div>
         <div class="campo"><label>Tipo</label><select id="k-tipo">
           <option value="despesa"${tipo === "despesa" ? " selected" : ""}>Despesa</option>
           <option value="receita"${tipo === "receita" ? " selected" : ""}>Receita</option>
@@ -1093,7 +1093,7 @@ function formContato(c) {
     <div class="modal">
       <div class="modal-h"><span class="card-ico i-navy">${icon("users")}</span><h3>${c ? "Editar contato" : "Novo contato"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="o-nome" value="${e.nome || ""}" placeholder="Nome ou razão social"></div>
+        <div class="campo full"><label>Nome</label><input id="o-nome" value="${e.nome || ""}" placeholder="Nome do contato"></div>
         <div class="campo"><label>Tipo</label><select id="o-tipo">
           <option value="cliente"${e.tipo === "cliente" ? " selected" : ""}>Recebo de (fonte de renda)</option>
           <option value="fornecedor"${e.tipo === "fornecedor" ? " selected" : ""}>Pago para (estabelecimento)</option>
@@ -1101,7 +1101,7 @@ function formContato(c) {
         <div class="campo"><label>Documento (CPF/CNPJ)</label><input id="o-doc" value="${e.documento || ""}"></div>
         <div class="campo"><label>Telefone</label><input id="o-tel" value="${e.telefone || ""}"></div>
         <div class="campo"><label>E-mail</label><input id="o-email" value="${e.email || ""}"></div>
-        ${campoLogo("Logo da empresa (ex.: Havan, Magalu, Celesc). PNG/JPG, reduzido e salvo no sistema.")}
+        ${campoLogo("Logo da empresa. PNG ou JPG — reduzido e salvo no sistema.")}
         <div class="campo full"><label>Observações</label><textarea id="o-obs" rows="2">${e.obs || ""}</textarea></div>
       </div></div>
       <div class="modal-f">
@@ -1259,7 +1259,7 @@ function formVeiculo(x) {
     <div class="modal" style="max-width:640px">
       <div class="modal-h"><span class="card-ico i-navy">${icon("car")}</span><h3>${x ? "Editar veículo" : "Novo veículo"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Apelido / nome</label><input id="v-nome" value="${e.nome || ""}" placeholder="Ex.: Corolla da família"></div>
+        <div class="campo full"><label>Apelido / nome</label><input id="v-nome" value="${e.nome || ""}" placeholder="Apelido do veículo"></div>
         <div class="campo"><label>Marca</label><input id="v-marca" value="${e.marca || ""}"></div>
         <div class="campo"><label>Modelo</label><input id="v-modelo" value="${e.modelo || ""}"></div>
         <div class="campo"><label>Ano/modelo</label><input id="v-ano" value="${e.ano || ""}" placeholder="2021/2022"></div>
@@ -1272,7 +1272,7 @@ function formVeiculo(x) {
             <option value="fipe"${fipe ? " selected" : ""}>Automático pela FIPE (FIPEConsulta)</option>
             <option value="fixo"${!fipe ? " selected" : ""}>Valor fixo (eu defino)</option>
           </select></div>
-        <div class="campo" id="wrap-fipe-cod"><label>Código FIPE (p/ consulta)</label><input id="v-fipecod" value="${e.fipe_codigo || ""}" placeholder="ex.: 038003-2"></div>
+        <div class="campo" id="wrap-fipe-cod"><label>Código FIPE (p/ consulta)</label><input id="v-fipecod" value="${e.fipe_codigo || ""}" placeholder="Código FIPE"></div>
         <div class="campo" id="wrap-fipe-val"><label>Valor FIPE atual (R$)</label><input id="v-fipeval" type="number" step="0.01" value="${e.fipe_valor ?? ""}" placeholder="consultar ou informar"></div>
         <div class="campo" id="wrap-fixo"><label>Valor fixo (R$)</label><input id="v-fixo" type="number" step="0.01" value="${e.valor_fixo ?? ""}"></div>
 
@@ -1301,7 +1301,7 @@ function formVeiculo(x) {
 function renderExtras() {
   $("#extras-box").innerHTML = EXTRAS.map((ex, i) => `
     <div style="display:flex;gap:8px;margin-bottom:6px">
-      <input placeholder="Campo (ex.: Seguro)" value="${ex.k}" oninput="EXTRAS[${i}].k=this.value" style="flex:1">
+      <input placeholder="Nome do campo" value="${ex.k}" oninput="EXTRAS[${i}].k=this.value" style="flex:1">
       <input placeholder="Valor" value="${ex.v}" oninput="EXTRAS[${i}].v=this.value" style="flex:1">
       <button class="btn-icon" onclick="EXTRAS.splice(${i},1);renderExtras()">${icon("trash")}</button>
     </div>`).join("") || `<div class="meta">Nenhum campo. Você escolhe o que controlar (seguro, IPVA, Renavam...).</div>`;
@@ -1632,7 +1632,7 @@ function formUsuario(u) {
             ${CORES_FAM.map(c => `<div class="cor-opt${c===FORM_COR?" sel":""}" style="background:${c}" onclick="selecionarCor('${c}')"></div>`).join("")}
           </div>
         </div>
-        <div class="campo"><label>Nome</label><input id="fu-nome" value="${e.nome||""}" placeholder="Ex.: Maisa Tomelin"></div>
+        <div class="campo"><label>Nome</label><input id="fu-nome" value="${e.nome||""}" placeholder="Nome completo"></div>
         <div class="campo"><label>E-mail</label><input id="fu-email" type="email" value="${e.email||""}"></div>
         <div class="campo"><label>Senha ${u?"(deixe em branco para manter)":""}</label><input id="fu-senha" type="password" placeholder="${u?"Nova senha (opcional)":"Senha"}"></div>
         <div class="campo">

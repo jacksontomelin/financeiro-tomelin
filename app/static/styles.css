@@ -118,22 +118,87 @@ input,select,textarea{font-family:inherit;font-size:14px}
    COMPONENTES
    ============================================================ */
 .btn{
-  display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;
-  font-weight:600;font-size:14px;transition:transform .08s,box-shadow .15s,background .15s;
+  display:inline-flex;align-items:center;gap:7px;padding:10px 18px;
+  border-radius:12px;font-weight:600;font-size:13.5px;cursor:pointer;border:none;
+  transition:all .15s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;
+  letter-spacing:.2px;
 }
-.btn svg{width:17px;height:17px;stroke-width:2}
-.btn:active{transform:translateY(1px)}
-.btn-primary{background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;box-shadow:var(--shadow-sm)}
-.btn-primary:hover{box-shadow:0 6px 18px rgba(8,45,81,.28)}
-.btn-green{background:linear-gradient(135deg,var(--green-2),var(--green-deep));color:#fff}
-.btn-gold{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#3a2e05}
-.btn-ghost{background:#fff;color:var(--navy);border:1.5px solid var(--line)}
-.btn-ghost:hover{border-color:var(--navy-soft);background:var(--bg-2)}
-.btn-danger{background:var(--red-soft);color:var(--red)}
-.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:8px}
-.btn-icon{padding:8px;border-radius:9px;background:#fff;border:1.5px solid var(--line);color:var(--ink-2)}
-.btn-icon:hover{border-color:var(--navy-soft);color:var(--navy)}
-.btn-icon svg{width:17px;height:17px}
+.btn svg{width:16px;height:16px;stroke-width:2;flex-shrink:0}
+.btn:active{transform:scale(.97)}
+.btn::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+.btn:hover::after{background:rgba(255,255,255,.08)}
+
+/* Primary — navy gradiente com brilho */
+.btn-primary{
+  background:linear-gradient(135deg,#0E3A63 0%,#082D51 100%);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(8,45,81,.3),inset 0 1px 0 rgba(255,255,255,.12);
+}
+.btn-primary:hover{
+  background:linear-gradient(135deg,#1A4A7A 0%,#0E3A63 100%);
+  box-shadow:0 6px 20px rgba(8,45,81,.35),inset 0 1px 0 rgba(255,255,255,.15);
+  transform:translateY(-1px);
+}
+
+/* Gold — dourado da marca */
+.btn-gold{
+  background:linear-gradient(135deg,#C9A94E 0%,#B8963B 100%);
+  color:#2a1f00;
+  box-shadow:0 2px 8px rgba(201,169,78,.35),inset 0 1px 0 rgba(255,255,255,.2);
+}
+.btn-gold:hover{
+  box-shadow:0 6px 20px rgba(201,169,78,.4);
+  transform:translateY(-1px);
+}
+
+/* Green — teal da marca */
+.btn-green{
+  background:linear-gradient(135deg,#3E9079 0%,#2F817A 100%);
+  color:#fff;
+  box-shadow:0 2px 8px rgba(47,129,122,.3);
+}
+.btn-green:hover{box-shadow:0 6px 20px rgba(47,129,122,.35);transform:translateY(-1px)}
+
+/* Ghost — contorno sutil */
+.btn-ghost{
+  background:transparent;
+  color:var(--navy);
+  border:1.5px solid var(--line);
+  box-shadow:none;
+}
+.btn-ghost:hover{
+  background:var(--bg);
+  border-color:var(--blue-ink);
+  color:var(--blue-ink);
+}
+.btn-ghost::after{display:none}
+
+/* Danger */
+.btn-danger{background:rgba(180,80,62,.1);color:var(--red);border:1.5px solid rgba(180,80,62,.2)}
+.btn-danger:hover{background:rgba(180,80,62,.18)}
+.btn-danger::after{display:none}
+
+/* Tamanhos */
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:9px;gap:5px}
+.btn-sm svg{width:14px;height:14px}
+.btn-lg{padding:13px 24px;font-size:15px;border-radius:14px}
+
+/* Icon button — quadrado com ícone */
+.btn-icon{
+  padding:8px;border-radius:10px;
+  background:transparent;
+  border:1.5px solid var(--line);
+  color:var(--ink-3);
+  transition:all .15s;
+}
+.btn-icon:hover{
+  background:var(--bg);
+  border-color:var(--blue-ink);
+  color:var(--navy);
+  transform:scale(1.08);
+}
+.btn-icon svg{width:16px;height:16px}
+.btn-icon:active{transform:scale(.95)}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm)}
 .card-pad{padding:22px}
@@ -352,8 +417,10 @@ html.dark .card-h h3, html.dark .modal-h h3,
 html.dark .wa-card .t, html.dark .cmd .c,
 html.dark .kpi.navy .val{color:var(--ink)}
 html.dark .i-navy{background:rgba(140,170,200,.14);color:var(--ink)}
-html.dark .btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
-html.dark .btn-icon{background:var(--card);border-color:var(--line);color:var(--ink-2)}
+html.dark .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line-2)}
+html.dark .btn-ghost:hover{background:var(--card);border-color:var(--blue-ink)}
+html.dark .btn-icon{background:transparent;border-color:var(--line-2);color:var(--ink-3)}
+html.dark .btn-icon:hover{background:var(--card);border-color:var(--blue-ink);color:var(--ink)}
 html.dark .toolbar input.search-i,
 html.dark .toolbar select,
 html.dark .seg{background:var(--bg-2);border-color:var(--line);color:var(--ink)}
