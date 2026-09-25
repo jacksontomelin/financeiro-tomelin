@@ -42,7 +42,20 @@ services:
       ALERTA_HORA: ${ALERTA_HORA:-8}
       ALERTA_DIAS_ANTES: ${ALERTA_DIAS_ANTES:-3}
       RESUMO_SEMANAL: ${RESUMO_SEMANAL:-true}
+      FECHAMENTO_DIARIO: ${FECHAMENTO_DIARIO:-true}
+      FECHAMENTO_HORA: ${FECHAMENTO_HORA:-20}
       TIMEZONE: ${TIMEZONE:-America/Sao_Paulo}
+
+      # FIPE (tecnologia própria FIPEConsulta)
+      FIPE_ATIVO: ${FIPE_ATIVO:-false}
+      FIPE_API_URL: ${FIPE_API_URL:-}
+      FIPE_API_TOKEN: ${FIPE_API_TOKEN:-}
+      FIPE_ENDPOINT: ${FIPE_ENDPOINT:-/api/fipe/{codigo}}
+
+      # dados para PDFs
+      EMPRESA_NOME: ${EMPRESA_NOME:-Tomelin — Gestão Financeira da Família}
+      EMPRESA_DOC: ${EMPRESA_DOC:-}
+      EMPRESA_CIDADE: ${EMPRESA_CIDADE:-Blumenau/SC}
     ports:
       - "8000:8000"
 
