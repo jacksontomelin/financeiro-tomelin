@@ -1,6 +1,32 @@
 """Tomelin Gestão Financeira — aplicação principal FastAPI."""
 import logging
 from contextlib import asynccontextmanager
+from sqlalchemy import text
+
+
+def _migrar(engine):
+    """Adiciona colunas novas em tabelas existentes sem quebrar o banco."""
+    migrações = [
+        # ultimo_acesso e ultimo_acesso_ip na tabela usuarios
+        "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ultimo_acesso TIMESTAMP",
+        "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ultimo_acesso_ip VARCHAR(60)",
+        # juros e multa em lancamentos
+        "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS juros NUMERIC(14,2) DEFAULT 0",
+        "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS multa NUMERIC(14,2) DEFAULT 0",
+        # logo em contas e contatos
+        "ALTER TABLE contas ADD COLUMN IF NOT EXISTS logo TEXT",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS logo TEXT",
+        # veiculos (tabela criada pelo create_all, mas garante colunas extras)
+        "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
+    ]
+    with engine.connect() as conn:
+        for sql in migrações:
+            try:
+                conn.execute(text(sql))
+            except Exception:
+                pass  # coluna já existe ou tabela ainda não existe — create_all cuida
+        conn.commit()
+    log.info("Migrações aplicadas.")
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -27,6 +53,7 @@ scheduler = BackgroundScheduler(timezone=pytz.timezone(settings.TIMEZONE))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _migrar(engine)
     seed.seed()
 
     # alerta diário de vencimentos
