@@ -1,0 +1,92 @@
+"""Tomelin Gestão Financeira — aplicação principal FastAPI."""
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import pytz
+
+from .config import settings
+from .database import Base, engine
+from . import seed, whatsapp
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios
+from .routers import whatsapp as whatsapp_router
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("tomelin")
+
+STATIC = Path(__file__).parent / "static"
+scheduler = BackgroundScheduler(timezone=pytz.timezone(settings.TIMEZONE))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    seed.seed()
+
+    # alerta diário de vencimentos
+    scheduler.add_job(whatsapp.job_alerta_vencimentos,
+                      CronTrigger(hour=settings.ALERTA_HORA, minute=0),
+                      id="alerta_vencimentos", replace_existing=True)
+    # resumo semanal (segunda 8h)
+    scheduler.add_job(whatsapp.job_resumo_semanal,
+                      CronTrigger(day_of_week="mon", hour=settings.ALERTA_HORA, minute=5),
+                      id="resumo_semanal", replace_existing=True)
+    # fechamento do dia (contas pagas hoje)
+    scheduler.add_job(whatsapp.job_fechamento_dia,
+                      CronTrigger(hour=settings.FECHAMENTO_HORA, minute=0),
+                      id="fechamento_dia", replace_existing=True)
+    scheduler.start()
+    log.info("Scheduler iniciado (alerta %02d:00, tz %s)", settings.ALERTA_HORA, settings.TIMEZONE)
+    yield
+    scheduler.shutdown(wait=False)
+
+
+app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+for r in (auth.router, categorias.router, contas.router, contatos.router,
+          lancamentos.router, dashboard.router, veiculos.router,
+          relatorios.router, whatsapp_router.router):
+    app.include_router(r)
+
+
+@app.get("/api/health")
+def health():
+    return {"ok": True, "app": settings.APP_NOME}
+
+
+@app.get("/api/config")
+def config_publica():
+    return {"app": settings.APP_NOME, "alerta_dias_antes": settings.ALERTA_DIAS_ANTES}
+
+
+# ---- Frontend (SPA + PWA) ----
+app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
+
+
+@app.get("/manifest.json")
+def manifest():
+    return FileResponse(str(STATIC / "manifest.json"), media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(str(STATIC / "sw.js"), media_type="application/javascript")
+
+
+@app.get("/")
+@app.get("/{path:path}")
+def spa(path: str = ""):
+    # deixa a API responder normalmente; qualquer outra rota devolve o SPA
+    if path.startswith("api/"):
+        return {"erro": "rota não encontrada"}
+    arquivo = STATIC / path
+    if path and arquivo.is_file():
+        return FileResponse(str(arquivo))
+    return FileResponse(str(STATIC / "index.html"))

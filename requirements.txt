@@ -1,0 +1,15 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-jose[cryptography]==3.3.0
+# (passlib removido — usamos bcrypt direto em security.py)
+bcrypt==4.2.1
+python-multipart==0.0.20
+httpx==0.28.1
+APScheduler==3.11.0
+python-dateutil==2.9.0.post0
+pytz==2024.2
+reportlab==4.2.5

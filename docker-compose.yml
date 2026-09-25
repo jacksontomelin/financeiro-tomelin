@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tomelin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tomelin}
+      POSTGRES_DB: ${POSTGRES_DB:-tomelin}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tomelin} -d ${POSTGRES_DB:-tomelin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # banco (aponta para o serviço "db")
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tomelin}:${POSTGRES_PASSWORD:-tomelin}@db:5432/${POSTGRES_DB:-tomelin}
+
+      # segurança / admin (TROQUE em produção)
+      SECRET_KEY: ${SECRET_KEY:-troque-esta-chave-por-uma-aleatoria-bem-grande}
+      TOKEN_HORAS: ${TOKEN_HORAS:-72}
+      ADMIN_NOME: ${ADMIN_NOME:-Jackson Tomelin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@tomelin.com.br}
+      ADMIN_SENHA: ${ADMIN_SENHA:-tomelin123}
+
+      # WhatsApp (estilo Sentinela — usa seu gateway whatsapp.jackson)
+      WHATSAPP_ATIVO: ${WHATSAPP_ATIVO:-false}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-}
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
+      WHATSAPP_GRUPO: ${WHATSAPP_GRUPO:-}
+      WHATSAPP_ENDPOINT_ENVIAR: ${WHATSAPP_ENDPOINT_ENVIAR:-/api/enviar}
+
+      # alertas automáticos
+      ALERTA_HORA: ${ALERTA_HORA:-8}
+      ALERTA_DIAS_ANTES: ${ALERTA_DIAS_ANTES:-3}
+      RESUMO_SEMANAL: ${RESUMO_SEMANAL:-true}
+      TIMEZONE: ${TIMEZONE:-America/Sao_Paulo}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:
