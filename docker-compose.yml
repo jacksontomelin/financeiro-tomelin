@@ -1,28 +1,15 @@
-services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-tomelin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tomelin}
-      POSTGRES_DB: ${POSTGRES_DB:-tomelin}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tomelin} -d ${POSTGRES_DB:-tomelin}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+version: '3.8'
 
+services:
   app:
     build: .
+    container_name: tomelin-app
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    
     environment:
-      # banco (aponta para o serviço "db")
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tomelin}:${POSTGRES_PASSWORD:-tomelin}@db:5432/${POSTGRES_DB:-tomelin}
+      # banco — se Postgres rodando em outro container/VPS, mude isso:
+      # postgresql+psycopg2://user:password@host:5432/dbname
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://tomelin:tomelin@localhost:5432/tomelin}
 
       # segurança / admin (TROQUE em produção)
       SECRET_KEY: ${SECRET_KEY:-troque-esta-chave-por-uma-aleatoria-bem-grande}
@@ -37,6 +24,7 @@ services:
       WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
       WHATSAPP_GRUPO: ${WHATSAPP_GRUPO:-}
       WHATSAPP_ENDPOINT_ENVIAR: ${WHATSAPP_ENDPOINT_ENVIAR:-/api/enviar}
+      RECIBO_WHATSAPP_AUTO: ${RECIBO_WHATSAPP_AUTO:-true}
 
       # alertas automáticos
       ALERTA_HORA: ${ALERTA_HORA:-8}
@@ -56,8 +44,12 @@ services:
       EMPRESA_NOME: ${EMPRESA_NOME:-Tomelin — Gestão Financeira da Família}
       EMPRESA_DOC: ${EMPRESA_DOC:-}
       EMPRESA_CIDADE: ${EMPRESA_CIDADE:-Blumenau/SC}
+    
     ports:
       - "8000:8000"
-
-volumes:
-  pgdata:
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,51 @@
+# Docker Compose APENAS para PostgreSQL
+# Use isso se quiser rodar o banco separado da aplicação (recomendado em produção)
+# 
+# Para subir: docker-compose -f docker-compose.postgres.yml up -d
+# 
+# Depois, na app, configure:
+#   DATABASE_URL=postgresql+psycopg2://tomelin:SENHA@IP_POSTGRES:5432/tomelin
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tomelin-postgres
+    restart: always
+    
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tomelin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tomelin}
+      POSTGRES_DB: ${POSTGRES_DB:-tomelin}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
+    
+    volumes:
+      # Persiste dados do banco
+      - pgdata:/var/lib/postgresql/data
+      # (opcional) Backup automático
+      # - ./backups:/backups
+    
+    ports:
+      # Expõe na porta 5432 (mude se quiser outro port)
+      - "5432:5432"
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tomelin} -d ${POSTGRES_DB:-tomelin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    # Limites de recurso (ajuste conforme sua VPS)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  pgdata:
+    driver: local
