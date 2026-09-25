@@ -244,7 +244,7 @@ function renderLogin() {
         <div id="l-erro" class="login-erro hidden"></div>
         <button id="l-btn" type="submit" class="btn btn-primary" style="justify-content:center;padding:12px">Entrar</button>
       </form>
-      <div class="login-hint">Controle financeiro da família · self-hosted</div>
+      <div class="login-hint">Gestão Financeira · Dev Jackson Tomelin</div>
     </div>
   </div>`;
 }
