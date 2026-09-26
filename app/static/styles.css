@@ -758,15 +758,17 @@ html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); 
 
 /* ---- Lado direito: formulário ---- */
 .login-form-side {
-  width: 100%;
-  max-width: 480px;
+  flex: 0 0 420px;
+  max-width: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
+  padding: 32px 28px;
   background: var(--card);
+  overflow-y: auto;
 }
-@media(min-width:768px){ .login-form-side { padding: 48px 44px; } }
+@media(min-width:768px){ .login-form-side { padding: 40px 36px; } }
+@media(max-width:767px){ .login-form-side { flex: 1; max-width: 100%; } }
 
 .login-form-wrap { width: 100%; max-width: 380px; }
 
@@ -807,4 +809,30 @@ html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); 
 
 /* dark mode */
 html.dark .login-form-side { background: var(--card); }
+html.dark .lf-titulo { color: var(--ink); }
+
+/* Login form header */
+.lf-header { text-align: left; margin-bottom: 20px; }
+.lf-logo-sm { display: none; margin-bottom: 12px; }
+.lf-logo-sm .login-lockup { height: 36px; width: auto; }
+@media(max-width:767px){ .lf-logo-sm { display: block; } }
+.lf-titulo { font-size: 22px; font-weight: 800; color: var(--navy); margin: 0 0 4px; line-height: 1.2; }
+.lf-sub { font-size: 13px; color: var(--ink-2); margin: 0; }
+
+/* Status inline */
+.lp-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.7);
+  padding: 8px 14px; background: rgba(255,255,255,.08); border-radius: 8px; border: 1px solid rgba(255,255,255,.12); }
+.lp-status svg { flex-shrink: 0; }
+
+/* lp-card icon */
+.lp-card-ic { flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,.12); }
+
+/* Login form tweaks */
+.login-form-wrap { width: 100%; max-width: 340px; }
+.btn-login { width: 100%; justify-content: center; padding: 12px; font-size: 14.5px; margin-top: 6px; gap: 8px; }
+.btn-login svg { width: 18px; height: 18px; }
+.lf-footer { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 14px;
+  border-top: 1px solid var(--line); font-size: 11px; color: var(--ink-3); }
+
 html.dark .lf-titulo { color: var(--ink); }

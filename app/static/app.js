@@ -248,12 +248,11 @@ function toggleSenha() {
 function _statusLogin() {
   fetch("/api/auth/status").then(r => r.json()).then(d => {
     const el = document.getElementById("lp-status");
-    if (el) el.innerHTML = "🟢 Sistema online &nbsp;·&nbsp; " + d.total_lancamentos + " lançamentos registrados";
+    if (el) el.innerHTML = '<svg viewBox="0 0 8 8" width="8" height="8" style="margin-right:6px"><circle cx="4" cy="4" r="3.5" fill="#3E9079"/></svg> Sistema online &nbsp;·&nbsp; ' + d.total_lancamentos + ' lançamentos registrados';
   }).catch(() => {});
 }
 
 function renderLogin() {
-  // imagens financeiras gratuitas do Unsplash (sem API key)
   const IMGS = [
     "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80",
     "https://images.unsplash.com/photo-1607863680198-23d4b2565df0?w=900&q=80",
@@ -264,9 +263,14 @@ function renderLogin() {
   const img = IMGS[Math.floor(Math.random() * IMGS.length)];
   const ua = _ultimoAcesso();
 
+  // SVG icons inline para os cards (sem emoji)
+  const svgWallet = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>';
+  const svgUsers = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>';
+  const svgDoc = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
+  const svgShield = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+
   root().innerHTML =
     '<div class="login-split">' +
-      // lado esquerdo — foto + info
       '<div class="login-photo" style="background-image:url(\'' + img + '\')">' +
         '<div class="login-photo-overlay"></div>' +
         '<div class="login-photo-content">' +
@@ -276,19 +280,20 @@ function renderLogin() {
             '<div class="lp-t2">CONTROLANDO TUDO</div>' +
           '</div>' +
           '<div class="lp-cards">' +
-            '<div class="lp-card"><span class="lp-card-ic">💰</span><div><b>Controle total</b><br>Receitas, despesas e patrimônio</div></div>' +
-            '<div class="lp-card"><span class="lp-card-ic">🏠</span><div><b>Para toda família</b><br>Cada membro com seu acesso</div></div>' +
-            '<div class="lp-card"><span class="lp-card-ic">📊</span><div><b>Relatórios em PDF</b><br>Balancete e patrimônio</div></div>' +
+            '<div class="lp-card"><span class="lp-card-ic">' + svgWallet + '</span><div><b>Controle total</b><br>Receitas, despesas e patrimônio</div></div>' +
+            '<div class="lp-card"><span class="lp-card-ic">' + svgUsers + '</span><div><b>Para toda família</b><br>Cada membro com seu acesso</div></div>' +
+            '<div class="lp-card"><span class="lp-card-ic">' + svgDoc + '</span><div><b>Relatórios em PDF</b><br>Balancete e patrimônio</div></div>' +
           '</div>' +
-          '<div id="lp-status" class="lp-status">⏳ Verificando sistema...</div>' +
+          '<div id="lp-status" class="lp-status">' + svgShield + ' <span>Verificando sistema...</span></div>' +
         '</div>' +
       '</div>' +
-      // lado direito — formulário
       '<div class="login-form-side">' +
         '<div class="login-form-wrap">' +
-          '<div class="lf-saudacao">Bem-vindo de volta 👋</div>' +
-          '<h2 class="lf-titulo">Acesse sua conta</h2>' +
-          '<p class="lf-sub">Sistema de gestão financeira da família Tomelin</p>' +
+          '<div class="lf-header">' +
+            '<div class="lf-logo-sm">' + LOGO_LOCKUP + '</div>' +
+            '<h2 class="lf-titulo">Acesse sua conta</h2>' +
+            '<p class="lf-sub">Gestão financeira da família</p>' +
+          '</div>' +
           (ua ? '<div class="lf-ultimo-acesso">' + icon("clock") + ' ' + ua + '</div>' : '') +
           '<form onsubmit="fazerLogin(event)" autocomplete="on">' +
             '<div class="campo"><label>E-mail</label>' +
@@ -298,11 +303,11 @@ function renderLogin() {
               '<button type="button" class="btn-ver-senha" onclick="toggleSenha()" title="Mostrar senha">' + icon("eye") + '</button></div>' +
             '<div id="l-erro" class="login-erro hidden"></div>' +
             '<button id="l-btn" type="submit" class="btn btn-primary btn-login">' +
-              '<span id="l-btn-txt">Entrar</span></button>' +
+              icon("send") + '<span id="l-btn-txt">Entrar</span></button>' +
           '</form>' +
           '<div class="lf-footer">' +
-            '<div class="lf-dev">Dev <b>Jackson Tomelin</b> · UniController</div>' +
-            '<div class="lf-version">v1.0 · 2026</div>' +
+            '<span>Tomelin Gestao Financeira</span>' +
+            '<span>v1.0</span>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -557,7 +562,7 @@ async function viewDashboard(v) {
     <div class="dash-boas-vindas">
       <div class="bv-avatar">${State.emoji || "👤"}</div>
       <div class="bv-text">
-        <h2>${saudacao}, ${State.nome ? State.nome.split(" ")[0] : "Jackson"}! 👋</h2>
+        <h2>${saudacao}, ${State.nome ? State.nome.split(" ")[0] : "Jackson"}!</h2>
         <p>Aqui está o resumo financeiro da família Tomelin hoje.</p>
       </div>
       <div class="bv-deco">${SVG_HOUSE}</div>
@@ -1592,7 +1597,7 @@ async function viewUsuarios(v) {
           </div>
           <div class="familia-nome">${u.nome}</div>
           <div class="familia-email">${u.email}</div>
-          <span class="familia-papel ${u.papel}">${u.papel === "admin" ? "👑 Admin" : "👤 Membro"}</span>
+          <span class="familia-papel ${u.papel}">${u.papel === "admin" ? "Admin" : "Membro"}</span>
           <div class="familia-acesso">${u.ultimo_acesso
             ? "Último acesso: " + new Date(u.ultimo_acesso).toLocaleDateString("pt-BR")
             : "Nunca acessou"}</div>
@@ -1688,7 +1693,7 @@ async function verHistoricoLogin(uid, nome) {
       : `${Math.floor(diffMin/1440)}d atrás`;
     const ok = r.sucesso;
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
-      <span style="font-size:20px">${ok ? "✅" : "❌"}</span>
+      <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${ok ? '#2F817A18' : '#B4503E18'};flex-shrink:0">${ok ? icon("checkCircle") : icon("x")}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${r.dispositivo || "—"}</div>
         <div style="font-size:11.5px;color:var(--ink-2)">${data} às ${hora} · ${r.ip || "—"}</div>
