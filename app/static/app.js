@@ -391,7 +391,7 @@ function renderApp() {
             onblur="setTimeout(fecharBusca,200)">
           <div class="busca-box" id="busca-box"></div>
         </div>
-        <div>
+        <div class="hide-mob">
           <h2 id="tb-title">Visão geral</h2>
           <div class="sub" id="tb-sub"></div>
         </div>
