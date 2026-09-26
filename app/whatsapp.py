@@ -155,6 +155,19 @@ def _texto_metas(db: Session) -> str:
     return "\n".join(linhas).rstrip()
 
 
+_EMOJI_ICONE = {
+    "tag": "🏷️", "cash": "💵", "wallet": "👛", "bank": "🏦", "doc": "📄", "users": "👥",
+    "trendUp": "📈", "pie": "🥧", "calendar": "📅", "clock": "⏰", "alert": "⚠️", "cog": "⚙️",
+    "car": "🚗", "home": "🏠", "heart": "❤️", "star": "⭐", "receipt": "🧾", "shield": "🛡️",
+}
+
+
+def _emoji_cat(icone: str | None) -> str:
+    if not icone:
+        return "•"
+    return _EMOJI_ICONE.get(icone, icone if len(icone) <= 2 else "•")
+
+
 def _texto_categorias(db: Session) -> str:
     cats = db.query(models.Categoria).order_by(models.Categoria.tipo, models.Categoria.nome).all()
     rec = [c for c in cats if c.tipo == "receita"]
@@ -162,11 +175,11 @@ def _texto_categorias(db: Session) -> str:
     linhas = ["🗂️ *Categorias*", ""]
     if rec:
         linhas.append("📈 *Receitas:*")
-        linhas += [f"  {c.icone or '•'} {c.nome}" for c in rec]
+        linhas += [f"  {_emoji_cat(c.icone)} {c.nome}" for c in rec]
         linhas.append("")
     if desp:
         linhas.append("📉 *Despesas:*")
-        linhas += [f"  {c.icone or '•'} {c.nome}" for c in desp]
+        linhas += [f"  {_emoji_cat(c.icone)} {c.nome}" for c in desp]
     return "\n".join(linhas)
 
 
@@ -358,7 +371,7 @@ def processar_comando(texto: str, db: Session | None = None,
             return _buscar_lancamentos(db, partes[1] if len(partes) > 1 else "")
 
         # ── Nota Fiscal / NF-e pelo QR code ──────────────────────────────────
-        if t_low.startswith("nf ") or t_low.startswith("nota ") or t_low.startswith("nfe "):
+        if t_low in ("nf", "nota", "nfe", "nota fiscal") or t_low.startswith("nf ") or t_low.startswith("nota ") or t_low.startswith("nfe "):
             partes = t.split(None, 1)
             url = partes[1].strip() if len(partes) > 1 else ""
             if not url.startswith("http"):

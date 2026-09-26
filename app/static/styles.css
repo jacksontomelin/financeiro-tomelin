@@ -1296,7 +1296,7 @@ img,svg,video{max-width:100%}
 
 /* Cards de KPI não deixam valor estourar */
 .kpi{overflow:hidden;min-width:0}
-.kpi .val{word-break:break-all;overflow-wrap:anywhere}
+.kpi .val{overflow-wrap:anywhere;font-size:clamp(18px,5.2vw,28px)}
 .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 
 /* Toolbar não estoura — botões menores no mobile */
@@ -1371,3 +1371,16 @@ html.dark .btab{
 }
 html.dark .btab-item.on{color:#AFC2D6}
 html.dark .btab-item.on::before{background:#AFC2D6}
+
+/* ── Auto-fix geral (auditoria) ── */
+.brand-mark{width:100%;height:auto;object-fit:contain;display:block}
+/* textos longos (URLs, e-mails, IDs de grupo) nunca estouram o card */
+.card td, .card .sub, .card code, .busca-nome { overflow-wrap:anywhere; word-break:normal }
+.card table td[style*="monospace"], .card td[style*="font-family:monospace"]{ word-break:break-all }
+/* tabelas de itens da compra: inputs encolhem no mobile */
+@media(max-width:520px){
+  .modal table input{ font-size:12px !important; padding:3px !important }
+  .modal-b{ padding:16px 14px }
+  .modal-f{ padding:12px 14px; flex-wrap:wrap }
+  .modal-f .btn{ flex:1; justify-content:center }
+}

@@ -81,8 +81,6 @@ const P = {
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   car: '<path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13M5 13h14v4a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><circle cx="7.5" cy="15.5" r=".6"/><circle cx="16.5" cy="15.5" r=".6"/>',
   receipt: '<path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h6"/>',
-  cog: '<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
-  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
@@ -427,8 +425,8 @@ function renderApp() {
 
 function toggleSidebar(open) {
   State.sidebarOpen = open;
-  $("#sb").classList.toggle("open", open);
-  $("#bd").classList.toggle("show", open);
+  $("#sb")?.classList.toggle("open", open);
+  $("#bd")?.classList.toggle("show", open);
 }
 
 function marcarNav() {
@@ -451,8 +449,9 @@ function marcarNav() {
   });
 
   const m = META[State.view] || {};
-  $("#tb-title").textContent = m.nome || "";
-  $("#tb-sub").textContent = m.sub || "";
+  const tt = $("#tb-title"), ts = $("#tb-sub");
+  if (tt) tt.textContent = m.nome || "";
+  if (ts) ts.textContent = m.sub || "";
 }
 
 /* FAB (+) — abre mini-menu de novo lançamento */
@@ -572,7 +571,11 @@ async function atualizarBadge() {
    GRÁFICOS SVG (desenhados à mão, sem libs)
    ============================================================ */
 function barChart(dados) {
-  const W = 660, H = 280, pad = { t: 20, r: 12, b: 34, l: 54 };
+  const W = 660, H = 280, pad = { t: 20, r: 12, b: 34, l: 62 };
+  // rótulo compacto do eixo Y: 800 · 12 mil · 1,2 mi (não corta no celular)
+  const eixo = (n) => n >= 1e6 ? (n/1e6).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mi"
+                    : n >= 1e3 ? (n/1e3).toLocaleString("pt-BR",{maximumFractionDigits:1}) + " mil"
+                    : String(Math.round(n));
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
   const max = Math.max(1, ...dados.flatMap(d => [d.receitas, d.despesas]));
   const step = niceStep(max), topo = Math.ceil(max / step) * step;
@@ -585,7 +588,7 @@ function barChart(dados) {
   for (let i = 0; i <= topo; i += step) {
     const yy = y(i);
     grid += `<line x1="${pad.l}" y1="${yy}" x2="${W - pad.r}" y2="${yy}" stroke="${CINK.grid}"/>
-             <text x="${pad.l - 8}" y="${yy + 4}" text-anchor="end" font-size="10.5" fill="${CINK.axis}">${money0(i)}</text>`;
+             <text x="${pad.l - 8}" y="${yy + 4}" text-anchor="end" font-size="15" fill="${CINK.axis}">${eixo(i)}</text>`;
   }
   dados.forEach((d, i) => {
     const cx = pad.l + bw * i + bw / 2;
@@ -596,7 +599,7 @@ function barChart(dados) {
         <title>${d.label} · Receitas ${money(d.receitas)}</title></rect>
       <rect x="${x2}" y="${y(d.despesas)}" width="${barW}" height="${Math.max(1, dH)}" rx="4" fill="url(#gDesp)">
         <title>${d.label} · Despesas ${money(d.despesas)}</title></rect>
-      <text x="${cx}" y="${H - 12}" text-anchor="middle" font-size="11" fill="${CINK.label}" font-weight="600">${d.label}</text>`;
+      <text x="${cx}" y="${H - 12}" text-anchor="middle" font-size="15" fill="${CINK.label}" font-weight="600">${d.label}</text>`;
   });
   return `
   <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" font-family="Inter">
@@ -2963,6 +2966,7 @@ Object.assign(window, {
   formMeta, salvarMeta, excluirMeta, formAporte, confirmarAporte, _editarMeta,
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
+  _toggleItensCompra, verParcelasCompra,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 
