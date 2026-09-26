@@ -332,6 +332,7 @@ const NAV = [
   { id: "pagar", nome: "Contas a pagar", ic: "arrowUp", sub: "Pagamentos previstos e realizados" },
   { id: "lancamentos", nome: "Todos os lançamentos", ic: "wallet", sub: "Histórico completo de movimentações" },
   { id: "compras", nome: "Compras e cartões", ic: "receipt", sub: "Itens comprados e parcelas do cartão" },
+  { id: "metas", nome: "Metas financeiras", ic: "star", sub: "Objetivos e reservas de dinheiro" },
   { sec: "Patrimônio" },
   { id: "veiculos", nome: "Veículos", ic: "car", sub: "Carros e financiamentos (FIPE ou valor fixo)" },
   { sec: "Cadastros" },
@@ -378,6 +379,13 @@ function renderApp() {
     <div class="main">
       <header class="topbar">
         <button class="menu-btn" onclick="toggleSidebar(true)">${icon("menu")}</button>
+        <div class="busca-global-wrap">
+          <span class="busca-ic">${icon("search")}</span>
+          <input class="busca-input" id="busca-input" placeholder="Buscar lançamentos..."
+            oninput="buscaGlobal(this.value)"
+            onblur="setTimeout(fecharBusca,200)">
+          <div class="busca-box" id="busca-box"></div>
+        </div>
         <div>
           <h2 id="tb-title">Visão geral</h2>
           <div class="sub" id="tb-sub"></div>
@@ -420,6 +428,7 @@ async function setView(id) {
     else if (id === "receber") await viewLancamentos(v, "receita");
     else if (id === "lancamentos") await viewLancamentos(v, null);
     else if (id === "compras") await viewCompras(v);
+    else if (id === "metas") await viewMetas(v);
     else if (id === "contas") await viewContas(v);
     else if (id === "categorias") await viewCategorias(v);
     else if (id === "contatos") await viewContatos(v);
@@ -2320,6 +2329,8 @@ Object.assign(window, {
   abrirFormCompra, salvarCompra, _toggleParcelamento, _recalcularParcelas,
   _addItemCompra, _removerItem, _editarItem,
   verCompra, verComprasView, verParcelasPendentes, pagarParcela, estornarParcela,
+  formMeta, salvarMeta, excluirMeta, formAporte, confirmarAporte, _editarMeta,
+  _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

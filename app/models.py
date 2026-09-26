@@ -317,3 +317,28 @@ class ParcelaCartao(Base):
         if self.data_vencimento < date.today():
             return "atrasada"
         return "pendente"
+
+
+class Meta(Base):
+    """Meta financeira — ex: 'Reserva de emergência', 'Trocar o carro'."""
+    __tablename__ = "metas"
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(120), nullable=False)
+    descricao = Column(Text, nullable=True)
+    valor_alvo = Column(Numeric(14, 2), nullable=False)
+    valor_atual = Column(Numeric(14, 2), default=0)
+    cor = Column(String(9), default="#082D51")
+    icone = Column(String(8), default="🎯")
+    prazo = Column(Date, nullable=True)
+    concluida = Column(Boolean, default=False)
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+    @property
+    def progresso_pct(self) -> float:
+        if not self.valor_alvo:
+            return 0
+        return min(100, float(self.valor_atual) / float(self.valor_alvo) * 100)
+
+    @property
+    def falta(self):
+        return max(0, float(self.valor_alvo) - float(self.valor_atual))
