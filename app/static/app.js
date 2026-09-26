@@ -1,6 +1,9 @@
 /* ============================================================
    Tomelin Gestão Financeira — SPA (vanilla JS, sem dependências)
    ============================================================ */
+
+// Cache de lançamentos por ID — evita JSON.stringify em onclick (quebra com aspas)
+const _LANC_CACHE = new Map();
 const State = {
   token: localStorage.getItem("tom_token") || null,
   ultimo_acesso: null,
@@ -728,6 +731,7 @@ async function recarregarTabela() {
   if (FILTRO.busca) q += `&busca=${encodeURIComponent(FILTRO.busca)}`;
   if (FILTRO.cat) q += `&categoria_id=${FILTRO.cat}`;
   const itens = await api("/api/lancamentos" + q);
+  itens.forEach(l => _LANC_CACHE.set(l.id, l));
   const tb = $("#tb");
   if (!itens.length) {
     tb.innerHTML = `<tr><td colspan="7"><div class="empty">${icon("wallet")}<p>Nenhum lançamento encontrado.</p></div></td></tr>`;
@@ -746,12 +750,12 @@ async function recarregarTabela() {
       <td class="num ${rec ? 'val-rec' : 'val-desp'}"><span class="hide-mob">${rec ? '+' : '−'} </span>${money(l.valor)}</td>
       <td>
         <div style="display:flex;gap:5px;justify-content:flex-end">
-          ${podeBaixar ? `<button class="btn-icon" title="Dar baixa" onclick='formBaixa(${JSON.stringify(l)})'>${icon("check")}</button>`
+          ${podeBaixar ? `<button class="btn-icon" title="Dar baixa" onclick="formBaixaId(${l.id})">${icon("check")}</button>`
                        : `<button class="btn-icon" title="Estornar" onclick="estornar(${l.id})">${icon("refresh")}</button>`}
           <button class="btn-icon" title="Recibo em PDF" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">${icon("receipt")}</button>
           <button class="btn-icon" title="Recibo estilo cupom" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf?estilo=matricial')">${icon("terminal")}</button>
           <button class="btn-icon" title="Enviar recibo no WhatsApp" onclick="reciboWhats(${l.id})">${icon("whatsapp")}</button>
-          <button class="btn-icon" title="Editar" onclick='formLancamento(${JSON.stringify(l)},"${l.tipo}")'>${icon("edit")}</button>
+          <button class="btn-icon" title="Editar" onclick="formLancamentoId(${l.id})">${icon("edit")}</button>
           <button class="btn-icon" title="Excluir" onclick="excluirLanc(${l.id})">${icon("trash")}</button>
         </div>
       </td>
@@ -828,6 +832,30 @@ async function salvarLanc(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 
+
+// Wrappers seguros para onclick — buscam o objeto do cache global em vez de
+// embutir JSON.stringify() (que quebra quando há apóstrofos nos dados)
+function formBaixaId(id) {
+  const l = _LANC_CACHE.get(id);
+  if (!l) { toast("Recarregue a página e tente novamente.", "err"); return; }
+  formBaixa(l);
+}
+function formLancamentoId(id) {
+  const l = _LANC_CACHE.get(id);
+  if (!l) { toast("Recarregue a página e tente novamente.", "err"); return; }
+  formLancamento(l, l.tipo);
+}
+
+
+// Cache genérico para edições seguras (evita JSON.stringify em onclick)
+const _CACHE = { contas:{}, cats:{}, contatos:{}, veiculos:{}, usuarios:{} };
+
+function _editarConta(id)      { const o = _CACHE.contas[id];    if (o) formConta(o);     else toast("Recarregue a página.", "err"); }
+function _editarCategoria(id)  { const o = _CACHE.cats[id];      if (o) formCategoria(o); else toast("Recarregue a página.", "err"); }
+function _editarContato(id)    { const o = _CACHE.contatos[id];  if (o) formContato(o);   else toast("Recarregue a página.", "err"); }
+function _editarVeiculo(id)    { const o = _CACHE.veiculos[id];  if (o) formVeiculo(o);   else toast("Recarregue a página.", "err"); }
+function _editarUsuario(id)    { const o = _CACHE.usuarios[id];  if (o) formUsuario(o);   else toast("Recarregue a página.", "err"); }
+
 function formBaixa(l) {
   const rec = l.tipo === "receita";
   abrirModal(`
@@ -894,7 +922,7 @@ async function viewVencimentos(v) {
         <span class="venc-ico ${atras ? 'i-red' : rec ? 'i-green' : 'i-amber'}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
         <div class="d"><div class="n">${l.descricao}</div><div class="w">${quando} · ${dataBR(l.vencimento)}${l.categoria ? " · " + l.categoria : ""}</div></div>
         <div class="vv ${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</div>
-        ${mostrarBotao ? `<button class="btn btn-green btn-sm" onclick='formBaixa(${JSON.stringify(l)})'>${icon("check")}Baixar</button>` : ""}
+        ${mostrarBotao ? `<button class="btn btn-green btn-sm" onclick="formBaixaId(${l.id})">${icon("check")}Baixar</button>` : ""}
       </div>`;
     };
   }
@@ -914,6 +942,7 @@ async function viewVencimentos(v) {
    ============================================================ */
 async function viewContas(v) {
   const contas = await api("/api/contas");
+  contas.forEach(c => _CACHE.contas[c.id] = c);
   const total = contas.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
   v.innerHTML = `
     <div class="toolbar">
@@ -935,7 +964,7 @@ async function viewContas(v) {
           <div class="val mono-num" style="font-size:26px;color:${Number(c.saldo_atual) < 0 ? 'var(--red)' : 'var(--navy)'};margin:6px 0 2px">${money(c.saldo_atual)}</div>
           <div class="meta">Saldo inicial ${money(c.saldo_inicial)}</div>
           <div style="display:flex;gap:8px;margin-top:14px">
-            <button class="btn btn-ghost btn-sm" onclick='formConta(${JSON.stringify(c)})'>${icon("edit")}Editar</button>
+            <button class="btn btn-ghost btn-sm" onclick="_editarConta(${c.id})">${icon("edit")}Editar</button>
             <button class="btn btn-ghost btn-sm" onclick="excluirConta(${c.id})">${icon("trash")}Excluir</button>
           </div>
         </div>`).join("") || `<div class="empty">${icon("wallet")}<p>Nenhuma conta ainda.</p></div>`}
@@ -1001,7 +1030,7 @@ async function viewCategorias(v) {
           <div style="display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line)">
             <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
             <div class="grow"><div class="nm">${c.nome}</div></div>
-            <button class="btn-icon" onclick='formCategoria(${JSON.stringify(c)})'>${icon("edit")}</button>
+            <button class="btn-icon" onclick="_editarCategoria(${c.id})">${icon("edit")}</button>
             <button class="btn-icon" onclick="excluirCategoria(${c.id})">${icon("trash")}</button>
           </div>`).join("") || `<div class="empty" style="padding:20px">${icon("tag")}<p>Nenhuma.</p></div>`}
     </div>`;
@@ -1093,7 +1122,7 @@ function renderContatos() {
       <td><span class="tag ${c.tipo === "cliente" ? "pago" : "pendente"}">${c.tipo === "cliente" ? "Recebo de" : "Pago para"}</span></td>
       <td>${c.documento || "—"}</td><td>${c.telefone || "—"}</td><td>${c.email || "—"}</td>
       <td><div style="display:flex;gap:4px;justify-content:flex-end">
-        <button class="btn-icon" onclick='formContato(${JSON.stringify(c)})'>${icon("edit")}</button>
+        <button class="btn-icon" onclick="_editarContato(${c.id})">${icon("edit")}</button>
         <button class="btn-icon" onclick="excluirContato(${c.id})">${icon("trash")}</button>
       </div></td>
     </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${icon("users")}<p>Nenhum contato.</p></div></td></tr>`;
@@ -1255,7 +1284,7 @@ function cardVeiculo(x) {
       ${extras.length ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${extras.map(([k, val]) => `<span class="cat-chip"><b>${k}:</b>&nbsp;${val}</span>`).join("")}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${fipe ? `<button class="btn btn-ghost btn-sm" onclick="atualizarFipe(${x.id})">${icon("refresh")}Atualizar FIPE</button>` : ""}
-        <button class="btn btn-ghost btn-sm" onclick='formVeiculo(${JSON.stringify(x)})'>${icon("edit")}Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="_editarVeiculo(${x.id})">${icon("edit")}Editar</button>
         <button class="btn btn-ghost btn-sm" onclick="excluirVeiculo(${x.id})">${icon("trash")}</button>
       </div>
     </div>`;
@@ -1585,6 +1614,7 @@ let FORM_EMOJI = "👤", FORM_COR = "#305C74";
 
 async function viewUsuarios(v) {
   const us = await api("/api/usuarios");
+  us.forEach(u => _CACHE.usuarios[u.id] = u);
   v.innerHTML = `
     <div class="toolbar">
       <div>
@@ -1607,7 +1637,7 @@ async function viewUsuarios(v) {
             ? "Último acesso: " + new Date(u.ultimo_acesso).toLocaleDateString("pt-BR")
             : "Nunca acessou"}</div>
           <div class="card-actions">
-            <button class="btn btn-ghost btn-sm" onclick='formUsuario(${JSON.stringify(u)})'>${icon("edit")}Editar</button>
+            <button class="btn btn-ghost btn-sm" onclick="_editarUsuario(${u.id})">${icon("edit")}Editar</button>
             ${u.id !== State.uid ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirUsuario(${u.id})">Excluir</button>` : '<span class="meta">Você</span>'}
           </div>
         </div>`).join("")}
@@ -2271,6 +2301,8 @@ async function render() {
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
+  formBaixaId, formLancamentoId,
+  _editarConta, _editarCategoria, _editarContato, _editarVeiculo, _editarUsuario,
   formLancamento, salvarLanc, formBaixa, confirmarBaixa, estornar, excluirLanc,
   formConta, salvarConta, excluirConta,
   formCategoria, salvarCategoria, excluirCategoria,
