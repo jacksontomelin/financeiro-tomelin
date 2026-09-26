@@ -785,33 +785,78 @@ function exportarCSV(tf) {
 
 /* ---------- form lançamento ---------- */
 function formLancamento(l, tipo, pre) {
-  if (pre && !l) l = pre; // pré-preenchimento vindo da NF-e
+  if (pre && !l) l = pre;
   const ed = !!l;
-  const cats = State.cats.filter(c => c.tipo === (l ? l.tipo : tipo));
+  const tipoFinal = tipo || (l && l.tipo) || "despesa";
+  const cats = State.cats.filter(c => c.tipo === tipoFinal);
+  const rec = tipoFinal === "receita";
+
   abrirModal(`
     <div class="modal">
-      <div class="modal-h"><span class="card-ico ${tipo === 'receita' ? 'i-green' : 'i-red'}">${icon(tipo === 'receita' ? 'arrowDown' : 'arrowUp')}</span>
-        <h3>${ed ? 'Editar' : 'Novo'} ${tipo === 'receita' ? 'recebimento' : 'pagamento'}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h">
+        <span class="card-ico ${rec ? 'i-green' : 'i-red'}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
+        <h3>${ed ? "Editar" : "Novo"} ${rec ? "recebimento" : "pagamento"}</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
       <div class="modal-b"><div class="frm">
-        <input type="hidden" id="f-tipo" value="${tipo}">
-        <div class="campo full"><label>Descrição</label><input id="f-desc" value="${ed ? l.descricao : ''}" placeholder="Descrição do lançamento"></div>
-        <div class="campo"><label>Valor (R$)</label><input id="f-valor" type="number" step="0.01" value="${ed ? l.valor : ''}" placeholder="0,00"></div>
-        <div class="campo"><label>Categoria</label><select id="f-cat"><option value="">—</option>${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
-        <div class="campo"><label>Vencimento</label><input id="f-venc" type="date" value="${ed && l.vencimento ? l.vencimento.split('T')[0] : hojeISO()}"></div>
-        <div class="campo"><label>Competência</label><input id="f-comp" type="date" value="${ed && l.data_competencia ? l.data_competencia.split('T')[0] : hojeISO()}"></div>
-        <div class="campo"><label>Conta / carteira</label><select id="f-conta"><option value="">—</option>${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
-        <div class="campo"><label>Recebo de / Pago para</label><select id="f-contato"><option value="">—</option>${State.contatos.map(c => `<option value="${c.id}" ${ed && l.contato_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
+        <input type="hidden" id="f-tipo" value="${tipoFinal}">
+
+        <div class="campo full"><label>Descrição</label>
+          <div class="inp-wrap">
+            <div class="inp-ic">${icon("edit")}</div>
+            <input id="f-desc" value="${ed ? l.descricao : ""}" placeholder="Ex.: Aluguel, Salário...">
+          </div></div>
+
+        <div class="campo"><label>Valor (R$)</label>
+          <div class="inp-wrap">
+            <div class="inp-ic">${icon("cash")}</div>
+            <input id="f-valor" type="number" step="0.01" value="${ed ? l.valor : ""}" placeholder="0,00">
+          </div></div>
+
+        <div class="campo"><label>Categoria</label>
+          <select id="f-cat">
+            <option value="">— Sem categoria —</option>
+            ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""}>${c.icone ? c.icone + " " : ""}${c.nome}</option>`).join("")}
+          </select></div>
+
+        <div class="campo"><label>Vencimento</label>
+          <input id="f-venc" type="date" value="${ed && l.vencimento ? l.vencimento.split("T")[0] : hojeISO()}"></div>
+
+        <div class="campo"><label>Competência</label>
+          <input id="f-comp" type="date" value="${ed && l.data_competencia ? l.data_competencia.split("T")[0] : hojeISO()}"></div>
+
+        <div class="campo"><label>Conta / carteira</label>
+          <select id="f-conta">
+            <option value="">— Qualquer —</option>
+            ${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? "selected" : ""}>${c.nome}</option>`).join("")}
+          </select></div>
+
+        <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
+          <select id="f-contato">
+            <option value="">—</option>
+            ${State.contatos.map(c => `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${c.nome}</option>`).join("")}
+          </select></div>
+
         <div class="campo full"><label>Situação</label>
-          <select id="f-pago"><option value="">Pendente (a ${tipo === 'receita' ? 'receber' : 'pagar'})</option>
-          <option value="1" ${ed && l.data_pagamento ? 'selected' : ''}>Já ${tipo === 'receita' ? 'recebido' : 'pago'}</option></select></div>
-        <div class="campo"><label>Juros (R$)</label><input id="f-juros" type="number" step="0.01" value="${ed && l.juros && +l.juros ? l.juros : ''}" placeholder="0,00"></div>
-        <div class="campo"><label>Multa (R$)</label><input id="f-multa" type="number" step="0.01" value="${ed && l.multa && +l.multa ? l.multa : ''}" placeholder="0,00"></div>
-        <div class="campo full"><label>Observação</label><textarea id="f-obs" placeholder="Opcional">${ed && l.obs ? l.obs : ''}</textarea></div>
+          <select id="f-pago">
+            <option value="">Pendente (a ${rec ? "receber" : "pagar"})</option>
+            <option value="1" ${ed && l.data_pagamento ? "selected" : ""}>Já ${rec ? "recebido ✓" : "pago ✓"}</option>
+          </select></div>
+
+        <div class="campo"><label>Juros (R$)</label>
+          <input id="f-juros" type="number" step="0.01" value="${ed && l.juros && +l.juros ? l.juros : ""}" placeholder="0,00"></div>
+
+        <div class="campo"><label>Multa (R$)</label>
+          <input id="f-multa" type="number" step="0.01" value="${ed && l.multa && +l.multa ? l.multa : ""}" placeholder="0,00"></div>
+
+        <div class="campo full"><label>Observação</label>
+          <textarea id="f-obs" placeholder="Anotações opcionais...">${ed && l.obs ? l.obs : ""}</textarea></div>
       </div></div>
       <div class="modal-f">
-        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-        <button class="btn ${tipo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="salvarLanc(${ed ? l.id : 'null'})">${icon("check")}Salvar</button>
+        <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
+        <button class="btn ${rec ? "btn-green" : "btn-primary"}" onclick="salvarLanc(${ed ? l.id : "null"})">
+          ${icon("check")} ${ed ? "Salvar alterações" : (rec ? "Registrar recebimento" : "Registrar pagamento")}
+        </button>
       </div>
     </div>`);
 }
@@ -870,7 +915,7 @@ function formBaixa(l) {
   abrirModal(`
     <div class="modal" style="max-width:420px">
       <div class="modal-h"><span class="card-ico i-green">${icon("checkCircle")}</span>
-        <h3>Dar baixa</h3><button onclick="fecharModal()">${icon("x")}</button></div>
+        <h3>Dar baixa</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
         <p style="margin-bottom:16px;color:var(--ink-2)">Confirmar ${rec ? 'recebimento' : 'pagamento'} de <b>${l.descricao}</b> no valor de <b class="${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</b>?</p>
         <div class="frm">
@@ -983,7 +1028,7 @@ function formConta(c) {
   const e = c || {};
   abrirModal(`
     <div class="modal">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${c ? "Editar conta" : "Nova conta"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${c ? "Editar conta" : "Nova conta"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Nome</label><input id="c-nome" value="${e.nome || ""}" placeholder="Nome da conta"></div>
         <div class="campo"><label>Tipo</label><select id="c-tipo">
@@ -1059,7 +1104,7 @@ function formCategoria(c, tipoPad) {
   const icones = ["tag","cash","wallet","bank","doc","users","trendUp","pie","calendar","clock","alert","cog"];
   abrirModal(`
     <div class="modal">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("tag")}</span><h3>${c ? "Editar categoria" : "Nova categoria"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h"><span class="card-ico i-navy">${icon("tag")}</span><h3>${c ? "Editar categoria" : "Nova categoria"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Nome</label><input id="k-nome" value="${e.nome || ""}" placeholder="Nome da categoria"></div>
         <div class="campo"><label>Tipo</label><select id="k-tipo">
@@ -1140,7 +1185,7 @@ function formContato(c) {
   const e = c || {};
   abrirModal(`
     <div class="modal">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("users")}</span><h3>${c ? "Editar contato" : "Novo contato"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h"><span class="card-ico i-navy">${icon("users")}</span><h3>${c ? "Editar contato" : "Novo contato"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Nome</label><input id="o-nome" value="${e.nome || ""}" placeholder="Nome do contato"></div>
         <div class="campo"><label>Tipo</label><select id="o-tipo">
@@ -1373,7 +1418,7 @@ function formVeiculo(x) {
   const fipe = (e.tipo_valor || "fipe") === "fipe";
   abrirModal(`
     <div class="modal" style="max-width:640px">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("car")}</span><h3>${x ? "Editar veículo" : "Novo veículo"}</h3><button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h"><span class="card-ico i-navy">${icon("car")}</span><h3>${x ? "Editar veículo" : "Novo veículo"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Apelido / nome</label><input id="v-nome" value="${e.nome || ""}" placeholder="Apelido do veículo"></div>
         <div class="campo"><label>Marca</label><input id="v-marca" value="${e.marca || ""}"></div>
@@ -1732,7 +1777,7 @@ function formUsuario(u) {
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("users")}</span>
         <h3>${u ? "Editar membro" : "Novo membro da família"}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b"><div class="frm">
         <div class="campo full" style="align-items:center;justify-content:center;display:flex;flex-direction:column;gap:8px">
@@ -1823,7 +1868,7 @@ async function verHistoricoLogin(uid, nome) {
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("clock")}</span>
         <h3>Histórico de logins — ${nome}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b">
         ${aviso}
@@ -1876,7 +1921,7 @@ async function abrirLeitorNFe() {
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("receipt")}</span>
         <h3>Ler Nota Fiscal (NF-e / NFC-e)</h3>
-        <button onclick="fecharModal()">${icon("x")}</button>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b">
         <div class="dica azul" style="margin-bottom:16px">
@@ -2016,7 +2061,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("receipt")}</span>
         <h3>${d.emitente || "Cadastrar compra"}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Descrição</label>
@@ -2277,7 +2322,7 @@ async function verCompra(cid) {
     <div class="modal" style="max-width:520px">
       <div class="modal-h"><span class="card-ico i-navy">${icon("receipt")}</span>
         <h3>${c.estabelecimento || "Compra #" + c.id}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button></div>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">${_cardCompra(c)}</div>
       <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button></div>
     </div>`, "lg");
@@ -2291,7 +2336,7 @@ async function verParcelasCompra(cid) {
     <div class="modal" style="max-width:480px">
       <div class="modal-h"><span class="card-ico i-gold">${icon("wallet")}</span>
         <h3>Parcelas — ${c.estabelecimento || 'Compra'}</h3>
-        <button onclick="fecharModal()">${icon("x")}</button></div>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
         <div class="sub" style="margin-bottom:10px">${pm.cartao_nome} · ${pm.total_parcelas}x de ${money(pm.valor_parcela)}</div>
         ${pm.parcelas.map(p => `
@@ -2337,7 +2382,7 @@ async function verParcelasPendentes() {
     <div class="modal" style="max-width:520px">
       <div class="modal-h"><span class="card-ico i-gold">${icon("clock")}</span>
         <h3>Parcelas pendentes</h3>
-        <button onclick="fecharModal()">${icon("x")}</button></div>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
         ${parcelas.length === 0 ? `<div class="empty" style="padding:30px">${icon("checkCircle")}<p>Nenhuma parcela pendente!</p></div>` :
           parcelas.map(p => `
@@ -2373,6 +2418,23 @@ async function render() {
   }
 }
 
+
+/* Ripple effect em todos os .btn */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn");
+  if (!btn || btn.classList.contains("btn-icon") || btn.classList.contains("btn-ghost")) return;
+  const r = document.createElement("span");
+  r.className = "ripple";
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.5;
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  btn.appendChild(r);
+  r.addEventListener("animationend", () => r.remove());
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") fecharModal();
+});
 // expõe funções usadas por onclick inline
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
