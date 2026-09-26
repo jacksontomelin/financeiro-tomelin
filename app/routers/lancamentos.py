@@ -148,9 +148,8 @@ def _auto_recibo(l: models.Lancamento):
 
 
 @router.get("/{lid}/recibo.pdf")
-def recibo_pdf(lid: int, db: Session = Depends(get_db)):
+def recibo_pdf(lid: int, estilo: str = "padrao", db: Session = Depends(get_db)):
     from fastapi import Response
-    from .. import pdf as pdfgen
     l = db.query(models.Lancamento).options(
         joinedload(models.Lancamento.categoria),
         joinedload(models.Lancamento.contato),
@@ -159,7 +158,12 @@ def recibo_pdf(lid: int, db: Session = Depends(get_db)):
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
     cat, conta, contato = _ctx(l)
-    data = pdfgen.recibo(l, categoria=cat, conta=conta, contato=contato)
+    if estilo == "matricial":
+        from .. import pdf_matricial as pdfgen
+        data = pdfgen.recibo_matricial(l, categoria=cat, conta=conta, contato=contato)
+    else:
+        from .. import pdf as pdfgen
+        data = pdfgen.recibo(l, categoria=cat, conta=conta, contato=contato)
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="recibo-{lid:04d}.pdf"'})
 

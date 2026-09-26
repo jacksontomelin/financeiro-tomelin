@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from .. import service, pdf as pdfgen
+from .. import service, pdf as pdfgen, pdf_matricial as pdfgen_mtx
 from ..security import usuario_atual
 
 router = APIRouter(prefix="/api/relatorios", tags=["relatorios"],
@@ -52,20 +52,29 @@ def _pdf(data: bytes, filename: str):
 
 
 @router.get("/balancete.pdf")
-def balancete_pdf(de: date | None = None, ate: date | None = None, db: Session = Depends(get_db)):
+def balancete_pdf(de: date | None = None, ate: date | None = None, estilo: str = "padrao",
+                  db: Session = Depends(get_db)):
     de, ate = _periodo(de, ate)
     d = service.balancete(db, de, ate)
     label = f"{de.strftime('%d/%m/%Y')} a {ate.strftime('%d/%m/%Y')}"
-    data = pdfgen.balancete(label, d["receitas"], d["despesas"],
-                            d["total_receitas"], d["total_despesas"], d["juros"])
+    if estilo == "matricial":
+        data = pdfgen_mtx.balancete_matricial(label, d["receitas"], d["despesas"],
+                                              d["total_receitas"], d["total_despesas"], d["juros"])
+    else:
+        data = pdfgen.balancete(label, d["receitas"], d["despesas"],
+                                d["total_receitas"], d["total_despesas"], d["juros"])
     return _pdf(data, f"balancete-{de.isoformat()}.pdf")
 
 
 @router.get("/patrimonio.pdf")
-def patrimonio_pdf(db: Session = Depends(get_db)):
+def patrimonio_pdf(estilo: str = "padrao", db: Session = Depends(get_db)):
     p = service.patrimonio(db)
     contas = [(c["nome"], c["saldo"]) for c in p["contas"]]
     veic = [(v["nome"], v["valor"], v["financiamento"], v["liquido"]) for v in p["veiculos"]]
-    data = pdfgen.patrimonio(contas, veic, p["total_contas"],
-                             p["total_veiculos"], p["total_financiamentos"])
+    if estilo == "matricial":
+        data = pdfgen_mtx.patrimonio_matricial(contas, veic, p["total_contas"],
+                                               p["total_veiculos"], p["total_financiamentos"])
+    else:
+        data = pdfgen.patrimonio(contas, veic, p["total_contas"],
+                                 p["total_veiculos"], p["total_financiamentos"])
     return _pdf(data, "patrimonio.pdf")

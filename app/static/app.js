@@ -747,6 +747,7 @@ async function recarregarTabela() {
           ${podeBaixar ? `<button class="btn-icon" title="Dar baixa" onclick='formBaixa(${JSON.stringify(l)})'>${icon("check")}</button>`
                        : `<button class="btn-icon" title="Estornar" onclick="estornar(${l.id})">${icon("refresh")}</button>`}
           <button class="btn-icon" title="Recibo em PDF" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">${icon("receipt")}</button>
+          <button class="btn-icon" title="Recibo estilo cupom" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf?estilo=matricial')">${icon("terminal")}</button>
           <button class="btn-icon" title="Enviar recibo no WhatsApp" onclick="reciboWhats(${l.id})">${icon("whatsapp")}</button>
           <button class="btn-icon" title="Editar" onclick='formLancamento(${JSON.stringify(l)},"${l.tipo}")'>${icon("edit")}</button>
           <button class="btn-icon" title="Excluir" onclick="excluirLanc(${l.id})">${icon("trash")}</button>
@@ -1389,7 +1390,9 @@ async function viewRelatorios(v) {
       </div>
       <div class="grow"></div>
       <button class="btn btn-primary" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete PDF</button>
+      <button class="btn btn-ghost" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Estilo cupom</button>
       <button class="btn btn-gold" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio PDF</button>
+      <button class="btn btn-ghost" onclick="abrirPDF('/api/relatorios/patrimonio.pdf?estilo=matricial')">${icon("terminal")}Estilo cupom</button>
     </div>
 
     <div class="grid-2">
