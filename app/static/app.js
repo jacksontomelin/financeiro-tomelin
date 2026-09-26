@@ -1187,48 +1187,86 @@ async function viewWhatsapp(v) {
   let st = {};
   try { st = await api("/api/whatsapp/status"); } catch { st = {}; }
   const ativo = !!st.ativo;
-  const cmds = [
-    { n: "1", c: "saldo", d: "Saldo das contas" },
-    { n: "2", c: "vencimentos", d: "Atrasados + próximos 7 dias" },
-    { n: "3", c: "resumo", d: "Resumo do mês" },
-    { n: "4", c: "apagar", d: "Contas a pagar" },
-    { n: "5", c: "areceber", d: "Contas a receber" },
-    { n: "6", c: "patrimonio", d: "Contas + veículos" },
-    { n: "7", c: "juros", d: "Juros e multas do ano" },
-    { n: "0", c: "menu", d: "Mostra o menu" },
+
+  const consultas = [
+    { n:"1",  c:"saldo",       d:"Saldo de todas as contas" },
+    { n:"2",  c:"vencer",      d:"Atrasados + próximos 7 dias" },
+    { n:"3",  c:"resumo",      d:"Resumo do mês" },
+    { n:"4",  c:"pagar",       d:"Contas a pagar" },
+    { n:"5",  c:"receber",     d:"Contas a receber" },
+    { n:"6",  c:"patrimonio",  d:"Contas + veículos" },
+    { n:"7",  c:"juros",       d:"Juros e multas do ano" },
+    { n:"8",  c:"metas",       d:"Metas financeiras e progresso" },
+    { n:"9",  c:"categorias",  d:"Lista de categorias" },
+    { n:"10", c:"contas",      d:"Saldos por conta bancária" },
+    { n:"0",  c:"menu",        d:"Exibe o menu completo" },
   ];
+  const cadastros = [
+    { ex:"despesa 150 mercado",      d:"Lança despesa rápida" },
+    { ex:"receita 3000 salario",     d:"Lança receita rápida" },
+    { ex:"baixa 42",                 d:"Dá baixa no lançamento #42" },
+    { ex:"buscar aluguel",           d:"Busca lançamentos por texto" },
+    { ex:"ultimo",                   d:"Último lançamento cadastrado" },
+    { ex:"aporte 500 reserva",       d:"Aporta em meta financeira" },
+    { ex:"nf https://sat.sef.sc.gov.br/...", d:"Consulta NF-e pelo QR code" },
+  ];
+
   v.innerHTML = `
     <div class="wa-card" style="margin-bottom:18px">
       <div class="wa-ico">${icon("whatsapp")}</div>
       <div class="grow">
-        <div class="t">Central de avisos no WhatsApp</div>
-        <div class="s"><span class="status-dot ${ativo ? "on" : "off"}"></span>${ativo ? "Integração ativa" : "Integração desativada (defina as variáveis no servidor)"}</div>
+        <div class="t">WhatsApp — Central de controle financeiro</div>
+        <div class="s"><span class="status-dot ${ativo ? "on" : "off"}"></span>
+          ${ativo ? "Integração ativa com " + (st.gateway || "gateway") : "Desativada — configure as variáveis no Coolify"}</div>
       </div>
-      <button class="btn btn-green" onclick="testarWhatsapp(this)" ${ativo ? "" : "disabled"}>${icon("send")}Enviar teste</button>
+      <button class="btn btn-green" onclick="testarWhatsapp(this)" ${ativo ? "" : "disabled"}>${icon("send")}Testar</button>
     </div>
 
-    <div class="grid-2" style="grid-template-columns:1fr 1fr">
+    <div class="dica azul" style="margin-bottom:16px">
+      ${icon("whatsapp")}
+      <div>Adicione o número do WhatsApp no grupo de controle e configure <b>WHATSAPP_GRUPO</b> no Coolify com o ID do grupo (termina em @g.us). O sistema responde automaticamente aos comandos abaixo.</div>
+    </div>
+
+    <div class="grid-2" style="grid-template-columns:1fr 1.2fr;gap:16px">
       <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-navy">${icon("cog")}</span><div class="grow"><h3>Configuração atual</h3></div></div>
-        <table style="width:100%;font-size:13.5px">
+        <div class="card-h"><span class="card-ico i-navy">${icon("cog")}</span><div class="grow"><h3>Configuração</h3></div></div>
+        <table style="width:100%;font-size:13px">
           <tbody>
-            <tr><td style="padding:7px 0;color:var(--ink-3)">Gateway</td><td style="text-align:right;font-family:monospace">${st.gateway || "—"}</td></tr>
-            <tr><td style="padding:7px 0;color:var(--ink-3)">Grupo de controle</td><td style="text-align:right;font-family:monospace">${st.grupo || "—"}</td></tr>
-            <tr><td style="padding:7px 0;color:var(--ink-3)">Alerta diário</td><td style="text-align:right">${st.alerta_hora != null ? String(st.alerta_hora).padStart(2, "0") + ":00" : "—"}</td></tr>
-            <tr><td style="padding:7px 0;color:var(--ink-3)">Antecedência</td><td style="text-align:right">${st.alerta_dias_antes ?? "—"} dia(s)</td></tr>
-            <tr><td style="padding:7px 0;color:var(--ink-3)">Resumo semanal</td><td style="text-align:right">${st.resumo_semanal ? "Ativo (seg.)" : "Desativado"}</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Gateway</td><td style="text-align:right;font-size:12px;font-family:monospace">${st.gateway || "—"}</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Grupo</td><td style="text-align:right;font-size:12px;font-family:monospace">${st.grupo || "—"}</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Alerta diário</td><td style="text-align:right">${st.alerta_hora != null ? String(st.alerta_hora).padStart(2,"0")+":00" : "—"}</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Antecedência</td><td style="text-align:right">${st.alerta_dias_antes ?? "—"} dia(s)</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Resumo semanal</td><td style="text-align:right">${st.resumo_semanal ? "Ativo (seg.)" : "Desativado"}</td></tr>
+            <tr><td style="padding:6px 0;color:var(--ink-3)">Fechamento diário</td><td style="text-align:right">${st.fechamento_diario ? "Ativo" : "Desativado"}</td></tr>
           </tbody>
         </table>
-        <div class="login-hint" style="margin-top:12px">Configure em <b>Configurações</b> no menu lateral — WhatsApp, FIPE, alertas e PDFs, tudo pelo sistema.</div>
       </div>
 
       <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span><div class="grow"><h3>Comandos no grupo</h3><div class="sub">Responde a número ou palavra</div></div></div>
+        <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span>
+          <div class="grow"><h3>Consultas</h3><div class="sub">Número ou palavra-chave</div></div></div>
         <div class="cmd-grid">
-          ${cmds.map(c => `<div class="cmd"><span class="n">${c.n}</span><div><div class="c">${c.c}</div><div class="dsc">${c.d}</div></div></div>`).join("")}
+          ${consultas.map(c => `<div class="cmd"><span class="n">${c.n}</span><div><div class="c">${c.c}</div><div class="dsc">${c.d}</div></div></div>`).join("")}
         </div>
-        <div class="login-hint" style="margin-top:14px">O sistema envia sozinho: alerta de vencimentos todo dia às ${st.alerta_hora != null ? String(st.alerta_hora).padStart(2, "0") : "08"}:00 (só quando há algo) e um resumo semanal na segunda-feira. Silencioso quando não há nada a avisar — igual ao Sentinela.</div>
       </div>
+    </div>
+
+    <div class="card card-pad" style="margin-top:16px">
+      <div class="card-h"><span class="card-ico i-gold">${icon("edit")}</span>
+        <div class="grow"><h3>Cadastros e ações pelo WhatsApp</h3><div class="sub">Envie o comando no grupo e o sistema processa na hora</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px">
+        ${cadastros.map(c => `
+          <div style="background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--line)">
+            <div style="font-family:monospace;font-size:12.5px;color:var(--navy);font-weight:600;margin-bottom:4px">${c.ex}</div>
+            <div style="font-size:12px;color:var(--ink-2)">${c.d}</div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="dica verde" style="margin-top:16px">
+      ${icon("checkCircle")}
+      <div>Automático: alerta de vencimentos às ${st.alerta_hora != null ? String(st.alerta_hora).padStart(2,"0") : "08"}:00 (só quando há algo pendente) e resumo semanal na segunda-feira. Silencioso quando tudo está em dia — igual ao Sentinela.</div>
     </div>`;
 }
 async function testarWhatsapp(btn) {

@@ -1,3 +1,4 @@
+"""Webhook e endpoints do WhatsApp — integração com gateway Baileys (whatsapp.jackson)."""
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
@@ -9,42 +10,65 @@ from .. import whatsapp
 router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
 
 
-def _extrai(data: dict) -> tuple[str, str]:
-    """Tenta achar (grupo, texto) em vários formatos de payload de gateway."""
+def _extrai(data: dict) -> tuple[str, str, str]:
+    """
+    Extrai (grupo, texto, remetente) de vários formatos de payload Baileys/Evolution.
+    Retorna tupla de strings vazias se não achar.
+    """
     def first(*keys):
         for k in keys:
             if k in data and data[k]:
                 return str(data[k])
         return ""
-    grupo = first("grupo", "group", "from", "remoteJid", "chatId", "de", "para")
-    texto = first("mensagem", "message", "texto", "text", "body", "conteudo")
-    # formatos aninhados comuns (Baileys / whatsapp.jackson)
-    if not texto and isinstance(data.get("data"), dict):
-        return _extrai(data["data"])
-    if not texto and isinstance(data.get("message"), dict):
-        return _extrai(data["message"])
-    return grupo, texto
+
+    # formato Baileys 6.x via whatsapp.jackson
+    grupo = first("grupo", "group", "from", "remoteJid", "chatId", "de", "para", "jid")
+    texto = first("mensagem", "message", "texto", "text", "body", "conteudo", "content")
+    remetente = first("remetente", "sender", "senderJid", "author", "pushName", "numero")
+
+    # formatos aninhados (Evolution API, outros gateways)
+    if not texto:
+        for campo in ("data", "message", "evento", "event", "payload"):
+            if isinstance(data.get(campo), dict):
+                g2, t2, r2 = _extrai(data[campo])
+                if t2:
+                    grupo = grupo or g2
+                    remetente = remetente or r2
+                    return grupo, t2, remetente
+
+    # Baileys aninhado: data.message.conversation ou data.message.extendedTextMessage.text
+    msg = data.get("message", {})
+    if isinstance(msg, dict):
+        texto = texto or msg.get("conversation", "") or \
+                (msg.get("extendedTextMessage") or {}).get("text", "")
+
+    return grupo, texto, remetente
 
 
 @router.post("/webhook")
 async def webhook(req: Request, db: Session = Depends(get_db)):
-    """Recebe mensagens do grupo de controle e responde a comandos (estilo Sentinela)."""
+    """Recebe mensagens do grupo e responde a comandos."""
     try:
-        data = await req.json()
+        raw = await req.json()
     except Exception:
         return {"ok": False, "erro": "payload inválido"}
 
-    grupo, texto = _extrai(data if isinstance(data, dict) else {})
+    data = raw if isinstance(raw, dict) else {}
+    grupo, texto, remetente = _extrai(data)
 
-    # se um grupo de controle está configurado, só responde a ele
+    # Se um grupo de controle está configurado, só responde a ele
     alvo = settings.WHATSAPP_GRUPO
     if alvo and grupo and alvo not in grupo and grupo not in alvo:
         return {"ok": True, "ignorado": "fora do grupo de controle"}
 
-    resposta = whatsapp.processar_comando(texto, db)
+    if not texto:
+        return {"ok": True, "ignorado": "sem texto"}
+
+    resposta = whatsapp.processar_comando(texto, db, remetente=remetente or grupo)
     if resposta:
         whatsapp.enviar(resposta, grupo or alvo)
-        return {"ok": True, "respondido": True}
+        return {"ok": True, "respondido": True, "comando": texto[:80]}
+
     return {"ok": True, "respondido": False}
 
 
@@ -57,12 +81,14 @@ def status():
         "alerta_hora": settings.ALERTA_HORA,
         "alerta_dias_antes": settings.ALERTA_DIAS_ANTES,
         "resumo_semanal": settings.RESUMO_SEMANAL,
+        "fechamento_diario": settings.FECHAMENTO_DIARIO,
     }
 
 
 @router.post("/teste", dependencies=[Depends(usuario_atual)])
 def teste(db: Session = Depends(get_db)):
     from .. import service
-    ok = whatsapp.enviar("✅ *Teste Tomelin Gestão Financeira*\n\n"
-                         + service.texto_resumo_mes(db))
+    ok = whatsapp.enviar(
+        "✅ *Teste Tomelin Gestão Financeira*\n\n" +
+        service.texto_resumo_mes(db))
     return {"enviado": ok}
