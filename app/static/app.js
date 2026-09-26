@@ -328,6 +328,7 @@ const NAV = [
   { id: "receber", nome: "Contas a receber", ic: "arrowDown", sub: "Recebimentos previstos e realizados" },
   { id: "pagar", nome: "Contas a pagar", ic: "arrowUp", sub: "Pagamentos previstos e realizados" },
   { id: "lancamentos", nome: "Todos os lançamentos", ic: "wallet", sub: "Histórico completo de movimentações" },
+  { id: "compras", nome: "Compras e cartões", ic: "receipt", sub: "Itens comprados e parcelas do cartão" },
   { sec: "Patrimônio" },
   { id: "veiculos", nome: "Veículos", ic: "car", sub: "Carros e financiamentos (FIPE ou valor fixo)" },
   { sec: "Cadastros" },
@@ -415,6 +416,7 @@ async function setView(id) {
     else if (id === "pagar") await viewLancamentos(v, "despesa");
     else if (id === "receber") await viewLancamentos(v, "receita");
     else if (id === "lancamentos") await viewLancamentos(v, null);
+    else if (id === "compras") await viewCompras(v);
     else if (id === "contas") await viewContas(v);
     else if (id === "categorias") await viewCategorias(v);
     else if (id === "contatos") await viewContatos(v);
@@ -1881,27 +1883,375 @@ function _renderPreviewNFe(d) {
 
 async function cadastrarDaNFe() {
   if (!_nfeDados) return;
-  const d = _nfeDados;
   fecharModal();
+  abrirFormCompra(null, _nfeDados);
+}
 
-  // Monta o pré-preenchimento
-  const pre = {
-    descricao: d.descricao_sugerida || d.emitente || "Compra NF-e",
-    valor: d.valor_total || 0,
-    tipo: "despesa",
-    data_vencimento: d.data_emissao || new Date().toISOString().slice(0,10),
-    data_competencia: d.data_emissao || new Date().toISOString().slice(0,10),
-    status: "pago",
-    data_pagamento: d.data_emissao || new Date().toISOString().slice(0,10),
-    obs: d.obs || "",
-    contato_id: d.contato_id_sugerido || null,
-    categoria_id: d.categoria_sugerida?.id || null,
+/* ============================================================
+   FORM DE COMPRA — itens da nota + parcelamento no cartão
+   ============================================================ */
+let COMPRA_ITENS = [];
+let COMPRA_PARCELADO = false;
+
+function abrirFormCompra(lancamentoExistente, nfeDados) {
+  const d = nfeDados || {};
+  COMPRA_ITENS = (d.itens || []).map(i => ({
+    descricao: i.descricao, quantidade: 1,
+    valor_unitario: i.valor, valor_total: i.valor,
+  }));
+  COMPRA_PARCELADO = false;
+
+  const cartoes = State.contas.filter(c => c.tipo === "cartao");
+  const valorTotal = d.valor_total || 0;
+  const dataRef = d.data_emissao || hojeISO();
+
+  abrirModal(`
+    <div class="modal" style="max-width:640px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("receipt")}</span>
+        <h3>${d.emitente || "Cadastrar compra"}</h3>
+        <button onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b"><div class="frm">
+        <div class="campo full"><label>Descrição</label>
+          <input id="fc-desc" value="${d.descricao_sugerida || d.emitente || ''}" placeholder="Descrição do lançamento"></div>
+        <div class="campo"><label>Valor total (R$)</label>
+          <input id="fc-valor" type="number" step="0.01" value="${valorTotal}" oninput="_recalcularParcelas()"></div>
+        <div class="campo"><label>Categoria</label>
+          <select id="fc-cat"><option value="">—</option>${State.cats.filter(c => c.tipo === 'despesa').map(c =>
+            `<option value="${c.id}" ${d.categoria_sugerida?.id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
+        <div class="campo"><label>Data da compra</label>
+          <input id="fc-data" type="date" value="${dataRef}"></div>
+        <div class="campo"><label>Estabelecimento</label>
+          <input id="fc-estab" value="${d.emitente || ''}" placeholder="Nome da loja"></div>
+        <div class="campo full"><label>Como foi pago?</label>
+          <select id="fc-forma" onchange="_toggleParcelamento()">
+            <option value="avista">À vista (débito, pix, dinheiro)</option>
+            <option value="cartao">Cartão de crédito parcelado</option>
+          </select></div>
+
+        <div id="fc-parcel-box" class="campo full hidden" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px">
+          <div class="frm" style="grid-template-columns:1fr 1fr">
+            <div class="campo"><label>Cartão usado</label>
+              <select id="fc-cartao">
+                ${cartoes.length ? cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")
+                  : `<option value="">Nenhum cartão cadastrado</option>`}
+              </select></div>
+            <div class="campo"><label>Nº de parcelas</label>
+              <input id="fc-parcelas" type="number" min="1" max="48" value="1" oninput="_recalcularParcelas()"></div>
+            <div class="campo"><label>1ª parcela vence em</label>
+              <input id="fc-1parc" type="date" value="${_add30dias(dataRef)}" oninput="_recalcularParcelas()"></div>
+            <div class="campo"><label>Valor de cada parcela</label>
+              <div id="fc-valor-parcela" class="mono-num" style="padding-top:8px;font-weight:700;color:var(--navy)">—</div></div>
+          </div>
+          ${cartoes.length === 0 ? `<div class="dica ouro" style="margin-top:8px">${icon("alert")}<div>Cadastre um cartão em <b>Contas</b> (tipo "cartão") antes de usar o parcelamento.</div></div>` : ""}
+        </div>
+
+        <div class="campo full">
+          <label>Itens da compra ${COMPRA_ITENS.length ? `(${COMPRA_ITENS.length})` : ''}</label>
+          <div id="fc-itens-wrap">${_renderItensCompra()}</div>
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="_addItemCompra()">${icon("plus")}Adicionar item</button>
+        </div>
+      </div></div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCompra()">${icon("check")}Salvar compra</button>
+      </div>
+    </div>`, "lg");
+}
+
+function _add30dias(dataISO) {
+  const d = dataISO ? new Date(dataISO + "T12:00:00") : new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function _toggleParcelamento() {
+  const forma = document.getElementById("fc-forma").value;
+  COMPRA_PARCELADO = forma === "cartao";
+  document.getElementById("fc-parcel-box").classList.toggle("hidden", !COMPRA_PARCELADO);
+  if (COMPRA_PARCELADO) _recalcularParcelas();
+}
+
+function _recalcularParcelas() {
+  if (!COMPRA_PARCELADO) return;
+  const valor = parseFloat(document.getElementById("fc-valor")?.value || "0");
+  const n = Math.max(1, parseInt(document.getElementById("fc-parcelas")?.value || "1"));
+  const el = document.getElementById("fc-valor-parcela");
+  if (el) el.textContent = n > 0 ? `${n}x de ${money(valor / n)}` : "—";
+}
+
+function _renderItensCompra() {
+  if (!COMPRA_ITENS.length) {
+    return `<div class="empty" style="padding:16px">${icon("receipt")}<p>Nenhum item — adicione manualmente ou volte e leia o QR code da nota.</p></div>`;
+  }
+  return `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="background:var(--bg)">
+        <th style="padding:6px 8px;text-align:left;color:var(--ink-2)">Item</th>
+        <th style="padding:6px 8px;text-align:right;color:var(--ink-2);width:70px">Qtd</th>
+        <th style="padding:6px 8px;text-align:right;color:var(--ink-2);width:100px">Valor</th>
+        <th style="width:32px"></th>
+      </tr></thead>
+      <tbody>
+        ${COMPRA_ITENS.map((it, idx) => `<tr style="border-top:1px solid var(--line)">
+          <td style="padding:4px 6px"><input value="${it.descricao}" oninput="_editarItem(${idx},'descricao',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;padding:4px"></td>
+          <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.quantidade}" oninput="_editarItem(${idx},'quantidade',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px"></td>
+          <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.valor_total}" oninput="_editarItem(${idx},'valor_total',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px;font-family:monospace"></td>
+          <td><button class="btn-icon" style="padding:4px" onclick="_removerItem(${idx})">${icon("trash")}</button></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function _editarItem(idx, campo, valor) {
+  if (!COMPRA_ITENS[idx]) return;
+  COMPRA_ITENS[idx][campo] = campo === "descricao" ? valor : parseFloat(valor || "0");
+}
+
+function _addItemCompra() {
+  COMPRA_ITENS.push({ descricao: "", quantidade: 1, valor_unitario: 0, valor_total: 0 });
+  document.getElementById("fc-itens-wrap").innerHTML = _renderItensCompra();
+}
+
+function _removerItem(idx) {
+  COMPRA_ITENS.splice(idx, 1);
+  document.getElementById("fc-itens-wrap").innerHTML = _renderItensCompra();
+}
+
+async function salvarCompra() {
+  const descricao = $("#fc-desc").value.trim();
+  const valor = parseFloat($("#fc-valor").value || "0");
+  if (!descricao || !valor) { toast("Preencha descrição e valor.", "err"); return; }
+
+  const dataCompra = $("#fc-data").value || hojeISO();
+  const forma = $("#fc-forma").value;
+  const parcelado = forma === "cartao";
+
+  const bodyLanc = {
+    descricao, tipo: "despesa", valor,
+    categoria_id: +$("#fc-cat").value || null,
+    data_vencimento: dataCompra, data_competencia: dataCompra,
+    data_pagamento: parcelado ? null : dataCompra,  // parcelado só "paga" conforme as parcelas
+    obs: $("#fc-estab").value ? `Compra em ${$("#fc-estab").value}` : null,
   };
 
-  // Abre o form de lançamento pré-preenchido com os dados da NF-e
-  formLancamento(null, "despesa", pre);
-  toast("Dados da NF-e carregados! Confira e salve o lançamento.", "ok");
+  try {
+    const lanc = await api("/api/lancamentos", { method: "POST", body: JSON.stringify(bodyLanc) });
+
+    const bodyCompra = {
+      lancamento_id: lanc.id,
+      estabelecimento: $("#fc-estab").value || null,
+      cnpj_emitente: _nfeDados?.cnpj_emitente || null,
+      numero_nota: _nfeDados?.numero_nota || null,
+      chave_acesso: _nfeDados?.chave || null,
+      data_emissao: dataCompra,
+      uf: _nfeDados?.uf || null,
+      itens: COMPRA_ITENS.filter(i => i.descricao && i.valor_total).map(i => ({
+        descricao: i.descricao, quantidade: i.quantidade || 1,
+        valor_unitario: i.valor_unitario || (i.valor_total / (i.quantidade || 1)),
+        valor_total: i.valor_total,
+      })),
+    };
+
+    if (parcelado) {
+      const cartaoId = +$("#fc-cartao")?.value;
+      if (!cartaoId) { toast("Selecione um cartão para o parcelamento.", "err"); return; }
+      bodyCompra.parcelamento = {
+        cartao_id: cartaoId,
+        total_parcelas: parseInt($("#fc-parcelas").value || "1"),
+        primeira_parcela_data: $("#fc-1parc").value || _add30dias(dataCompra),
+      };
+    }
+
+    await api("/api/compras", { method: "POST", body: JSON.stringify(bodyCompra) });
+
+    fecharModal();
+    toast("Compra cadastrada com sucesso!", "ok");
+    await recarregarTabela(); atualizarBadge();
+  } catch (e) {
+    toast(e.message, "err");
+  }
 }
+
+
+/* ============================================================
+   VIEW: COMPRAS E CARTÕES — itens comprados + controle de parcelas
+   ============================================================ */
+async function viewCompras(v) {
+  const [compras, parcelasPend] = await Promise.all([
+    api("/api/compras"),
+    api("/api/compras/resumo/parcelas-pendentes"),
+  ]);
+
+  const totalParcelasPend = parcelasPend.length;
+  const somaParcelasPend = parcelasPend.reduce((s, p) => s + p.valor, 0);
+  const atrasadas = parcelasPend.filter(p => p.status === "atrasada");
+
+  v.innerHTML = `
+    <div class="toolbar">
+      <div><h2 style="margin:0;color:var(--navy)">Compras e cartões</h2>
+        <div class="sub">Itens comprados e controle de parcelamento</div></div>
+      <div class="grow"></div>
+      <button class="btn btn-ghost" onclick="verParcelasPendentes()">${icon("clock")}Parcelas pendentes${totalParcelasPend ? ` (${totalParcelasPend})` : ''}</button>
+    </div>
+
+    ${atrasadas.length ? `<div class="dica vermelho" style="margin-bottom:14px">${icon("alert")}<div><b>${atrasadas.length} parcela(s) atrasada(s)</b> — total de ${money(atrasadas.reduce((s,p)=>s+p.valor,0))}.</div></div>` : ""}
+
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi navy"><div class="lab"><span class="i i-navy">${icon("receipt")}</span>Compras registradas</div><div class="val mono-num">${compras.length}</div><div class="meta">com itens detalhados</div></div>
+      <div class="kpi gold"><div class="lab"><span class="i i-gold">${icon("wallet")}</span>Parcelas em aberto</div><div class="val mono-num">${totalParcelasPend}</div><div class="meta">${money(somaParcelasPend)}</div></div>
+    </div>
+
+    ${compras.length === 0 ? `
+      <div class="empty" style="padding:50px 20px">
+        ${icon("receipt")}
+        <p>Nenhuma compra detalhada ainda.</p>
+        <div class="sub">Use "Ler Nota Fiscal" em Lançamentos para cadastrar compras com itens e parcelamento.</div>
+      </div>` : compras.map(c => _cardCompra(c)).join("")}
+  `;
+}
+
+function _cardCompra(c) {
+  const pm = c.parcelamento;
+  const progresso = pm ? Math.round((pm.parcelas_pagas / pm.total_parcelas) * 100) : 0;
+  return `
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;gap:12px;cursor:pointer" onclick="_toggleItensCompra(${c.id})">
+        <span class="card-ico i-navy">${icon("receipt")}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--ink)">${c.estabelecimento || "Compra #" + c.id}</div>
+          <div class="sub">${c.numero_nota ? "NF " + c.numero_nota + " · " : ""}${c.data_emissao ? dataBR(c.data_emissao) : ""} ${c.uf ? "· " + c.uf : ""}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="mono-num" style="font-weight:700;color:var(--navy)">${money(c.valor_itens)}</div>
+          <div class="sub">${c.total_itens} ${c.total_itens === 1 ? 'item' : 'itens'}</div>
+        </div>
+      </div>
+
+      ${pm ? `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span class="sub">${icon("wallet")} ${pm.cartao_nome || "Cartão"} · ${pm.total_parcelas}x de ${money(pm.valor_parcela)}</span>
+            <span class="sub"><b>${pm.parcelas_pagas}/${pm.total_parcelas}</b> pagas</span>
+          </div>
+          <div style="background:var(--bg);border-radius:8px;height:8px;overflow:hidden">
+            <div style="background:var(--green,#2F817A);height:100%;width:${progresso}%;transition:width .3s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span class="sub">Pago: ${money(pm.valor_pago)}</span>
+            <span class="sub">Falta: ${money(pm.valor_restante)}</span>
+          </div>
+        </div>` : ''}
+
+      <div id="itens-compra-${c.id}" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <tbody>
+            ${c.itens.map(i => `<tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:6px 4px;color:var(--ink)">${i.descricao}</td>
+              <td style="padding:6px 4px;text-align:center;color:var(--ink-2);width:60px">${i.quantidade > 1 ? i.quantidade + 'x' : ''}</td>
+              <td style="padding:6px 4px;text-align:right;color:var(--ink);font-family:monospace">${money(i.valor_total)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+        ${pm ? `<button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="verParcelasCompra(${c.id})">${icon("clock")}Ver parcelas</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function _toggleItensCompra(cid) {
+  const el = document.getElementById(`itens-compra-${cid}`);
+  if (el) el.classList.toggle("hidden");
+}
+
+async function verCompra(cid) {
+  const c = await api(`/api/compras/${cid}`);
+  abrirModal(`
+    <div class="modal" style="max-width:520px">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("receipt")}</span>
+        <h3>${c.estabelecimento || "Compra #" + c.id}</h3>
+        <button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">${_cardCompra(c)}</div>
+      <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button></div>
+    </div>`, "lg");
+}
+
+async function verParcelasCompra(cid) {
+  const c = await api(`/api/compras/${cid}`);
+  const pm = c.parcelamento;
+  if (!pm) return;
+  abrirModal(`
+    <div class="modal" style="max-width:480px">
+      <div class="modal-h"><span class="card-ico i-gold">${icon("wallet")}</span>
+        <h3>Parcelas — ${c.estabelecimento || 'Compra'}</h3>
+        <button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        <div class="sub" style="margin-bottom:10px">${pm.cartao_nome} · ${pm.total_parcelas}x de ${money(pm.valor_parcela)}</div>
+        ${pm.parcelas.map(p => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+            <span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;
+              background:${p.paga ? '#2F817A18' : p.status === 'atrasada' ? '#B4503E18' : 'var(--bg)'};
+              color:${p.paga ? '#2F817A' : p.status === 'atrasada' ? '#B4503E' : 'var(--ink-2)'}">${p.numero}</span>
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--ink)">${money(p.valor)}</div>
+              <div class="sub">${dataBR(p.data_vencimento)} ${p.paga ? '· pago em ' + dataBR(p.data_pagamento) : ''}</div>
+            </div>
+            <span class="tag ${p.paga ? 'pago' : p.status === 'atrasada' ? 'atrasado' : 'pendente'}">${p.paga ? 'Paga' : p.status === 'atrasada' ? 'Atrasada' : 'Pendente'}</span>
+            ${!p.paga ? `<button class="btn-icon" title="Marcar como paga" onclick="pagarParcela(${p.id}, ${cid})">${icon("check")}</button>`
+                      : `<button class="btn-icon" title="Estornar" onclick="estornarParcela(${p.id}, ${cid})">${icon("refresh")}</button>`}
+          </div>`).join("")}
+      </div>
+      <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button></div>
+    </div>`, "lg");
+}
+
+async function pagarParcela(pid, cid) {
+  try {
+    await api(`/api/compras/parcelas/${pid}/pagar`, { method: "POST" });
+    toast("Parcela paga!", "ok");
+    fecharModal();
+    if (cid) verParcelasCompra(cid);
+    if (State.view === "compras") setView("compras");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function estornarParcela(pid, cid) {
+  try {
+    await api(`/api/compras/parcelas/${pid}/estornar`, { method: "POST" });
+    toast("Parcela estornada", "ok");
+    if (cid) verParcelasCompra(cid);
+    if (State.view === "compras") setView("compras");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function verParcelasPendentes() {
+  const parcelas = await api("/api/compras/resumo/parcelas-pendentes");
+  abrirModal(`
+    <div class="modal" style="max-width:520px">
+      <div class="modal-h"><span class="card-ico i-gold">${icon("clock")}</span>
+        <h3>Parcelas pendentes</h3>
+        <button onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        ${parcelas.length === 0 ? `<div class="empty" style="padding:30px">${icon("checkCircle")}<p>Nenhuma parcela pendente!</p></div>` :
+          parcelas.map(p => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.estabelecimento || 'Compra'} — parcela ${p.numero}/${p.total_parcelas}</div>
+                <div class="sub">${p.cartao_nome} · vence ${dataBR(p.data_vencimento)}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="mono-num" style="font-weight:700">${money(p.valor)}</div>
+                <span class="tag ${p.status === 'atrasada' ? 'atrasado' : 'pendente'}" style="font-size:10px">${p.status === 'atrasada' ? 'Atrasada' : 'Pendente'}</span>
+              </div>
+              <button class="btn-icon" title="Marcar como paga" onclick="pagarParcela(${p.id}, ${p.compra_id})">${icon("check")}</button>
+            </div>`).join("")}
+      </div>
+      <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button></div>
+    </div>`, "lg");
+}
+
+async function verComprasView() { setView("compras"); }
 
 async function render() {
   aplicarTema(temaAtual());
@@ -1935,6 +2285,9 @@ Object.assign(window, {
   formUsuario, salvarUsuario, excluirUsuario, selecionarEmoji, selecionarCor,
   verHistoricoLogin, meuHistoricoLogin,
   abrirLeitorNFe, consultarNFe, cadastrarDaNFe,
+  abrirFormCompra, salvarCompra, _toggleParcelamento, _recalcularParcelas,
+  _addItemCompra, _removerItem, _editarItem,
+  verCompra, verComprasView, verParcelasPendentes, pagarParcela, estornarParcela,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

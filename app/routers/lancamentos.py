@@ -131,11 +131,11 @@ def _ctx(l):
             l.contato.nome if l.contato else "")
 
 
-def _auto_recibo(l: models.Lancamento):
+def _auto_recibo(l: models.Lancamento, db: Session = None):
     """Dispara o recibo no WhatsApp automaticamente quando a conta fica paga."""
     from ..config import settings
     from ..cfg import get_bool
-    if not (get_bool(db_or_none(l), 'RECIBO_WHATSAPP_AUTO', settings.RECIBO_WHATSAPP_AUTO) and get_bool(db_or_none(l), 'WHATSAPP_ATIVO', settings.WHATSAPP_ATIVO)):
+    if not (get_bool(db, 'RECIBO_WHATSAPP_AUTO', settings.RECIBO_WHATSAPP_AUTO) and get_bool(db, 'WHATSAPP_ATIVO', settings.WHATSAPP_ATIVO)):
         return
     if not l.data_pagamento:
         return

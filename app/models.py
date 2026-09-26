@@ -208,3 +208,112 @@ class LoginHistorico(Base):
     ip = Column(String(60), nullable=True)
     dispositivo = Column(String(200), nullable=True)  # user-agent resumido
     sucesso = Column(Boolean, default=True)           # False = senha errada
+
+
+# ═══════════════════════════════════════════════════════════════
+#  COMPRAS — itens de nota fiscal + controle de parcelamento no cartão
+# ═══════════════════════════════════════════════════════════════
+
+class Compra(Base):
+    """
+    Cabeçalho de uma compra (geralmente originada da leitura de uma NF-e).
+    Liga o lançamento financeiro aos itens comprados e, se parcelado no
+    cartão, ao controle de parcelas.
+    """
+    __tablename__ = "compras"
+    id = Column(Integer, primary_key=True)
+    lancamento_id = Column(Integer, ForeignKey("lancamentos.id", ondelete="CASCADE"),
+                           nullable=False, unique=True, index=True)
+
+    # dados do estabelecimento (vindos da NF-e ou preenchidos manualmente)
+    estabelecimento = Column(String(160), nullable=True)
+    cnpj_emitente = Column(String(20), nullable=True)
+    numero_nota = Column(String(30), nullable=True)
+    chave_acesso = Column(String(50), nullable=True)
+    data_emissao = Column(Date, nullable=True)
+    uf = Column(String(2), nullable=True)
+
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+    lancamento = relationship("Lancamento", backref="compra", uselist=False)
+    itens = relationship("ItemCompra", back_populates="compra",
+                         cascade="all, delete-orphan", order_by="ItemCompra.id")
+    parcelamento = relationship("Parcelamento", back_populates="compra",
+                                uselist=False, cascade="all, delete-orphan")
+
+
+class ItemCompra(Base):
+    """Um produto/item dentro de uma compra (linha da NF-e)."""
+    __tablename__ = "itens_compra"
+    id = Column(Integer, primary_key=True)
+    compra_id = Column(Integer, ForeignKey("compras.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    descricao = Column(String(200), nullable=False)
+    quantidade = Column(Numeric(12, 3), default=1)
+    valor_unitario = Column(Numeric(14, 2), nullable=True)
+    valor_total = Column(Numeric(14, 2), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=True)
+
+    compra = relationship("Compra", back_populates="itens")
+    categoria = relationship("Categoria")
+
+
+class Parcelamento(Base):
+    """
+    Controle de parcelamento no cartão de crédito para uma compra.
+    Guarda o cartão usado e o total de parcelas; as parcelas individuais
+    ficam em ParcelaCartao.
+    """
+    __tablename__ = "parcelamentos"
+    id = Column(Integer, primary_key=True)
+    compra_id = Column(Integer, ForeignKey("compras.id", ondelete="CASCADE"),
+                       nullable=False, unique=True, index=True)
+    cartao_id = Column(Integer, ForeignKey("contas.id"), nullable=False)
+    total_parcelas = Column(Integer, nullable=False)
+    valor_parcela = Column(Numeric(14, 2), nullable=False)
+    primeira_parcela_data = Column(Date, nullable=False)
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+    compra = relationship("Compra", back_populates="parcelamento")
+    cartao = relationship("Conta")
+    parcelas = relationship("ParcelaCartao", back_populates="parcelamento",
+                            cascade="all, delete-orphan", order_by="ParcelaCartao.numero")
+
+    @property
+    def parcelas_pagas(self) -> int:
+        return sum(1 for p in self.parcelas if p.paga)
+
+    @property
+    def parcelas_restantes(self) -> int:
+        return self.total_parcelas - self.parcelas_pagas
+
+    @property
+    def valor_pago(self):
+        return sum((p.valor for p in self.parcelas if p.paga), 0)
+
+    @property
+    def valor_restante(self):
+        return sum((p.valor for p in self.parcelas if not p.paga), 0)
+
+
+class ParcelaCartao(Base):
+    """Uma parcela individual de um parcelamento no cartão."""
+    __tablename__ = "parcelas_cartao"
+    id = Column(Integer, primary_key=True)
+    parcelamento_id = Column(Integer, ForeignKey("parcelamentos.id", ondelete="CASCADE"),
+                             nullable=False, index=True)
+    numero = Column(Integer, nullable=False)  # 1, 2, 3...
+    valor = Column(Numeric(14, 2), nullable=False)
+    data_vencimento = Column(Date, nullable=False, index=True)
+    paga = Column(Boolean, default=False)
+    data_pagamento = Column(Date, nullable=True)
+
+    parcelamento = relationship("Parcelamento", back_populates="parcelas")
+
+    @property
+    def status(self) -> str:
+        if self.paga:
+            return "paga"
+        if self.data_vencimento < date.today():
+            return "atrasada"
+        return "pendente"
