@@ -384,13 +384,14 @@ function renderApp() {
     <div class="main">
       <header class="topbar">
         <button class="menu-btn" onclick="toggleSidebar(true)">${icon("menu")}</button>
-        <div class="busca-global-wrap">
+        <div class="busca-global-wrap hide-mob">
           <span class="busca-ic">${icon("search")}</span>
           <input class="busca-input" id="busca-input" placeholder="Buscar lançamentos..."
             oninput="buscaGlobal(this.value)"
             onblur="setTimeout(fecharBusca,200)">
           <div class="busca-box" id="busca-box"></div>
         </div>
+        <button class="btn-icon show-mob" title="Buscar" onclick="abrirBuscaMobile()">${icon("search")}</button>
         <div class="hide-mob">
           <h2 id="tb-title">Visão geral</h2>
           <div class="sub" id="tb-sub"></div>
@@ -2788,6 +2789,85 @@ function fecharBusca() {
   if (box) box.style.display = "none";
 }
 
+/* ── Busca mobile: overlay fullscreen estilo app nativo ── */
+function abrirBuscaMobile() {
+  if (document.getElementById("busca-mob-overlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "busca-mob-overlay";
+  ov.style.cssText = "position:fixed;inset:0;z-index:200;background:var(--card);display:flex;flex-direction:column;animation:ovIn .15s ease";
+  ov.innerHTML =
+    `<div style="display:flex;align-items:center;gap:10px;padding:calc(16px + var(--safe-top)) 16px 14px;border-bottom:1px solid var(--line)">
+       <div style="position:relative;flex:1">
+         <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);display:flex;pointer-events:none">${icon("search")}</span>
+         <input id="busca-mob-input" placeholder="Buscar lançamentos e contatos..."
+           style="width:100%;padding:11px 12px 11px 38px;border:1.5px solid var(--navy);border-radius:12px;font-size:15px;background:var(--bg);color:var(--ink);outline:none"
+           oninput="buscaMobileQuery(this.value)" autofocus>
+       </div>
+       <button onclick="fecharBuscaMobile()" style="padding:6px 2px;font-size:14px;font-weight:700;color:var(--navy);flex-shrink:0">Cancelar</button>
+     </div>
+     <div id="busca-mob-res" style="flex:1;overflow-y:auto;padding:8px 0">
+       <div style="padding:48px 20px;text-align:center;color:var(--ink-3)">
+         ${icon("search")}<p style="margin-top:14px;font-size:14px">Digite para buscar</p>
+       </div>
+     </div>`;
+  document.body.appendChild(ov);
+  setTimeout(() => { const i = document.getElementById("busca-mob-input"); if(i) i.focus(); }, 80);
+}
+
+function fecharBuscaMobile() {
+  document.getElementById("busca-mob-overlay")?.remove();
+}
+
+async function buscaMobileQuery(q) {
+  const res = document.getElementById("busca-mob-res");
+  if (!res) return;
+  if (!q || q.length < 2) {
+    res.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--ink-3)"><p style="font-size:14px">Digite ao menos 2 caracteres</p></div>`;
+    return;
+  }
+  try {
+    const [lancs, conts] = await Promise.all([
+      api("/api/lancamentos?busca=" + encodeURIComponent(q) + "&limite=10"),
+      api("/api/contatos").then(cs => cs.filter(c => c.nome.toLowerCase().includes(q.toLowerCase())).slice(0,5)),
+    ]);
+    if (!lancs.length && !conts.length) {
+      res.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--ink-3)"><p>Nenhum resultado para <b>${q}</b></p></div>`;
+      return;
+    }
+    let html = "";
+    if (lancs.length) {
+      html += `<div style="padding:8px 16px 4px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Lançamentos</div>`;
+      for (const l of lancs) {
+        const cor = l.tipo === "receita" ? "var(--teal)" : "var(--red)";
+        const ico = l.tipo === "receita" ? "💵" : "💸";
+        const data = l.data_vencimento ? dataBR(l.data_vencimento) : "";
+        const cat  = l.categoria_nome ? " · " + l.categoria_nome : "";
+        html += `<div onclick="fecharBuscaMobile();setView('lancamentos')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer">
+          <span style="font-size:22px">${ico}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
+            <div style="font-size:12px;color:var(--ink-2)">${data}${cat}</div>
+          </div>
+          <span style="font-family:monospace;font-weight:700;font-size:13px;color:${cor};flex-shrink:0">${money(l.valor)}</span>
+        </div>`;
+      }
+    }
+    if (conts.length) {
+      html += `<div style="padding:12px 16px 4px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Contatos</div>`;
+      for (const c of conts) {
+        html += `<div onclick="fecharBuscaMobile();setView('contatos')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer">
+          <span style="width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">${c.nome.charAt(0).toUpperCase()}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;color:var(--ink)">${c.nome}</div>
+            <div style="font-size:12px;color:var(--ink-2)">${c.tipo || ""}${c.documento ? " · " + c.documento : ""}</div>
+          </div>
+        </div>`;
+      }
+    }
+    res.innerHTML = html;
+  } catch { res.innerHTML = `<div style="padding:20px 16px;color:var(--red)">Erro na busca.</div>`; }
+}
+
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
@@ -2812,6 +2892,7 @@ Object.assign(window, {
   verCompra, verComprasView, verParcelasPendentes, pagarParcela, estornarParcela,
   formMeta, salvarMeta, excluirMeta, formAporte, confirmarAporte, _editarMeta,
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
+  abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 
