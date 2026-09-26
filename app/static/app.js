@@ -779,8 +779,8 @@ function popupVencimentos(venc) {
   abrirModal(`
     <div class="modal">
       <div class="popup-hero">
-        ${icon("alert")}
-        <div><div class="t">Você tem ${itens.length} vencimento(s) para atenção</div>
+        <span style="flex-shrink:0;width:20px;height:20px;display:flex;margin-top:1px">${icon("alert")}</span>
+      <div><div class="t">Você tem ${itens.length} vencimento(s) para atenção</div>
         <div class="s">${money(totalPagar)} a pagar nos próximos dias</div></div>
       </div>
       <div class="popup-body venc-list">${linhas}</div>
@@ -1393,7 +1393,7 @@ async function viewWhatsapp(v) {
     </div>
 
     <div class="dica azul" style="margin-bottom:16px">
-      ${icon("whatsapp")}
+      <span style="flex-shrink:0;width:22px;height:22px;display:flex">${icon("whatsapp")}</span>
       <div>Adicione o número do WhatsApp no grupo de controle e configure <b>WHATSAPP_GRUPO</b> no Coolify com o ID do grupo (termina em @g.us). O sistema responde automaticamente aos comandos abaixo.</div>
     </div>
 
@@ -1448,7 +1448,7 @@ async function viewWhatsapp(v) {
     </div>
 
     <div class="dica verde" style="margin-top:16px">
-      ${icon("checkCircle")}
+      <span style="flex-shrink:0;width:20px;height:20px;display:flex;margin-top:1px">${icon("checkCircle")}</span>
       <div>Automático: alerta de vencimentos às ${st.alerta_hora != null ? String(st.alerta_hora).padStart(2,"0") : "08"}:00 (só quando há algo pendente) e resumo semanal na segunda-feira. Silencioso quando tudo está em dia — igual ao Sentinela.</div>
     </div>`;
 }
@@ -1643,59 +1643,70 @@ async function viewRelatorios(v) {
   const linhaCat = (arr) => arr.map(([n, val]) => `<tr><td>${n}</td><td class="num">${money(val)}</td></tr>`).join("") || `<tr><td colspan="2" class="meta">Sem lançamentos</td></tr>`;
   const resPos = bal.resultado >= 0;
   v.innerHTML = `
-    <div class="toolbar">
-      <div class="frm" style="display:flex;gap:10px;align-items:end;margin:0">
-        <div class="campo" style="margin:0"><label>De</label><input type="date" id="r-de" value="${PERIODO.de}"></div>
-        <div class="campo" style="margin:0"><label>Até</label><input type="date" id="r-ate" value="${PERIODO.ate}"></div>
+    <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="campo" style="margin:0"><label>De</label><input type="date" id="r-de" value="${PERIODO.de}" style="width:140px"></div>
+        <div class="campo" style="margin:0"><label>Até</label><input type="date" id="r-ate" value="${PERIODO.ate}" style="width:140px"></div>
         <button class="btn btn-ghost" onclick="aplicarPeriodo()">${icon("filter")}Aplicar</button>
       </div>
-      <div class="grow"></div>
-      <button class="btn btn-primary" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete PDF</button>
-      <button class="btn btn-ghost" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Estilo cupom</button>
-      <button class="btn btn-gold" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio PDF</button>
-      <button class="btn btn-ghost" onclick="abrirPDF('/api/relatorios/patrimonio.pdf?estilo=matricial')">${icon("terminal")}Estilo cupom</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Cupom</button>
+        <button class="btn btn-gold btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf?estilo=matricial')">${icon("terminal")}Cupom</button>
+      </div>
     </div>
 
-    <div class="grid-2">
+    <div class="grid-2" style="gap:16px">
       <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-green">${icon("trendUp")}</span><div class="grow"><h3>Balancete — receitas</h3></div></div>
+        <div class="card-h"><span class="card-ico i-green">${icon("trendUp")}</span><div class="grow"><h3>Receitas</h3></div></div>
         <div class="tbl-wrap"><table><tbody>${linhaCat(bal.receitas)}
           <tr style="border-top:2px solid var(--green)"><td><b>Total de receitas</b></td><td class="num val-rec"><b>${money(bal.total_receitas)}</b></td></tr>
         </tbody></table></div>
       </div>
       <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-gold">${icon("arrowUp")}</span><div class="grow"><h3>Balancete — despesas</h3></div></div>
+        <div class="card-h"><span class="card-ico i-gold">${icon("arrowUp")}</span><div class="grow"><h3>Despesas</h3></div></div>
         <div class="tbl-wrap"><table><tbody>${linhaCat(bal.despesas)}
           <tr style="border-top:2px solid var(--gold)"><td><b>Total de despesas</b></td><td class="num val-desp"><b>${money(bal.total_despesas)}</b></td></tr>
         </tbody></table></div>
       </div>
     </div>
 
-    <div class="card card-pad" style="margin-top:18px">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <div><div class="sub">Resultado do período</div>
-          <div class="val mono-num" style="font-size:26px;color:${resPos ? "var(--green-deep)" : "var(--red)"}">${money(bal.resultado)}</div></div>
-        <div style="text-align:right"><div class="sub">Juros pagos no período</div>
-          <div class="val mono-num" style="font-size:20px;color:var(--red)">${money(bal.juros)}</div></div>
+    <div class="kpi-grid" style="margin-top:16px">
+      <div class="kpi ${resPos ? 'green' : 'red'}">
+        <div class="lab"><span class="i i-${resPos?'green':'red'}">${icon(resPos?'trendUp':'arrowUp')}</span>Resultado do período</div>
+        <div class="val mono-num">${money(bal.resultado)}</div>
+        <div class="meta">${money(bal.total_receitas)} receitas · ${money(bal.total_despesas)} despesas</div>
+      </div>
+      <div class="kpi navy">
+        <div class="lab"><span class="i i-navy">${icon("wallet")}</span>Patrimônio líquido</div>
+        <div class="val mono-num">${money(pat.patrimonio_liquido)}</div>
+        <div class="meta">Contas + veículos − financiamentos</div>
+      </div>
+      <div class="kpi gold">
+        <div class="lab"><span class="i i-gold">${icon("alert")}</span>Juros no ano</div>
+        <div class="val mono-num">${money(jur.juros_pago_ano)}</div>
+        <div class="meta">a pagar: ${money(jur.juros_a_pagar)}</div>
       </div>
     </div>
 
-    <div class="grid-2" style="margin-top:18px">
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-navy">${icon("trendUp")}</span><div class="grow"><h3>Projeção — próximos 6 meses</h3><div class="sub">Baseada em pendências e média recente</div></div></div>
-        ${barChart(proj)}
-        <div class="meta" style="margin-top:8px">Saldo projetado ao fim do período: <b>${money(proj[proj.length - 1]?.saldo || 0)}</b></div>
-      </div>
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-navy">${icon("car")}</span><div class="grow"><h3>Patrimônio</h3></div></div>
-        <div class="tbl-wrap"><table><tbody>
-          <tr><td>Contas e aplicações</td><td class="num">${money(pat.total_contas)}</td></tr>
-          <tr><td>Veículos</td><td class="num">${money(pat.total_veiculos)}</td></tr>
-          <tr><td>Financiamentos (a pagar)</td><td class="num val-desp">− ${money(pat.total_financiamentos)}</td></tr>
-          <tr style="border-top:2px solid var(--gold)"><td><b>Patrimônio líquido</b></td><td class="num"><b>${money(pat.patrimonio_liquido)}</b></td></tr>
-        </tbody></table></div>
-        <div class="meta" style="margin-top:8px">Juros no ano: <b>${money(jur.juros_pago_ano)}</b> · a pagar <b>${money(jur.juros_a_pagar)}</b></div>
-      </div>
+    <div class="card card-pad" style="margin-top:16px">
+      <div class="card-h"><span class="card-ico i-navy">${icon("trendUp")}</span>
+        <div class="grow"><h3>Projeção — próximos 6 meses</h3>
+          <div class="sub">Saldo projetado: <b>${money(proj[proj.length-1]?.saldo||0)}</b></div></div></div>
+      <div style="overflow-x:auto">${barChart(proj)}</div>
+    </div>
+
+    <div class="card card-pad" style="margin-top:16px">
+      <div class="card-h"><span class="card-ico i-navy">${icon("car")}</span><div class="grow"><h3>Patrimônio detalhado</h3></div></div>
+      <div class="tbl-wrap"><table><tbody>
+        <tr><td>Contas e aplicações</td><td class="num">${money(pat.total_contas)}</td></tr>
+        <tr><td>Veículos</td><td class="num">${money(pat.total_veiculos)}</td></tr>
+        <tr><td>Financiamentos</td><td class="num val-desp">− ${money(pat.total_financiamentos)}</td></tr>
+        <tr style="border-top:2px solid var(--gold);font-weight:700">
+          <td><b>Patrimônio líquido</b></td><td class="num"><b>${money(pat.patrimonio_liquido)}</b></td>
+        </tr>
+      </tbody></table></div>
     </div>`;
 }
 function aplicarPeriodo() {
@@ -2034,8 +2045,8 @@ async function abrirLeitorNFe() {
       </div>
       <div class="modal-b">
         <div class="dica azul" style="margin-bottom:16px">
-          ${icon("alert")}
-          <div>Cole a <b>URL do QR code</b> da nota ou a <b>chave de acesso</b> (44 dígitos) impressa no cupom fiscal.</div>
+          <span style="flex-shrink:0;width:20px;height:20px;display:flex;margin-top:1px">${icon("alert")}</span>
+      <div>Cole a <b>URL do QR code</b> da nota ou a <b>chave de acesso</b> (44 dígitos) impressa no cupom fiscal.</div>
         </div>
 
         <div class="campo full">
@@ -2127,7 +2138,7 @@ function _renderPreviewNFe(d) {
     </div>
 
     <div class="dica verde" style="margin-bottom:0">
-      ${icon("checkCircle")}
+      <span style="flex-shrink:0;width:20px;height:20px;display:flex;margin-top:1px">${icon("checkCircle")}</span>
       <div>Tudo certo! Clique em <b>Cadastrar lançamento</b> para criar a despesa com esses dados.</div>
     </div>`;
 
