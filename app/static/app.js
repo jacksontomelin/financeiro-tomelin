@@ -98,6 +98,11 @@ const P = {
   cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.4H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 6.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>',
   doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
   logoMini: '',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  terminal: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  chart: '<path d="M3 3v18h18"/><path d="m7 16 4-4 4 4 4-5"/>',
+  map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
 };
@@ -2540,6 +2545,238 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") fecharModal();
 });
 // expõe funções usadas por onclick inline
+
+/* ============================================================
+   METAS FINANCEIRAS — funções que precisam ser definidas
+   ============================================================ */
+const METAS_ICONES = ["🎯","🏠","🚗","✈️","📱","💻","🎓","💰","🏖️","👶","🏋️","🎸","📚","🩺","💍"];
+const METAS_CORES  = ["#082D51","#2F817A","#C9A94E","#B4503E","#6B3FA0","#D9772E","#1E5FA8","#3B6D11","#C74B4B","#305C74"];
+let _metaFormCor = "#082D51";
+let _metaFormIcone = "🎯";
+const _CACHE_METAS = {};
+
+async function viewMetas(v) {
+  const metas = await api("/api/metas");
+  const ativas = metas.filter(m => !m.concluida);
+  const concluidas = metas.filter(m => m.concluida);
+  const totalAlvo = ativas.reduce((s,m) => s + m.valor_alvo, 0);
+  const totalAtual = ativas.reduce((s,m) => s + m.valor_atual, 0);
+  v.innerHTML = `
+    <div class="toolbar">
+      <div><h2 style="margin:0;color:var(--navy)">Metas financeiras</h2>
+        <div class="sub">Objetivos e reservas de dinheiro</div></div>
+      <div class="grow"></div>
+      <button class="btn btn-primary" onclick="formMeta(null)">${icon("plus")}Nova meta</button>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi navy"><div class="lab"><span class="i i-navy">${icon("star")}</span>Metas ativas</div>
+        <div class="val mono-num">${ativas.length}</div><div class="meta">${money(totalAlvo)} no total</div></div>
+      <div class="kpi green"><div class="lab"><span class="i i-green">${icon("trendUp")}</span>Guardado</div>
+        <div class="val mono-num">${money(totalAtual)}</div>
+        <div class="meta">${totalAlvo ? Math.round(totalAtual/totalAlvo*100) : 0}% do objetivo</div></div>
+      <div class="kpi gold"><div class="lab"><span class="i i-gold">${icon("checkCircle")}</span>Concluídas</div>
+        <div class="val mono-num">${concluidas.length}</div><div class="meta">Objetivos alcançados</div></div>
+    </div>
+    ${metas.length === 0 ? `
+      <div class="empty" style="padding:60px 20px">
+        ${icon("star")}<p>Nenhuma meta ainda.</p>
+        <button class="btn btn-primary" style="margin-top:20px" onclick="formMeta(null)">${icon("plus")}Criar primeira meta</button>
+      </div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+        ${[...ativas,...concluidas].map(m => _cardMeta(m)).join("")}
+      </div>`}`;
+}
+
+function _cardMeta(m) {
+  const pct = m.progresso_pct;
+  const dias = m.prazo ? Math.ceil((new Date(m.prazo) - new Date()) / 86400000) : null;
+  const prazoStr = m.prazo ? (dias < 0 ? `Prazo vencido há ${Math.abs(dias)}d` : dias === 0 ? "Prazo hoje!" : `${dias} dias restantes`) : "Sem prazo";
+  const prazoClass = dias !== null && dias <= 30 && !m.concluida ? "color:var(--red)" : "color:var(--ink-2)";
+  return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative">
+    ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída ✓</span></div>` : ""}
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${m.icone}</div>
+      <div><div style="font-weight:700;color:var(--ink)">${m.nome}</div>
+        ${m.descricao ? `<div class="sub">${m.descricao}</div>` : ""}</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span class="sub">${money(m.valor_atual)} guardados</span>
+        <span class="mono-num" style="font-size:12px;font-weight:700;color:${m.cor}">${pct.toFixed(0)}%</span>
+      </div>
+      <div style="background:var(--bg);border-radius:6px;height:10px;overflow:hidden">
+        <div style="background:${m.cor};height:100%;width:${pct}%;transition:width .4s;border-radius:6px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <span class="sub" style="${prazoClass}">${prazoStr}</span>
+        <span class="sub">Falta ${money(m.falta)}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id},'${m.nome.replace(/'/g,"\\'")}')">${icon("plus")}Aportar</button>` : ""}
+      <button class="btn btn-ghost btn-sm" onclick="_editarMeta(${m.id})">${icon("edit")}</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})">${icon("trash")}</button>
+    </div>
+  </div>`;
+}
+
+function formMeta(m) {
+  _metaFormCor = m?.cor || "#082D51";
+  _metaFormIcone = m?.icone || "🎯";
+  if (m) _CACHE_METAS[m.id] = m;
+  abrirModal(`
+    <div class="modal" style="max-width:500px">
+      <div class="modal-h"><span class="card-ico i-gold">${icon("star")}</span>
+        <h3>${m ? "Editar meta" : "Nova meta financeira"}</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b"><div class="frm">
+        <div class="campo full" style="text-align:center">
+          <div id="meta-prev" style="width:64px;height:64px;border-radius:18px;background:${_metaFormCor}20;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 8px">${_metaFormIcone}</div>
+        </div>
+        <div class="campo full"><label>Ícone</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
+            ${METAS_ICONES.map(ic => `<div onclick="_setMetaIcone('${ic}')" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${ic===_metaFormIcone?'var(--navy)':'var(--line)'};background:${ic===_metaFormIcone?'var(--bg)':'transparent'}">${ic}</div>`).join("")}
+          </div></div>
+        <div class="campo full"><label>Cor</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
+            ${METAS_CORES.map(c => `<div onclick="_setMetaCor('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c===_metaFormCor?'var(--navy)':'transparent'};outline:2px solid ${c===_metaFormCor?c:'transparent'}"></div>`).join("")}
+          </div></div>
+        <div class="campo full"><label>Nome da meta</label>
+          <input id="mt-nome" value="${m?.nome||''}" placeholder="Ex.: Reserva de emergência, Viagem..."></div>
+        <div class="campo full"><label>Descrição (opcional)</label>
+          <input id="mt-desc" value="${m?.descricao||''}" placeholder="Detalhes adicionais"></div>
+        <div class="campo"><label>Valor alvo (R$)</label>
+          <input id="mt-alvo" type="number" step="0.01" value="${m?.valor_alvo||''}"></div>
+        <div class="campo"><label>Já guardado (R$)</label>
+          <input id="mt-atual" type="number" step="0.01" value="${m?.valor_atual||0}"></div>
+        <div class="campo full"><label>Prazo (opcional)</label>
+          <input id="mt-prazo" type="date" value="${m?.prazo||''}"></div>
+      </div></div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarMeta(${m?m.id:'null'})">${icon("check")} Salvar meta</button>
+      </div>
+    </div>`, "lg");
+}
+
+function _editarMeta(id) {
+  const m = _CACHE_METAS[id];
+  if (m) { formMeta(m); return; }
+  api("/api/metas").then(ms => { const f = ms.find(x=>x.id===id); if(f){_CACHE_METAS[id]=f;formMeta(f);} });
+}
+
+function _setMetaIcone(ic) {
+  _metaFormIcone = ic;
+  document.querySelectorAll("[onclick^='_setMetaIcone']").forEach(el => {
+    const isThis = el.textContent.trim() === ic;
+    el.style.border = `2px solid ${isThis ? "var(--navy)" : "var(--line)"}`;
+    el.style.background = isThis ? "var(--bg)" : "transparent";
+  });
+  const p = document.getElementById("meta-prev"); if(p) p.textContent = ic;
+}
+
+function _setMetaCor(cor) {
+  _metaFormCor = cor;
+  document.querySelectorAll("[onclick^='_setMetaCor']").forEach(el => {
+    const bg = el.style.backgroundColor || el.style.background;
+    el.style.border = `3px solid ${el.getAttribute("onclick")?.includes(cor) ? "var(--navy)" : "transparent"}`;
+  });
+  const p = document.getElementById("meta-prev"); if(p) p.style.background = cor + "20";
+}
+
+async function salvarMeta(id) {
+  const body = {
+    nome: document.getElementById("mt-nome").value.trim(),
+    descricao: document.getElementById("mt-desc").value.trim() || null,
+    valor_alvo: parseFloat(document.getElementById("mt-alvo").value || "0"),
+    valor_atual: parseFloat(document.getElementById("mt-atual").value || "0"),
+    prazo: document.getElementById("mt-prazo").value || null,
+    cor: _metaFormCor, icone: _metaFormIcone,
+  };
+  if (!body.nome || !body.valor_alvo) { toast("Nome e valor alvo são obrigatórios.", "err"); return; }
+  try {
+    if (id) await api(`/api/metas/${id}`, {method:"PUT", body:JSON.stringify(body)});
+    else     await api("/api/metas",       {method:"POST",body:JSON.stringify(body)});
+    fecharModal(); toast("Meta salva!", "ok"); setView("metas");
+  } catch(e) { toast(e.message, "err"); }
+}
+
+function formAporte(id, nome) {
+  abrirModal(`
+    <div class="modal" style="max-width:360px">
+      <div class="modal-h"><span class="card-ico i-green">${icon("plus")}</span>
+        <h3>Aportar na meta</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        <p style="color:var(--ink-2);margin-bottom:16px">Quanto você guardou para <b>${nome}</b>?</p>
+        <div class="campo full"><label>Valor do aporte (R$)</label>
+          <input id="ap-valor" type="number" step="0.01" min="0.01" placeholder="0,00" autofocus></div>
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
+        <button class="btn btn-green" onclick="confirmarAporte(${id})">${icon("check")} Aportar</button>
+      </div>
+    </div>`);
+}
+
+async function confirmarAporte(id) {
+  const v = parseFloat(document.getElementById("ap-valor").value || "0");
+  if (!v || v <= 0) { toast("Informe um valor positivo.", "err"); return; }
+  try {
+    await api(`/api/metas/${id}/aporte`, {method:"POST", body:JSON.stringify({valor:v})});
+    fecharModal(); toast("Aporte registrado!", "ok"); setView("metas");
+  } catch(e) { toast(e.message, "err"); }
+}
+
+async function excluirMeta(id) {
+  if (!confirm("Excluir esta meta permanentemente?")) return;
+  try { await api(`/api/metas/${id}`, {method:"DELETE"}); toast("Meta excluída", "ok"); setView("metas"); }
+  catch(e) { toast(e.message, "err"); }
+}
+
+/* ============================================================
+   BUSCA GLOBAL
+   ============================================================ */
+async function buscaGlobal(q) {
+  if (!q || q.length < 2) { fecharBusca(); return; }
+  try {
+    const [lancs, conts] = await Promise.all([
+      api(`/api/lancamentos?busca=${encodeURIComponent(q)}&limite=6`),
+      api("/api/contatos").then(cs => cs.filter(c => c.nome.toLowerCase().includes(q.toLowerCase())).slice(0,3)),
+    ]);
+    const res = [...lancs.map(l => ({tipo:"lanc",l})), ...conts.map(c => ({tipo:"cont",c}))];
+    let box = document.getElementById("busca-box");
+    if (!box) return;
+    if (!res.length) {
+      box.innerHTML = `<div style="padding:12px 16px;color:var(--ink-2);font-size:13px">Nenhum resultado.</div>`;
+      box.style.display = "block"; return;
+    }
+    box.innerHTML = res.map(r => {
+      if (r.tipo === "lanc") {
+        const l = r.l;
+        return `<div class="busca-item" onclick="setView('lancamentos');fecharBusca()">
+          <span style="font-size:16px">${l.tipo==="receita"?"💵":"💸"}</span>
+          <div style="flex:1;min-width:0"><div class="busca-nome">${l.descricao}</div>
+            <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"—"}</div></div>
+          <span class="mono-num" style="font-size:12px;font-weight:700">${money(l.valor)}</span>
+        </div>`;
+      }
+      const c = r.c;
+      return `<div class="busca-item" onclick="setView('contatos');fecharBusca()">
+        <span style="font-size:16px">👤</span>
+        <div style="flex:1"><div class="busca-nome">${c.nome}</div>
+          <div class="busca-sub">${c.tipo||""}</div></div>
+      </div>`;
+    }).join("");
+    box.style.display = "block";
+  } catch { fecharBusca(); }
+}
+
+function fecharBusca() {
+  const box = document.getElementById("busca-box");
+  if (box) box.style.display = "none";
+}
+
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
