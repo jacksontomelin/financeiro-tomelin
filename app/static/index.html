@@ -22,7 +22,20 @@
 <script src="/static/app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        // Verifica por atualização assim que registra
+        reg.update().catch(()=>{});
+      }).catch(()=>{});
+    });
+    // Quando um novo Service Worker assume o controle (nova versão publicada),
+    // recarrega a página automaticamente para o usuário ver a versão mais nova.
+    let recarregando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (recarregando) return;
+      recarregando = true;
+      window.location.reload();
+    });
   }
 </script>
 </body>

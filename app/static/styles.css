@@ -1,3 +1,13 @@
+
+/* ============================================================
+   SAFE AREA (PWA em tela cheia no iOS) — evita conteúdo colado
+   na status bar ou cortado pela barra inferior/home indicator
+   ============================================================ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ============================================================
    Tomelin Gestão Financeira — Design System
    Paleta da marca: navy + dourado + verde
@@ -79,7 +89,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
   color:#cfe0f0; display:flex; flex-direction:column; position:fixed; inset:0 auto 0 0;
   z-index:40; transition:transform .25s ease;
 }
-.sb-brand{display:flex;align-items:center;gap:12px;padding:22px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand{display:flex;align-items:center;gap:12px;padding:calc(22px + var(--safe-top)) 20px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
 .sb-logo{width:44px;height:44px;border-radius:12px;background:#fff;display:grid;place-items:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .sb-logo img{width:34px;height:34px;object-fit:contain;display:block}
 .sb-brand .t{font-weight:800;font-size:16px;color:#fff;letter-spacing:-.01em;line-height:1.1}
@@ -105,14 +115,14 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* --- conteúdo --- */
 .main{flex:1;margin-left:var(--sidebar);min-width:0;display:flex;flex-direction:column}
 .topbar{
-  position:sticky;top:0;z-index:30;background:rgba(246,248,251,.86);backdrop-filter:blur(10px);
+  position:sticky;top:var(--safe-top);z-index:30;background:rgba(246,248,251,.86);backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);padding:16px 30px;display:flex;align-items:center;gap:16px;
 }
 .topbar .menu-btn{display:none;color:var(--navy);padding:6px}
 .topbar h2{font-size:19px;font-weight:800;color:var(--navy);letter-spacing:-.02em}
 .topbar .sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
 .topbar .grow{flex:1}
-.content{padding:26px 30px 60px;max-width:1360px;width:100%}
+.content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%}
 
 /* ============================================================
    COMPONENTES
@@ -354,7 +364,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg)}
   .main{margin-left:0}
-  .topbar .menu-btn{display:grid;place-items:center}
+  .topbar .menu-btn{display:grid;place-items:center;min-width:40px;min-height:40px;position:relative;z-index:31}
   .content{padding:18px 16px 80px}
   .topbar{padding:14px 16px}
   .backdrop.show{display:block;position:fixed;inset:0;background:rgba(9,24,42,.4);z-index:35}
