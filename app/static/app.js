@@ -396,7 +396,27 @@ function renderApp() {
       </header>
       <main class="content" id="view"></main>
     </div>
-  </div>`;
+  </div>
+  <!-- Bottom Tab Bar (mobile only) -->
+  <nav class="btab" id="btab">
+    <button class="btab-item" data-tab="dashboard"  onclick="setView('dashboard')">
+      ${icon("home")}<span>Início</span>
+    </button>
+    <button class="btab-item" data-tab="vencimentos" onclick="setView('vencimentos')">
+      ${icon("clock")}<span>Vencer</span>
+      <span class="btab-badge hidden" id="btab-badge"></span>
+    </button>
+    <button class="btab-fab" onclick="abrirFabMenu()">
+      <div class="btab-fab-inner">${icon("plus")}</div>
+      <span style="color:var(--ink-3)">Novo</span>
+    </button>
+    <button class="btab-item" data-tab="lancamentos" onclick="setView('lancamentos')">
+      ${icon("wallet")}<span>Extrato</span>
+    </button>
+    <button class="btab-item" data-tab="mais" onclick="abrirMenuMais()">
+      ${icon("grid")}<span>Mais</span>
+    </button>
+  </nav>`;
 }
 
 function toggleSidebar(open) {
@@ -408,11 +428,92 @@ function toggleSidebar(open) {
 function marcarNav() {
   document.querySelectorAll(".nav-item").forEach(a => {
     a.classList.toggle("on", a.dataset.id === State.view ||
-      (["pagar", "receber"].includes(State.view) && a.dataset.id === State.view));
+      (["pagar","receber"].includes(State.view) && a.dataset.id === State.view));
   });
+
+  // Sincroniza bottom tab bar
+  const tabMap = { pagar:"lancamentos", receber:"lancamentos",
+    compras:"lancamentos", metas:"mais", relatorios:"mais",
+    configuracoes:"mais", usuarios:"mais", veiculos:"mais",
+    contas:"mais", categorias:"mais", contatos:"mais", whatsapp:"mais" };
+  const tabAtivo = tabMap[State.view] || State.view;
+  document.querySelectorAll(".btab-item[data-tab]").forEach(b => {
+    b.classList.toggle("on", b.dataset.tab === tabAtivo);
+  });
+  document.querySelectorAll(".btab-item[data-tab='mais']").forEach(b => {
+    b.classList.toggle("on", tabAtivo === "mais");
+  });
+
   const m = META[State.view] || {};
   $("#tb-title").textContent = m.nome || "";
   $("#tb-sub").textContent = m.sub || "";
+}
+
+/* FAB (+) — abre mini-menu de novo lançamento */
+function abrirFabMenu() {
+  abrirModal(`
+    <div class="modal" style="max-width:340px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("plus")}</span>
+        <h3>Novo lançamento</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b" style="padding:12px 16px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-green btn-full btn-lg" onclick="fecharModal();formLancamento(null,'receita')">
+            ${icon("arrowDown")} <span>Registrar recebimento</span>
+          </button>
+          <button class="btn btn-primary btn-full btn-lg" onclick="fecharModal();formLancamento(null,'despesa')">
+            ${icon("arrowUp")} <span>Registrar pagamento</span>
+          </button>
+          <button class="btn btn-gold btn-full btn-lg" onclick="fecharModal();abrirLeitorNFe()">
+            ${icon("receipt")} <span>Ler nota fiscal</span>
+          </button>
+          <button class="btn btn-ghost btn-full" onclick="fecharModal();setView('compras');setTimeout(()=>abrirFormCompra(null,null),100)">
+            ${icon("wallet")} <span>Registrar compra</span>
+          </button>
+        </div>
+      </div>
+    </div>`);
+}
+
+/* Menu "Mais" — todas as outras seções */
+function abrirMenuMais() {
+  const MAIS_ITENS = [
+    { id:"relatorios",    ic:"chart",    nome:"Relatórios",         cor:"i-navy" },
+    { id:"metas",         ic:"star",     nome:"Metas financeiras",  cor:"i-gold" },
+    { id:"compras",       ic:"receipt",  nome:"Compras e cartões",  cor:"i-navy" },
+    { id:"veiculos",      ic:"car",      nome:"Veículos",           cor:"i-green" },
+    { id:"contas",        ic:"wallet",   nome:"Contas e carteiras", cor:"i-navy" },
+    { id:"categorias",    ic:"tag",      nome:"Categorias",         cor:"i-gold" },
+    { id:"contatos",      ic:"users",    nome:"Contatos",           cor:"i-green" },
+    { id:"usuarios",      ic:"user",     nome:"Família",            cor:"i-navy" },
+    { id:"whatsapp",      ic:"whatsapp", nome:"WhatsApp",           cor:"i-green" },
+    { id:"configuracoes", ic:"cog",      nome:"Configurações",      cor:"i-navy" },
+  ];
+  abrirModal(`
+    <div class="modal" style="max-width:380px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("grid")}</span>
+        <h3>Menu completo</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b" style="padding:12px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${MAIS_ITENS.map(it => `
+            <button onclick="fecharModal();setView('${it.id}')"
+              style="display:flex;align-items:center;gap:10px;padding:12px 14px;
+                     border-radius:12px;border:1.5px solid var(--line);
+                     background:var(--bg);cursor:pointer;text-align:left;
+                     transition:all .15s;font-size:13px;font-weight:600;color:var(--ink)"
+              onmouseover="this.style.borderColor='var(--navy)';this.style.background='var(--card)'"
+              onmouseout="this.style.borderColor='var(--line)';this.style.background='var(--bg)'">
+              <span class="card-ico ${it.cor}" style="width:32px;height:32px;border-radius:9px">${icon(it.ic)}</span>
+              ${it.nome}
+            </button>`).join("")}
+        </div>
+      </div>
+    </div>`);
 }
 
 async function setView(id) {
@@ -455,6 +556,9 @@ async function atualizarBadge() {
     VENC_BADGE = v.atrasados.length + v.proximos.length;
     const b = $("#badge-venc");
     if (b) { b.textContent = VENC_BADGE; b.classList.toggle("hidden", VENC_BADGE === 0); }
+    // Sincroniza com bottom tab badge
+    const btabBadge = $("#btab-badge");
+    if (btabBadge) { btabBadge.textContent = VENC_BADGE; btabBadge.classList.toggle("hidden", VENC_BADGE === 0); }
   } catch {}
 }
 
@@ -2439,7 +2543,7 @@ document.addEventListener("keydown", (e) => {
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
-  formBaixaId, formLancamentoId,
+  formBaixaId, formLancamentoId, abrirFabMenu, abrirMenuMais,
   _editarConta, _editarCategoria, _editarContato, _editarVeiculo, _editarUsuario,
   formLancamento, salvarLanc, formBaixa, confirmarBaixa, estornar, excluirLanc,
   formConta, salvarConta, excluirConta,
