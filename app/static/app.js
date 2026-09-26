@@ -1202,13 +1202,29 @@ async function viewWhatsapp(v) {
     { n:"0",  c:"menu",        d:"Exibe o menu completo" },
   ];
   const cadastros = [
-    { ex:"despesa 150 mercado",      d:"Lança despesa rápida" },
-    { ex:"receita 3000 salario",     d:"Lança receita rápida" },
-    { ex:"baixa 42",                 d:"Dá baixa no lançamento #42" },
-    { ex:"buscar aluguel",           d:"Busca lançamentos por texto" },
-    { ex:"ultimo",                   d:"Último lançamento cadastrado" },
-    { ex:"aporte 500 reserva",       d:"Aporta em meta financeira" },
+    { ex:"despesa 150 mercado",        d:"Lança despesa (categoria sugerida auto)" },
+    { ex:"despesa 1.500 aluguel",      d:"Aceita qualquer formato de valor" },
+    { ex:"receita 3000 salario",       d:"Lança receita" },
+    { ex:"baixa 42",                   d:"Dá baixa no lançamento #42" },
+    { ex:"buscar aluguel",             d:"Busca lançamentos por texto" },
+    { ex:"ultimo",                     d:"Último lançamento cadastrado" },
+    { ex:"aporte 500 reserva",         d:"Aporta em meta financeira" },
     { ex:"nf https://sat.sef.sc.gov.br/...", d:"Consulta NF-e pelo QR code" },
+  ];
+  const extras = [
+    { ex:"fluxo",             d:"Gráfico ASCII receitas x despesas (6 meses)" },
+    { ex:"gastos",            d:"Top categorias de gasto do mês" },
+    { ex:"hoje",              d:"Resumo do dia — vence e pagos" },
+    { ex:"semana",            d:"Movimentos da semana atual" },
+    { ex:"projecao",          d:"Projeção de saldo: 3 meses" },
+    { ex:"parcelas",          d:"Parcelas de cartão pendentes" },
+    { ex:"carros",            d:"Veículos e financiamentos" },
+    { ex:"dica",              d:"Dica financeira personalizada" },
+    { ex:"nova conta Nubank", d:"Cadastra conta bancária" },
+    { ex:"nova cat Mercado",  d:"Cadastra categoria de despesa" },
+    { ex:"mais",              d:"Exibe o menu completo com todos os comandos" },
+    { ex:"ajuda baixa",       d:"Ajuda detalhada de qualquer comando" },
+    { ex:"proximo mes",       d:"Contas previstas para o próximo mês" },
   ];
 
   v.innerHTML = `
@@ -1259,6 +1275,19 @@ async function viewWhatsapp(v) {
         ${cadastros.map(c => `
           <div style="background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--line)">
             <div style="font-family:monospace;font-size:12.5px;color:var(--navy);font-weight:600;margin-bottom:4px">${c.ex}</div>
+            <div style="font-size:12px;color:var(--ink-2)">${c.d}</div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="card card-pad" style="margin-top:16px">
+      <div class="card-h"><span class="card-ico i-navy">${icon("trendUp")}</span>
+        <div class="grow"><h3>Análises e automações</h3><div class="sub">Consultas avançadas e cadastros rápidos</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px">
+        ${extras.map(c => `
+          <div style="background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--line)">
+            <div style="font-family:monospace;font-size:12.5px;color:var(--teal,#2F817A);font-weight:600;margin-bottom:4px">${c.ex}</div>
             <div style="font-size:12px;color:var(--ink-2)">${c.d}</div>
           </div>`).join("")}
       </div>
