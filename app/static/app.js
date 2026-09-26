@@ -1641,48 +1641,65 @@ async function viewRelatorios(v) {
     api("/api/relatorios/projecao?meses=6"),
     api("/api/relatorios/juros"),
   ]);
-  const linhaCat = (arr) => arr.map(([n, val]) => `<tr><td>${n}</td><td class="num">${money(val)}</td></tr>`).join("") || `<tr><td colspan="2" class="meta">Sem lançamentos</td></tr>`;
+
   const resPos = bal.resultado >= 0;
+  const deLabel = PERIODO.de ? dataBR(PERIODO.de) : "";
+  const ateLabel = PERIODO.ate ? dataBR(PERIODO.ate) : "";
+
+  // linha de categoria com barra visual de proporção
+  const linhaCat = (arr, total, cor) => {
+    if (!arr?.length) return `<div class="meta" style="padding:12px 0">Sem lançamentos no período.</div>`;
+    return arr.map(([nome, val]) => {
+      const pct = total ? Math.round(val / total * 100) : 0;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13.5px;color:var(--ink)">${nome}</span>
+          <span class="mono-num" style="font-size:13.5px;font-weight:700">${money(val)}</span>
+        </div>
+        <div style="background:var(--bg);border-radius:4px;height:5px">
+          <div style="background:${cor};width:${pct}%;height:100%;border-radius:4px;transition:width .4s"></div>
+        </div>
+        <div class="sub" style="margin-top:2px;font-size:11px">${pct}% do total</div>
+      </div>`;
+    }).join("");
+  };
+
   v.innerHTML = `
-    <div class="toolbar" style="flex-wrap:wrap;gap:10px">
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-        <div class="campo" style="margin:0"><label>De</label><input type="date" id="r-de" value="${PERIODO.de}" style="width:140px"></div>
-        <div class="campo" style="margin:0"><label>Até</label><input type="date" id="r-ate" value="${PERIODO.ate}" style="width:140px"></div>
-        <button class="btn btn-ghost" onclick="aplicarPeriodo()">${icon("filter")}Aplicar</button>
+    <!-- Filtro de período -->
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="card-ico i-navy">${icon("calendar")}</span>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;flex:1">
+          <div class="campo" style="margin:0;min-width:130px">
+            <label>De</label>
+            <input type="date" id="r-de" value="${PERIODO.de}">
+          </div>
+          <div class="campo" style="margin:0;min-width:130px">
+            <label>Até</label>
+            <input type="date" id="r-ate" value="${PERIODO.ate}">
+          </div>
+          <button class="btn btn-primary" onclick="aplicarPeriodo()">${icon("filter")}Aplicar</button>
+        </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete</button>
+      <!-- Botões PDF compactos -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Cupom</button>
-        <button class="btn btn-gold btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio</button>
-        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf?estilo=matricial')">${icon("terminal")}Cupom</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio PDF</button>
       </div>
     </div>
 
-    <div class="grid-2" style="gap:16px">
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-green">${icon("trendUp")}</span><div class="grow"><h3>Receitas</h3></div></div>
-        <div class="tbl-wrap"><table><tbody>${linhaCat(bal.receitas)}
-          <tr style="border-top:2px solid var(--green)"><td><b>Total de receitas</b></td><td class="num val-rec"><b>${money(bal.total_receitas)}</b></td></tr>
-        </tbody></table></div>
-      </div>
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-gold">${icon("arrowUp")}</span><div class="grow"><h3>Despesas</h3></div></div>
-        <div class="tbl-wrap"><table><tbody>${linhaCat(bal.despesas)}
-          <tr style="border-top:2px solid var(--gold)"><td><b>Total de despesas</b></td><td class="num val-desp"><b>${money(bal.total_despesas)}</b></td></tr>
-        </tbody></table></div>
-      </div>
-    </div>
-
-    <div class="kpi-grid" style="margin-top:16px">
-      <div class="kpi ${resPos ? 'green' : 'red'}">
-        <div class="lab"><span class="i i-${resPos?'green':'red'}">${icon(resPos?'trendUp':'arrowUp')}</span>Resultado do período</div>
+    <!-- KPIs do período -->
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi ${resPos ? "green" : "red"}">
+        <div class="lab"><span class="i i-${resPos ? "green" : "red"}">${icon(resPos ? "trendUp" : "arrowUp")}</span>Resultado</div>
         <div class="val mono-num">${money(bal.resultado)}</div>
-        <div class="meta">${money(bal.total_receitas)} receitas · ${money(bal.total_despesas)} despesas</div>
+        <div class="meta">${deLabel} → ${ateLabel}</div>
       </div>
       <div class="kpi navy">
         <div class="lab"><span class="i i-navy">${icon("wallet")}</span>Patrimônio líquido</div>
         <div class="val mono-num">${money(pat.patrimonio_liquido)}</div>
-        <div class="meta">Contas + veículos − financiamentos</div>
+        <div class="meta">contas + veículos − dívidas</div>
       </div>
       <div class="kpi gold">
         <div class="lab"><span class="i i-gold">${icon("alert")}</span>Juros no ano</div>
@@ -1691,23 +1708,76 @@ async function viewRelatorios(v) {
       </div>
     </div>
 
-    <div class="card card-pad" style="margin-top:16px">
-      <div class="card-h"><span class="card-ico i-navy">${icon("trendUp")}</span>
-        <div class="grow"><h3>Projeção — próximos 6 meses</h3>
-          <div class="sub">Saldo projetado: <b>${money(proj[proj.length-1]?.saldo||0)}</b></div></div></div>
-      <div style="overflow-x:auto">${barChart(proj)}</div>
+    <!-- Balancete: Receitas -->
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div class="card-h" style="margin-bottom:14px">
+        <span class="card-ico i-green">${icon("trendUp")}</span>
+        <div class="grow">
+          <h3 style="color:var(--teal)">Receitas do período</h3>
+          <div class="sub">Total: <b class="mono-num">${money(bal.total_receitas)}</b></div>
+        </div>
+      </div>
+      ${linhaCat(bal.receitas, bal.total_receitas, "var(--teal)")}
     </div>
 
-    <div class="card card-pad" style="margin-top:16px">
-      <div class="card-h"><span class="card-ico i-navy">${icon("car")}</span><div class="grow"><h3>Patrimônio detalhado</h3></div></div>
-      <div class="tbl-wrap"><table><tbody>
-        <tr><td>Contas e aplicações</td><td class="num">${money(pat.total_contas)}</td></tr>
-        <tr><td>Veículos</td><td class="num">${money(pat.total_veiculos)}</td></tr>
-        <tr><td>Financiamentos</td><td class="num val-desp">− ${money(pat.total_financiamentos)}</td></tr>
-        <tr style="border-top:2px solid var(--gold);font-weight:700">
-          <td><b>Patrimônio líquido</b></td><td class="num"><b>${money(pat.patrimonio_liquido)}</b></td>
-        </tr>
-      </tbody></table></div>
+    <!-- Balancete: Despesas -->
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div class="card-h" style="margin-bottom:14px">
+        <span class="card-ico i-gold">${icon("arrowUp")}</span>
+        <div class="grow">
+          <h3 style="color:var(--gold-2)">Despesas do período</h3>
+          <div class="sub">Total: <b class="mono-num">${money(bal.total_despesas)}</b></div>
+        </div>
+      </div>
+      ${linhaCat(bal.despesas, bal.total_despesas, "var(--gold)")}
+    </div>
+
+    <!-- Projeção -->
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div class="card-h">
+        <span class="card-ico i-navy">${icon("trendUp")}</span>
+        <div class="grow">
+          <h3>Projeção — próximos 6 meses</h3>
+          <div class="sub">Saldo projetado: <b>${money(proj[proj.length - 1]?.saldo || 0)}</b></div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:8px">${barChart(proj)}</div>
+    </div>
+
+    <!-- Patrimônio -->
+    <div class="card card-pad" style="margin-bottom:14px">
+      <div class="card-h" style="margin-bottom:16px">
+        <span class="card-ico i-navy">${icon("shield")}</span>
+        <div class="grow"><h3>Patrimônio</h3></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="card-ico i-navy" style="width:32px;height:32px;border-radius:9px">${icon("bank")}</span>
+            <span style="font-size:13.5px;color:var(--ink)">Contas e aplicações</span>
+          </div>
+          <span class="mono-num" style="font-weight:700">${money(pat.total_contas)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="card-ico i-green" style="width:32px;height:32px;border-radius:9px">${icon("car")}</span>
+            <span style="font-size:13.5px;color:var(--ink)">Veículos</span>
+          </div>
+          <span class="mono-num" style="font-weight:700">${money(pat.total_veiculos)}</span>
+        </div>
+        ${pat.total_financiamentos > 0 ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(180,80,62,.06);border-radius:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="card-ico i-red" style="width:32px;height:32px;border-radius:9px">${icon("alert")}</span>
+            <span style="font-size:13.5px;color:var(--ink)">Financiamentos</span>
+          </div>
+          <span class="mono-num val-desp" style="font-weight:700">− ${money(pat.total_financiamentos)}</span>
+        </div>` : ""}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;margin-top:4px">
+          <span style="font-size:14px;font-weight:700;color:#fff">Patrimônio líquido</span>
+          <span class="mono-num" style="font-size:20px;font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
+        </div>
+      </div>
     </div>`;
 }
 function aplicarPeriodo() {
