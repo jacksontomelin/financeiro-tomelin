@@ -540,7 +540,7 @@ async function setView(id) {
     else if (id === "contatos") await viewContatos(v);
     else if (id === "veiculos") await viewVeiculos(v);
     else if (id === "relatorios") await viewRelatorios(v);
-    else if (id === "whatsapp") await viewWhatsapp(v);
+    else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
   } catch (e) {
@@ -1425,13 +1425,24 @@ async function viewWhatsapp(v) {
       <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()" ${st.gateway && st.chave_configurada ? "" : "disabled"}>${icon("users")}Listar meus grupos</button>
       <div id="wa-grupos" style="margin-top:10px"></div>`)}
 
-    ${passo(3, false, "Cadastrar o webhook no gateway", `
-      <div class="sub" style="margin-bottom:8px">No painel do WhatsApp → <b>Webhooks</b>, adicione esta URL com os eventos <b>received</b> e <b>sent</b>:</div>
+    ${passo(3, false, "Webhook (opcional)", `
+      <div class="dica verde" style="margin-bottom:10px"><span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
+        <div>O sistema já <b>lê o grupo sozinho</b> a cada 4 segundos, inclusive o que você digita. O webhook só deixa a resposta instantânea.</div></div>
+      <div class="sub" style="margin-bottom:8px">No painel do WhatsApp → <b>Webhooks</b>:</div>
       <div style="display:flex;gap:8px;align-items:center">
         <code id="wa-hook" style="flex:1;min-width:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-size:12px;overflow-wrap:anywhere">${webhookUrl}</code>
         <button class="btn-icon" title="Copiar" onclick="copiarTexto('${webhookUrl}')">${icon("doc")}</button>
       </div>
-      <div class="sub" style="margin-top:8px">Com <b>sent</b> ativo, os comandos que você mesmo digita no grupo também são respondidos.</div>`)}
+      <div class="sub" style="margin-top:8px">O painel do gateway aceita <b>um evento por webhook</b>: cadastre esta URL <b>duas vezes</b> — uma com "Mensagem recebida" e outra com "Mensagem enviada" (os comandos que você digita chegam como "enviada").</div>`)}
+
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="card-h">
+        <span class="card-ico i-navy">${icon("shield")}</span>
+        <div class="grow"><h3>Diagnóstico</h3><div class="sub">Por que um comando foi (ou não) respondido</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="rodarDiagnosticoWA()">${icon("refresh")}<span>Verificar</span></button>
+      </div>
+      <div id="wa-diag"><div class="sub">Verificando…</div></div>
+    </div>
 
     <div class="card card-pad" style="margin-bottom:12px">
       <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span><div class="grow"><h3>Consultas</h3><div class="sub">Digite no grupo</div></div></div>
@@ -1468,6 +1479,31 @@ async function viewWhatsapp(v) {
       <span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
       <div>Automático: alerta de vencimentos às ${String(st.alerta_hora ?? 8).padStart(2, "0")}:00 (só quando há algo) ${st.resumo_semanal ? "· resumo na segunda-feira" : ""} ${st.fechamento_diario ? "· fechamento do dia" : ""}.</div>
     </div>`;
+}
+
+async function rodarDiagnosticoWA() {
+  const box = document.getElementById("wa-diag");
+  if (!box) return;
+  box.innerHTML = `<div class="sub">Verificando…</div>`;
+  let d;
+  try { d = await api("/api/whatsapp/diagnostico"); } catch (e) { box.innerHTML = `<div class="sub" style="color:var(--red)">${e.message}</div>`; return; }
+  const linha = (ok, nome, det) => `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">
+      <span style="font-size:15px;line-height:1.3">${ok ? "✅" : "❌"}</span>
+      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600;color:var(--ink)">${nome}</div>
+        ${det ? `<div class="sub" style="font-size:12px;overflow-wrap:anywhere">${det}</div>` : ""}</div>
+    </div>`;
+  const cor = r => /respondido|PDF .* enviado/.test(r) ? "var(--teal)" : /FALHOU|erro/.test(r) ? "var(--red)" : "var(--ink-3)";
+  box.innerHTML = d.checks.map(c => linha(c.ok, c.nome, c.detalhe)).join("") +
+    `<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Últimas mensagens processadas</div>` +
+    (d.eventos.length ? d.eventos.slice(0, 12).map(e => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <code style="font-size:12.5px;color:var(--navy);overflow-wrap:anywhere">${(e.texto || "").replace(/</g,"&lt;")}</code>
+          <span class="sub" style="font-size:11px;flex-shrink:0">${e.hora}</span></div>
+        <div style="font-size:11.5px;color:${cor(e.resultado)}">${e.resultado} · ${e.autor || "—"} · via ${e.origem}</div>
+      </div>`).join("")
+      : `<div class="sub" style="padding:8px 0">Nenhuma mensagem processada ainda. Mande <b>menu</b> no grupo e toque em Verificar.</div>`);
 }
 
 async function salvarGatewayWA() {
@@ -3030,7 +3066,7 @@ Object.assign(window, {
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
   _toggleItensCompra, verParcelasCompra,
-  salvarGatewayWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
+  rodarDiagnosticoWA, salvarGatewayWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

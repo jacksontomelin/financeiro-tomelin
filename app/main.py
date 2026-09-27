@@ -38,6 +38,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
+import logging as _logging
+_logging.getLogger("apscheduler").setLevel(_logging.WARNING)
 from apscheduler.triggers.cron import CronTrigger
 import pytz
 
@@ -76,6 +78,11 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(whatsapp.job_fechamento_dia,
                       CronTrigger(hour=settings.FECHAMENTO_HORA, minute=0),
                       id="fechamento_dia", replace_existing=True)
+    # escuta direta do grupo do WhatsApp (lê mensagens novas pela API v1)
+    from apscheduler.triggers.interval import IntervalTrigger
+    from .routers.whatsapp import job_escutar_grupo
+    scheduler.add_job(job_escutar_grupo, IntervalTrigger(seconds=4), id="escuta_whatsapp",
+                      replace_existing=True, max_instances=1, coalesce=True)
     scheduler.start()
     log.info("Scheduler iniciado (alerta %02d:00, tz %s)", settings.ALERTA_HORA, settings.TIMEZONE)
     yield
