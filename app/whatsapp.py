@@ -56,6 +56,102 @@ MENU = (
 )
 
 
+
+# ════════════════════════════════════════════════════════════════════════════
+#  CATÁLOGO ÚNICO DE COMANDOS — gera o menu completo e a "ajuda X"
+#  (cmd, descrição, exemplo, apelidos)
+# ════════════════════════════════════════════════════════════════════════════
+CATALOGO = [
+    ("📊 CONSULTAS", [
+        ("1 · saldo",       "Saldo de todas as contas",               "saldo",        "contas, saldos"),
+        ("2 · vencer",      "Atrasados + próximos 7 dias",            "vencer",       "vencimentos, vence"),
+        ("3 · resumo",      "Receitas, despesas e saldo do mês",      "resumo",       "mes"),
+        ("4 · pagar",       "Contas a pagar em aberto",               "pagar",        "a pagar"),
+        ("5 · receber",     "Contas a receber em aberto",             "receber",      "a receber"),
+        ("6 · patrimonio",  "Contas + veículos − financiamentos",     "patrimonio",   ""),
+        ("7 · juros",       "Juros e multas pagos no ano",            "juros",        "multas"),
+        ("8 · metas",       "Metas financeiras com progresso",        "metas",        "objetivos"),
+        ("9 · categorias",  "Lista de categorias",                    "categorias",   ""),
+        ("10 · contas",     "Saldo por conta bancária",               "contas",       "saldos"),
+    ]),
+    ("📈 ANÁLISES", [
+        ("hoje",        "O que vence hoje e o que foi pago",      "hoje",        "dia"),
+        ("semana",      "Movimentos desta semana",                "semana",      ""),
+        ("fluxo",       "Gráfico dos últimos 6 meses",            "fluxo",       "grafico, historico"),
+        ("gastos",      "Onde o dinheiro foi no mês",             "gastos",      "top"),
+        ("projecao",    "Saldo previsto nos próximos 3 meses",    "projecao",    "previsao"),
+        ("proximo mes", "Contas agendadas para o mês que vem",    "proximo mes", "lembretes"),
+        ("parcelas",    "Parcelas de cartão em aberto",           "parcelas",    "cartao"),
+        ("carros",      "Veículos, FIPE e financiamentos",        "carros",      "veiculos"),
+        ("dica",        "Dica financeira com base nos seus dados","dica",        "conselho"),
+    ]),
+    ("✏️ LANÇAR E DAR BAIXA", [
+        ("despesa VALOR DESCRIÇÃO", "Lança uma despesa (categoria automática)", "despesa 150 mercado", "gasto, d"),
+        ("receita VALOR DESCRIÇÃO", "Lança uma receita",                        "receita 3000 salario", "r"),
+        ("baixa Nº",                "Marca o lançamento como pago/recebido",    "baixa 42",            "paguei 42"),
+        ("buscar TEXTO",            "Procura lançamentos pela descrição",       "buscar aluguel",      "busca"),
+        ("ultimo",                  "Mostra o último lançamento",               "ultimo",              ""),
+        ("aporte VALOR META",       "Guarda dinheiro numa meta",                "aporte 500 reserva",  "guardei"),
+    ]),
+    ("🗂️ CADASTROS", [
+        ("nova conta NOME", "Cria conta bancária/cartão/carteira", "nova conta Nubank", ""),
+        ("nova cat NOME",   "Cria categoria",                      "nova cat Pets",     "nova categoria"),
+    ]),
+    ("📎 PDFs NO GRUPO", [
+        ("recibo Nº",       "Recibo em PDF",                        "recibo 42",       ""),
+        ("recibo cupom Nº", "Recibo estilo impressora matricial",   "recibo cupom 42", ""),
+        ("balancete",       "Balancete do mês em PDF",              "balancete",       "relatorio"),
+        ("balancete cupom", "Balancete estilo cupom",               "balancete cupom", ""),
+        ("patrimonio pdf",  "Patrimônio em PDF",                    "patrimonio pdf",  ""),
+    ]),
+    ("🧾 NOTA FISCAL", [
+        ("nf LINK", "Lê a nota pelo link do QR code", "nf https://sat.sef.sc.gov.br/...", "nota"),
+    ]),
+    ("❓ AJUDA", [
+        ("menu",          "Esta lista completa",               "menu",        "comandos, ajuda, ?"),
+        ("ajuda COMANDO", "Explica um comando com exemplos",   "ajuda baixa", ""),
+    ]),
+]
+
+
+def _texto_menu() -> str:
+    num = {"1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣", "5": "5️⃣", "6": "6️⃣",
+           "7": "7️⃣", "8": "8️⃣", "9": "9️⃣", "10": "🔟"}
+    L = ["🏠 *Tomelin — comandos do grupo*",
+         "_Digite o número ou a palavra. Maiúscula e acento tanto faz._", ""]
+    for sec, cmds in CATALOGO:
+        L.append(f"*{sec}*")
+        for cmd, desc, ex, _ in cmds:
+            if " · " in cmd:
+                n, nome = cmd.split(" · ")
+                L.append(f"{num.get(n, n)} *{nome}* — {desc}")
+            elif ex != cmd:
+                L.append(f"▪️ *{cmd}* — {desc}\n      ex.: `{ex}`")
+            else:
+                L.append(f"▪️ *{cmd}* — {desc}")
+        L.append("")
+    L.append("💡 _Detalhes de qualquer um: `ajuda baixa`, `ajuda nf`..._")
+    return "\n".join(L)
+
+
+def _ajuda_catalogo(q: str) -> str | None:
+    q = _sem_acento(q.strip().lower())
+    for sec, cmds in CATALOGO:
+        for cmd, desc, ex, apel in cmds:
+            nomes = [_sem_acento(cmd.split(" · ")[-1].split()[0].lower())] + \
+                    [_sem_acento(a.strip().lower()) for a in apel.split(",") if a.strip()]
+            if q in nomes or (len(q) >= 3 and nomes[0].startswith(q)):
+                extra = f"\nTambém funciona: {apel}" if apel else ""
+                return (f"ℹ️ *{cmd.split(' · ')[-1]}*  ({sec[2:].strip().title()})\n\n"
+                        f"{desc}.\n\n*Exemplo:* `{ex}`{extra}")
+    return None
+
+
+def _sem_acento(t: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
+
+
 def enviar(mensagem: str, grupo: str | None = None, db=None) -> bool:
     """Envia texto ao grupo de controle via API v1 do gateway (config do painel)."""
     from . import zapapi
@@ -302,7 +398,7 @@ def processar_comando(texto: str, db: Session | None = None,
     if not texto:
         return None
     t = texto.strip()
-    t_low = t.lower()
+    t_low = _sem_acento(t.lower())
 
     fechar = False
     if db is None:
@@ -310,8 +406,8 @@ def processar_comando(texto: str, db: Session | None = None,
 
     try:
         # ── Menu / ajuda ──────────────────────────────────────────────────────
-        if t_low in ("menu", "ajuda", "help", "0", "oi", "ola", "olá", "inicio", "início"):
-            return MENU
+        if t_low in ("menu", "ajuda", "help", "0", "oi", "ola", "inicio", "comandos", "comando", "?", "lista", "mais", "mais comandos"):
+            return _texto_menu()
 
         # ── Consultas numéricas ───────────────────────────────────────────────
         if t_low in ("1", "saldo"):
@@ -324,7 +420,7 @@ def processar_comando(texto: str, db: Session | None = None,
             return service.texto_a_pagar(db)
         if t_low in ("5", "areceber", "a receber", "receber", "contas a receber"):
             return service.texto_a_receber(db)
-        if t_low in ("6", "patrimonio", "patrimônio", "veiculos", "veículos", "carros"):
+        if t_low in ("6", "patrimonio"):
             return service.texto_patrimonio(db)
         if t_low in ("7", "juros", "multa", "multas"):
             return service.texto_juros(db)
@@ -336,17 +432,19 @@ def processar_comando(texto: str, db: Session | None = None,
             return _texto_contas(db)
 
         # ── Cadastro rápido: despesa ──────────────────────────────────────────
-        if t_low.startswith("despesa ") or t_low.startswith("gasto ") or t_low.startswith("d "):
+        _p = t_low.split()
+        _tem_valor = len(_p) >= 2 and _parse_valor(_p[1]) is not None
+        if t_low.startswith("despesa ") or t_low.startswith("gasto ") or (t_low.startswith("d ") and _tem_valor):
             partes = t.split(None, 1)
             return _lancar(db, "despesa", partes[0] + " " + partes[1] if len(partes) > 1 else "despesa")
 
         # ── Cadastro rápido: receita ──────────────────────────────────────────
-        if t_low.startswith("receita ") or t_low.startswith("recebimento ") or t_low.startswith("r "):
+        if t_low.startswith("receita ") or t_low.startswith("recebimento ") or (t_low.startswith("r ") and _tem_valor):
             partes = t.split(None, 1)
             return _lancar(db, "receita", partes[0] + " " + partes[1] if len(partes) > 1 else "receita")
 
         # ── Dar baixa em lançamento ───────────────────────────────────────────
-        if t_low.startswith("baixa ") or t_low.startswith("paguei ") or t_low.startswith("pago "):
+        if t_low.startswith("baixa ") or ((t_low.startswith("paguei ") or t_low.startswith("pago ")) and len(_p) >= 2 and _p[1].lstrip("#").isdigit()):
             partes = t.split(None, 1)
             return _dar_baixa(db, partes[1] if len(partes) > 1 else "")
 
@@ -457,8 +555,8 @@ def processar_comando(texto: str, db: Session | None = None,
             return _nova_categoria(db, t_low)
 
         # ── Menu extra ────────────────────────────────────────────────────────
-        if t_low in ("mais", "mais comandos", "extra", "avancado", "avançado"):
-            return MENU + MENU_EXTRA
+        if t_low in ("extra", "avancado"):
+            return _texto_menu()
 
         # ── Ajuda de comando específico ───────────────────────────────────────
         if t_low.startswith("ajuda ") or t_low.startswith("help ") or t_low.startswith("como usar "):
@@ -993,9 +1091,12 @@ def _nova_categoria(db: Session, texto: str) -> str:
 
 def _ajuda_comando(cmd: str) -> str:
     """Exibe ajuda detalhada de um comando específico."""
-    cmd = cmd.strip().lower()
+    cmd = _sem_acento(cmd.strip().lower())
     if cmd in AJUDAS:
         return AJUDAS[cmd]
+    do_catalogo = _ajuda_catalogo(cmd)
+    if do_catalogo:
+        return do_catalogo
     # sugere comandos parecidos
     todos = list(AJUDAS.keys()) + ["saldo", "vencer", "resumo", "metas", "fluxo", "gastos", "hoje", "semana", "projecao", "parcelas", "carros", "dica"]
     sugest = [c for c in todos if cmd in c or c in cmd]
@@ -1023,7 +1124,7 @@ def _texto_lembrete_mes_seguinte(db: Session) -> str:
 
     total_desp = sum(float(l.valor) for l in prox_mes if l.tipo == models.TipoMov.despesa)
     linhas = [
-        f"📋 *Contas do próximo mês ({ini.strftime('%B/%Y').title()})*",
+        f"📋 *Contas do próximo mês ({['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][ini.month]}/{ini.year})*",
         f"Total previsto: {_brl(total_desp)}", "",
     ]
     for l in prox_mes[:10]:
