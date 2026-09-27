@@ -32,13 +32,15 @@ def _extrai(data: dict) -> dict:
     texto = first(d, "texto", "text", "mensagem", "body", "conteudo") or \
         msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text") or ""
     key = d.get("key") if isinstance(d.get("key"), dict) else {}
+    autor_num = first(d, "autorNumero", "autorNum", "autor_numero", "remetente") or ""
     return {
         "evento": first(d, "evento", "event") or "received",
         "jid": first(d, "jid", "remoteJid", "chatId", "grupo", "from") or key.get("remoteJid") or "",
         "texto": str(texto).strip(),
         "id": first(d, "id", "msgId", "messageId") or key.get("id"),
         "deMim": bool(first(d, "deMim", "fromMe") or key.get("fromMe")),
-        "autor": first(d, "autorNome", "pushName", "autorNumero", "remetente") or "",
+        "autor_num": autor_num,
+        "autor": first(d, "autorNome", "pushName") or autor_num or "",
     }
 
 
@@ -76,8 +78,7 @@ def processar_mensagem(m: dict, db, origem: str = "webhook") -> dict:
         if m["id"] in _PROCESSADOS:
             return {"ok": True, "ignorado": "já processada"}
         _PROCESSADOS.append(m["id"])
-    if m["evento"] not in ("received", "sent", "message", "messages.upsert"):
-        return {"ok": True, "ignorado": f"evento {m['evento']}"}
+    # aceita received, sent, message — igual ao Sentinela
     if not m["texto"]:
         return {"ok": True, "ignorado": "sem texto"}
     if m["deMim"] and zapapi.foi_enviado_pelo_sistema(m["texto"]):

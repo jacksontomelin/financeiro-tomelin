@@ -1741,12 +1741,18 @@ async function viewWhatsapp(v) {
     <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
       ${stepCircle(3, false)}
       <div>
-        <div style="font-weight:800;font-size:15px;color:var(--ink)">Webhook <span style="font-size:12px;font-weight:600;background:#25D36618;color:#128C7E;padding:2px 8px;border-radius:10px;margin-left:4px">Opcional</span></div>
-        <div style="font-size:12px;color:var(--ink-3)">O sistema já lê o grupo a cada 4s — webhook deixa instantâneo</div>
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">Webhook — resposta imediata</div>
+        <div style="font-size:12px;color:var(--ink-3)">Igual ao Sentinela — sem atraso, responde na hora</div>
       </div>
     </div>
     <div style="padding:16px 18px">
-      <div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Painel do gateway → <b>Webhooks</b> → Adicionar <b>duas vezes</b> esta URL:<br>uma com evento <b>Mensagem recebida</b>, outra com <b>Mensagem enviada</b>.</div>
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(37,211,102,.07);border:1.5px solid rgba(37,211,102,.3);border-radius:12px;margin-bottom:12px">
+        <span style="font-size:20px;flex-shrink:0">⚡</span>
+        <div style="font-size:13px;color:var(--ink-2)">
+          No painel <b>zap.unicontroller.com.br → Webhooks</b>, adicione esta URL com evento <b>"Mensagem recebida"</b>.<br>
+          <span style="color:#128C7E;font-weight:700">Só um evento, só uma vez — igual ao Sentinela.</span>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:12px">
         <code style="flex:1;min-width:0;font-size:11.5px;color:var(--navy);overflow-wrap:anywhere">${webhookUrl}</code>
         <button onclick="copiarTexto('${webhookUrl}')" title="Copiar"
