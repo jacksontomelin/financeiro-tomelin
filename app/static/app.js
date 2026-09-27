@@ -1561,65 +1561,178 @@ async function viewWhatsapp(v) {
 
   <!-- PASSO 2: GRUPO + NÚMERO -->
   <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+
+    <!-- header do passo -->
     <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
       ${stepCircle(2, !!st.grupo)}
       <div>
         <div style="font-weight:800;font-size:15px;color:var(--ink)">Grupo e seu número</div>
-        <div style="font-size:12px;color:var(--ink-3)">${st.grupo||"Nenhum grupo configurado"}</div>
+        <div style="font-size:12px;color:var(--ink-3)">${st.grupo ? "Grupo configurado" : "Nenhum grupo configurado"}</div>
       </div>
     </div>
-    <div style="padding:16px 18px">
 
-      <!-- grupo atual -->
-      ${st.grupo?`
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(37,211,102,.07);
-           border:1.5px solid rgba(37,211,102,.3);border-radius:14px;margin-bottom:12px">
-        <div style="width:38px;height:38px;border-radius:11px;background:#25D366;
-             display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;color:var(--ink);font-size:13.5px">Grupo configurado ✓</div>
-          <div style="font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${st.grupo}</div>
+    <div style="padding:18px">
+
+      <!-- ── SEÇÃO: GRUPO ── -->
+      <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;
+                  color:#128C7E;margin-bottom:12px">Grupo de controle</div>
+
+      <!-- chip do grupo atual (quando configurado) -->
+      ${st.grupo ? `
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+           background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(7,94,84,.06));
+           border:2px solid rgba(37,211,102,.35);border-radius:16px;margin-bottom:14px;
+           position:relative;overflow:hidden">
+        <div style="position:absolute;right:-10px;top:-10px;width:60px;height:60px;border-radius:50%;
+             background:rgba(37,211,102,.08)"></div>
+        <div style="width:46px;height:46px;border-radius:14px;
+             background:linear-gradient(135deg,#25D366,#128C7E);
+             display:flex;align-items:center;justify-content:center;flex-shrink:0;
+             box-shadow:0 4px 12px rgba(37,211,102,.3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="24" height="24">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()">${icon("edit")}</button>
-      </div>`:`
-      <div style="padding:12px 14px;background:rgba(255,193,7,.08);border:1.5px solid rgba(255,193,7,.3);border-radius:14px;margin-bottom:12px;font-size:13px;color:var(--ink-2)">
-        ⚠️ Selecione abaixo qual grupo receberá as respostas.
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:#128C7E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Grupo ativo</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Família Tomelin</div>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace">${st.grupo}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="font-size:18px">✅</span>
+          <button onclick="carregarGruposWA()"
+            style="font-size:11px;font-weight:700;color:#128C7E;background:rgba(18,140,126,.1);
+                   border:none;border-radius:8px;padding:4px 8px;cursor:pointer">Trocar</button>
+        </div>
+      </div>` : `
+      <!-- placeholder quando não tem grupo -->
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+           background:var(--bg);border:2px dashed var(--line);border-radius:16px;margin-bottom:14px">
+        <div style="width:46px;height:46px;border-radius:14px;background:var(--line);
+             display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.8" width="24" height="24">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:700;color:var(--ink-3)">Nenhum grupo selecionado</div>
+          <div style="font-size:12px;color:var(--ink-3);margin-top:2px">Toque em Listar grupos abaixo</div>
+        </div>
+        <span style="font-size:22px;opacity:.3">👥</span>
       </div>`}
 
-      <button onclick="carregarGruposWA()" ${st.gateway&&st.chave_configurada?"":'disabled style="opacity:.5"'}
-        style="width:100%;padding:11px;border-radius:12px;background:var(--bg);color:var(--navy);
-               font-weight:700;font-size:13.5px;border:1.5px solid var(--line);cursor:pointer;
-               display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
-        ${icon("users")} ${st.grupo?"Trocar grupo":"Listar meus grupos e escolher"}
+      <!-- botão listar grupos -->
+      <button onclick="carregarGruposWA()" ${st.gateway && st.chave_configurada ? "" : "disabled"}
+        style="width:100%;padding:13px 16px;border-radius:14px;cursor:pointer;
+               display:flex;align-items:center;gap:12px;margin-bottom:4px;
+               background:${st.gateway && st.chave_configurada ? "linear-gradient(135deg,#075E54,#128C7E)" : "var(--bg)"};
+               color:${st.gateway && st.chave_configurada ? "#fff" : "var(--ink-3)"};
+               border:${st.gateway && st.chave_configurada ? "none" : "1.5px solid var(--line)"};
+               box-shadow:${st.gateway && st.chave_configurada ? "0 4px 14px rgba(7,94,84,.3)" : "none"};
+               opacity:${st.gateway && st.chave_configurada ? "1" : ".5"};transition:all .15s">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);
+             display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div style="text-align:left;flex:1">
+          <div style="font-size:14px;font-weight:800">${st.grupo ? "Trocar grupo" : "Listar grupos e escolher"}</div>
+          <div style="font-size:11.5px;opacity:.75">${st.gateway && st.chave_configurada ? "Busca no seu WhatsApp" : "Configure o gateway primeiro"}</div>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
       </button>
-      <div id="wa-grupos"></div>
+      <div id="wa-grupos" style="margin-top:4px"></div>
 
-      <!-- número -->
-      <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:4px">
-        <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:10px">Seu número</div>
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg);border:1.5px solid var(--line);border-radius:14px">
-          <div style="width:36px;height:36px;border-radius:10px;background:#25D366;
-               display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:10.5px;color:var(--ink-3);font-weight:600;margin-bottom:3px">DDI+DDD+número, só dígitos</div>
-            <input id="wa-meunumero" value="${st.meu_numero||""}" placeholder="5547999990000"
-              style="border:none;background:transparent;font-size:15px;font-weight:700;color:var(--ink);
-                     width:100%;padding:0;font-family:monospace;outline:none"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'');_previewNumeroWA(this.value)">
-          </div>
-          <span id="wa-num-ico" style="font-size:20px">${st.meu_numero?"✅":"📱"}</span>
-        </div>
-        <div id="wa-num-preview" style="margin-top:8px;font-size:12.5px;color:${st.meu_numero?"#128C7E":"var(--ink-3)"}">
-          ${st.meu_numero?"✓ Somente você controla o sistema.":"Deixe em branco para qualquer membro do grupo usar."}
-        </div>
-        <button onclick="salvarNumeroWA()"
-          style="margin-top:12px;padding:10px 20px;border-radius:12px;background:#075E54;color:#fff;
-                 font-weight:700;font-size:13.5px;border:none;cursor:pointer;
-                 display:inline-flex;align-items:center;gap:7px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
-          Salvar número
-        </button>
+      <!-- ── SEPARADOR ── -->
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0 16px">
+        <div style="flex:1;height:1px;background:var(--line)"></div>
+        <span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#128C7E">Seu número</span>
+        <div style="flex:1;height:1px;background:var(--line)"></div>
       </div>
+
+      <!-- ── CHIP DO NÚMERO (estilo contato salvo no celular) ── -->
+      <div style="background:var(--bg);border-radius:18px;border:1.5px solid var(--line);overflow:hidden;
+                  transition:border-color .15s" onclick="document.getElementById('wa-meunumero').focus()"
+           id="wa-num-chip">
+        <!-- topo do chip: avatar + nome -->
+        <div style="display:flex;align-items:center;gap:14px;padding:16px 16px 12px">
+          <div style="width:52px;height:52px;border-radius:50%;
+               background:${st.meu_numero ? "linear-gradient(135deg,#25D366,#128C7E)" : "var(--line)"};
+               display:flex;align-items:center;justify-content:center;flex-shrink:0;
+               box-shadow:${st.meu_numero ? "0 3px 10px rgba(37,211,102,.3)" : "none"};
+               transition:all .3s" id="wa-num-avatar">
+            ${st.meu_numero ? `
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="26" height="26">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>` : `
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.8" width="26" height="26">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+              <line x1="12" y1="1" x2="12" y2="5"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            </svg>`}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:3px">Responsável pelo grupo</div>
+            <div id="wa-num-nome" style="font-size:15px;font-weight:800;color:var(--ink)">
+              ${st.meu_numero ? (State.nome || "Jackson Tomelin") : "Não configurado"}
+            </div>
+          </div>
+          <span id="wa-num-ico" style="font-size:22px">${st.meu_numero ? "✅" : "➕"}</span>
+        </div>
+
+        <!-- linha divisória -->
+        <div style="height:1px;background:var(--line);margin:0 16px"></div>
+
+        <!-- campo de número estilo app de contato -->
+        <div style="padding:12px 16px 16px">
+          <div style="font-size:10.5px;font-weight:700;color:#128C7E;text-transform:uppercase;
+                      letter-spacing:.08em;margin-bottom:6px">📱 WhatsApp (DDI+DDD+número)</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <!-- bandeira BR decorativa -->
+            <div style="width:32px;height:32px;border-radius:8px;background:#009c3b;
+                 display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">🇧🇷</div>
+            <input id="wa-meunumero" value="${st.meu_numero || ""}" placeholder="5547 9 9999-0000"
+              style="flex:1;border:none;background:transparent;font-size:17px;font-weight:700;
+                     color:var(--ink);padding:0;font-family:monospace;outline:none;min-width:0"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'');_previewNumeroWA(this.value)">
+            <div id="wa-num-status" style="font-size:20px;flex-shrink:0">${st.meu_numero ? "✅" : ""}</div>
+          </div>
+          <div id="wa-num-preview" style="margin-top:6px;font-size:12.5px;
+            color:${st.meu_numero ? "#128C7E" : "var(--ink-3)"}">
+            ${st.meu_numero ? "✓ Somente você controla o sistema pelo grupo."
+              : "Deixe em branco para qualquer membro do grupo usar."}
+          </div>
+        </div>
+      </div>
+
+      <!-- botão salvar número -->
+      <button onclick="salvarNumeroWA()"
+        style="margin-top:12px;width:100%;padding:13px 16px;border-radius:14px;
+               background:linear-gradient(135deg,#075E54,#128C7E);color:#fff;
+               font-weight:800;font-size:14px;border:none;cursor:pointer;
+               display:flex;align-items:center;justify-content:center;gap:8px;
+               box-shadow:0 4px 14px rgba(7,94,84,.3);transition:all .15s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="18" height="18">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Salvar número
+      </button>
+
     </div>
   </div>
 
@@ -1808,33 +1921,73 @@ async function salvarGatewayWA() {
 async function carregarGruposWA() {
   const box = document.getElementById("wa-grupos");
   if (!box) return;
-  box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:8px 0">Buscando grupos…</div>`;
+  box.innerHTML = `<div style="padding:12px 0;text-align:center;color:var(--ink-3);font-size:13px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"
+         style="animation:spin 1s linear infinite;vertical-align:middle">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg> Buscando grupos…
+  </div>`;
+
   const r = await api("/api/whatsapp/grupos");
-  if (!r.ok || !r.grupos.length) {
-    box.innerHTML = `<div style="font-size:13px;color:var(--red);padding:8px 0">${r.erro || "Nenhum grupo encontrado."}</div>`;
+  if (!r.ok || !r.grupos?.length) {
+    box.innerHTML = `<div style="padding:12px;background:rgba(180,80,62,.06);border-radius:12px;font-size:13px;color:var(--red)">
+      ${r.erro || "Nenhum grupo encontrado. Verifique a conexão com o gateway."}</div>`;
     return;
   }
+
+  // paleta de avatares para os grupos
+  const cores = ["#075E54","#128C7E","#25D366","#34B7F1","#9E62AE","#E65C6E","#F47A3A","#3B7DD8"];
+  const ini = (nome) => (nome || "G").replace(/[^a-zA-ZÀ-ú0-9]/g,"").slice(0,2).toUpperCase();
+
   box.innerHTML = `
-    <input placeholder="Filtrar grupos…" oninput="filtrarGruposWA(this.value)"
-      style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;
-             background:var(--bg);margin-bottom:8px;font-size:13.5px">
-    <div style="max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:12px">
-      ${r.grupos.map(g => `
-        <div class="wa-grupo" data-nome="${(g.nome||"").toLowerCase()}" onclick="escolherGrupoWA('${g.jid}')"
-          style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer">
-          <div style="width:32px;height:32px;border-radius:9px;background:#25D36618;display:flex;align-items:center;justify-content:center;color:#25D366;flex-shrink:0">
-            ${icon("users")}
-          </div>
-          <div style="min-width:0;flex:1">
-            <div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome}</div>
-            <div style="font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.jid}</div>
-          </div>
-        </div>`).join("")}
+    <div style="margin-top:8px">
+      <div style="position:relative;margin-bottom:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2"
+             width="16" height="16" style="position:absolute;left:12px;top:50%;transform:translateY(-50%)">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input placeholder="Filtrar grupos…" oninput="filtrarGruposWA(this.value)"
+          style="width:100%;padding:10px 12px 10px 36px;border:1.5px solid var(--line);
+                 border-radius:12px;background:var(--bg);font-size:13.5px;box-sizing:border-box">
+      </div>
+      <div id="wa-lista-grupos" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto">
+        ${r.grupos.map((g, i) => {
+          const cor = cores[i % cores.length];
+          const sigla = ini(g.nome);
+          return `<div class="wa-grupo" data-nome="${(g.nome||"").toLowerCase()}"
+            onclick="escolherGrupoWA('${g.jid}')"
+            style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+                   background:var(--bg);border:1.5px solid var(--line);border-radius:14px;
+                   cursor:pointer;transition:all .15s"
+            onmouseover="this.style.borderColor='#25D366';this.style.background='rgba(37,211,102,.04)'"
+            onmouseout="this.style.borderColor='var(--line)';this.style.background='var(--bg)'">
+            <div style="width:44px;height:44px;border-radius:14px;background:${cor};
+                 display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                 box-shadow:0 2px 8px ${cor}44;position:relative">
+              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="22" height="22">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:14px;color:var(--ink);
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome || "(sem nome)"}</div>
+              <div style="font-size:11px;color:var(--ink-3);font-family:monospace;margin-top:2px;
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.jid}</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" width="18" height="18">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>`;
+        }).join("")}
+      </div>
     </div>`;
 }
 
 function filtrarGruposWA(q) {
-  q = q.toLowerCase();
+  q = (q || "").toLowerCase();
   document.querySelectorAll(".wa-grupo").forEach(el =>
     el.style.display = el.dataset.nome.includes(q) ? "" : "none");
 }
@@ -1856,21 +2009,43 @@ function copiarTexto(t) {
 function _previewNumeroWA(v) {
   const el = document.getElementById("wa-num-preview");
   const ico = document.getElementById("wa-num-ico");
-  if (!el) return;
+  const st2 = document.getElementById("wa-num-status");
+  const nome = document.getElementById("wa-num-nome");
+  const avatar = document.getElementById("wa-num-avatar");
   const d = v.replace(/\D/g, "");
-  if (!d) {
-    el.innerHTML = "Deixe em branco para qualquer membro do grupo usar.";
-    el.style.color = "var(--ink-3)";
-    if (ico) ico.textContent = "📱";
-    return;
-  }
-  let fmt = "+" + d;
+
+  let fmt = d ? "+" + d : "";
   if (d.length >= 2)  fmt = "+" + d.slice(0,2) + " " + d.slice(2);
   if (d.length >= 4)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4);
   if (d.length >= 9)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4,9) + "-" + d.slice(9);
-  el.innerHTML = d.length >= 10 ? `✓ ${fmt} — somente você controla o sistema.` : `${fmt}…`;
-  el.style.color = d.length >= 10 ? "#128C7E" : "var(--ink-3)";
-  if (ico) ico.textContent = d.length >= 10 ? "✅" : "📱";
+  const completo = d.length >= 10;
+
+  if (el) {
+    el.textContent = !d ? "Deixe em branco para qualquer membro do grupo usar."
+      : completo ? "✓ Somente você controla o sistema pelo grupo."
+      : fmt + "…";
+    el.style.color = completo ? "#128C7E" : "var(--ink-3)";
+  }
+  if (st2) st2.textContent = completo ? "✅" : "";
+  if (ico) ico.textContent = completo ? "✅" : "➕";
+  if (nome) nome.textContent = completo ? (State.nome || "Jackson Tomelin") : "Não configurado";
+  if (avatar) {
+    avatar.style.background = completo
+      ? "linear-gradient(135deg,#25D366,#128C7E)"
+      : "var(--line)";
+    avatar.style.boxShadow = completo ? "0 3px 10px rgba(37,211,102,.3)" : "none";
+    avatar.innerHTML = completo
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="26" height="26">
+           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+           <circle cx="12" cy="7" r="4"/>
+         </svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.8" width="26" height="26">
+           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+           <circle cx="12" cy="7" r="4"/>
+           <line x1="12" y1="1" x2="12" y2="5"/>
+           <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+         </svg>`;
+  }
 }
 
 async function salvarNumeroWA() {

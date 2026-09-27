@@ -1399,3 +1399,4 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 .switch input:checked + .slider{background:var(--teal)}
 .switch input:checked + .slider::before{transform:translateX(18px)}
 @media(max-width:520px){.wa-chips{grid-template-columns:1fr 1fr}.wa-chip span{font-size:11px}}
+@keyframes spin{to{transform:rotate(360deg)}}
