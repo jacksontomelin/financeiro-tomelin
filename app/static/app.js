@@ -1426,7 +1426,7 @@ async function viewWhatsapp(v) {
   try { const t = await api("/api/whatsapp/tunnel-url"); tunnelUrl = t.url || ""; } catch {}
   // URL direta por IP:porta — igual ao Sentinela (bypassa o Traefik)
   const _host = location.hostname;
-  const webhookUrl = tunnelUrl || st.tunnel_url || (location.origin + "/api/whatsapp/webhook");
+  const webhookUrl = tunnelUrl || st.tunnel_url || `http://189.126.105.8:8788/api/whatsapp/webhook`;
   const webhookUrlAlt = location.origin + "/api/whatsapp/webhook";
   const ok       = st.conectado === true && st.ativo;
   const semCfg   = !st.gateway || !st.chave_configurada;
@@ -1913,7 +1913,7 @@ async function rodarDiagnosticoWA() {
   ];
 
   // ── URL DO WEBHOOK ──
-  const hookUrl = (d.config && d.config.tunnel_url) || tunnelUrl || (location.origin + "/api/whatsapp/webhook");
+  const hookUrl = (d.config && d.config.tunnel_url) || "http://189.126.105.8:8788/api/whatsapp/webhook";
   const hookUrlAlt = location.origin + "/api/whatsapp/webhook";
   const hookDbg  = location.origin + "/api/whatsapp/webhook/debug";
 

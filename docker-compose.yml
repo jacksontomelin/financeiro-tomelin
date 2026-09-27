@@ -3,6 +3,8 @@ services:
     build: .
     container_name: tomelin-app
     restart: unless-stopped
+    ports:
+      - "8788:8788"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       SECRET_KEY: ${SECRET_KEY}
