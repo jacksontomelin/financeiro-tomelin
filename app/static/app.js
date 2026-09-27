@@ -650,7 +650,7 @@ function donut(dados) {
 }
 
 /* ============================================================
-   VIEW: DASHBOARD
+   VIEW: DASHBOARD — layout premium
    ============================================================ */
 async function viewDashboard(v) {
   const [k, fluxo, desp, venc, jur, pat] = await Promise.all([
@@ -661,100 +661,178 @@ async function viewDashboard(v) {
     api("/api/relatorios/juros"),
     api("/api/relatorios/patrimonio"),
   ]);
-  const kpiCard = (cls, ic, lab, val, meta, extra='') => `
-    <div class="kpi ${cls}">
-      <div class="lab"><span class="i i-${cls}">${icon(ic)}</span>${lab}</div>
-      <div class="val mono-num">${val}</div>
-      <div class="meta">${meta}</div>
-      ${extra}
-    </div>`;
 
-  const lista = (arr, vazio) => arr.length ? arr.map(l => {
-    const d = l.vencimento ? diasEntre(l.vencimento) : null;
-    const atras = l.status === "atrasado";
-    const quando = atras ? `Venceu ${dataBRcurto(l.vencimento)} · há ${Math.abs(d)}d`
-      : d === 0 ? "Vence hoje" : d === 1 ? "Vence amanhã" : `Vence em ${d} dias`;
-    const rec = l.tipo === "receita";
-    return `<div class="venc-item">
-      <span class="venc-ico ${atras ? 'i-red' : rec ? 'i-green' : 'i-amber'}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
-      <div class="d"><div class="n">${l.descricao}</div><div class="w">${quando}${l.categoria ? " · " + l.categoria : ""}</div></div>
-      <div class="vv ${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</div>
-    </div>`;
-  }).join("") : `<div class="empty">${icon("checkCircle")}<p>${vazio}</p></div>`;
-
-  const saldoPos = k.saldo >= 0;
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const nome = State.nome ? State.nome.split(" ")[0] : "Jackson";
+  const saldoPos = k.saldo >= 0;
+  const resultado = k.receitas_mes - k.despesas_mes;
+  const resPos = resultado >= 0;
+
+  // mini spark line (últimos 6 meses de saldo) para o hero card
+  const saldos = fluxo.map(m => m.receitas - m.despesas);
+  const sMax = Math.max(...saldos, 1), sMin = Math.min(...saldos, 0);
+  const sy = (v) => 28 - ((v - sMin) / ((sMax - sMin) || 1)) * 26;
+  const sparkPts = saldos.map((s, i) => `${i * (60 / Math.max(saldos.length - 1, 1))},${sy(s).toFixed(1)}`).join(" ");
+
+  // lista de vencimentos compacta (estilo app bancário)
+  const itemVenc = (l) => {
+    const d = l.vencimento ? diasEntre(l.vencimento) : null;
+    const atras = l.status === "atrasado";
+    const rec = l.tipo === "receita";
+    const quando = atras ? `Venceu ${dataBRcurto(l.vencimento)} · há ${Math.abs(d)}d`
+      : d === 0 ? "Vence hoje" : d === 1 ? "Vence amanhã" : `Vence em ${d} dias`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)">
+      <div style="width:36px;height:36px;border-radius:12px;background:${atras?"rgba(180,80,62,.1)":rec?"rgba(47,129,122,.1)":"rgba(201,169,78,.1)"};
+           display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="${atras?"#B4503E":rec?"#2F817A":"#C9A94E"}" stroke-width="2" width="16" height="16">
+          ${rec ? '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
+                : '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>'}
+        </svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
+        <div style="font-size:11.5px;color:${atras?"var(--red)":"var(--ink-3)"};margin-top:1px">${quando}${l.categoria?" · "+l.categoria:""}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:13.5px;font-weight:700;font-family:monospace;color:${atras?"var(--red)":rec?"var(--teal)":"var(--ink)"}">${money(l.valor)}</div>
+        ${atras ? `<div style="font-size:10px;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;margin-top:2px">Atrasado</div>` : ""}
+      </div>
+    </div>`;
+  };
+
+  const atrasadas = venc.atrasados || [];
+  const proximas = venc.proximos || [];
+  const todasVenc = [...atrasadas, ...proximas];
+  const vencDesp = todasVenc.filter(x => x.tipo === "despesa");
+  const vencRec = todasVenc.filter(x => x.tipo === "receita");
+
   v.innerHTML = `
-    <div class="dash-boas-vindas">
-      <div class="bv-avatar">${State.emoji || "👤"}</div>
-      <div class="bv-text">
-        <h2>${saudacao}, ${State.nome ? State.nome.split(" ")[0] : "Jackson"}!</h2>
-        <p>Aqui está o resumo financeiro da família Tomelin hoje.</p>
-      </div>
-      <div class="bv-deco">${SVG_HOUSE}</div>
-    </div>
-    <div class="kpi-grid">
-      ${kpiCard("navy", "cash", "Saldo atual", money(k.saldo), saldoPos ? "Somando todas as contas" : "Atenção: saldo negativo", `<div class="kpi-deco"><svg viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="45" cy="45" r="30" fill="white" opacity=".5"/><circle cx="45" cy="45" r="20" fill="white" opacity=".4"/><text x="45" y="52" text-anchor="middle" font-size="20" fill="white" opacity=".7" font-family="serif">$</text></svg></div>`)}
-      ${kpiCard("green", "trendUp", "Receitas do mês", money(k.receitas_mes), "Competência no mês corrente")}
-      ${kpiCard("gold", "arrowUp", "Despesas do mês", money(k.despesas_mes), "Competência no mês corrente")}
-      ${kpiCard("teal", "clock", "A pagar", money(k.a_pagar), k.pagar_vencido > 0 ? `${money(k.pagar_vencido)} já vencido` : "Nenhum vencido")}
-    </div>
-
-    <div class="grid-2">
-      <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-red">${icon("trendUp")}</span>
-          <div class="grow"><h3>Juros pagos no ano</h3><div class="sub">Controle do custo financeiro</div></div>
-          <button class="btn btn-ghost btn-sm" onclick="setView('relatorios')">Detalhes</button>
+    <!-- ── HERO ── -->
+    <div style="background:linear-gradient(135deg,#06243F 0%,#082D51 45%,#0E3A63 100%);
+                border-radius:20px;padding:22px 24px 0;margin-bottom:16px;position:relative;overflow:hidden">
+      <!-- spark line decorativa -->
+      <svg viewBox="0 0 60 30" preserveAspectRatio="none"
+           style="position:absolute;right:0;bottom:0;width:55%;height:70%;opacity:.18">
+        <polyline points="${sparkPts}" fill="none" stroke="#C9A94E" stroke-width="1.8" stroke-linejoin="round"/>
+      </svg>
+      <!-- saudação -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);
+             display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${State.emoji||"👤"}</div>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
+          <div style="font-size:12.5px;color:rgba(255,255,255,.55)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
         </div>
-        <div class="val mono-num" style="font-size:26px;color:var(--red);margin:4px 0 2px">${money(jur.juros_pago_ano)}</div>
-        <div class="meta">No mês: <b>${money(jur.juros_mes)}</b> · Ainda a pagar: <b>${money(jur.juros_a_pagar)}</b>${jur.multa_ano ? ` · Multas: <b>${money(jur.multa_ano)}</b>` : ""}</div>
       </div>
-      <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-navy">${icon("car")}</span>
-          <div class="grow"><h3>Patrimônio líquido</h3><div class="sub">Contas + veículos − financiamentos</div></div>
-          <button class="btn btn-ghost btn-sm" onclick="setView('relatorios')">Relatórios</button>
+      <!-- saldo grande -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
+        <div style="font-size:clamp(28px,8vw,40px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
+          ${saldoPos?"▲":"▼"} ${money(Math.abs(resultado))} ${resPos?"de resultado positivo este mês":"de resultado negativo este mês"}
         </div>
-        <div class="val mono-num" style="font-size:26px;color:var(--navy);margin:4px 0 2px">${money(pat.patrimonio_liquido)}</div>
-        <div class="meta">Contas: <b>${money(pat.total_contas)}</b> · Veículos: <b>${money(pat.total_veiculos)}</b>${pat.total_financiamentos ? ` · Falta pagar: <b>${money(pat.total_financiamentos)}</b>` : ""}</div>
       </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-navy">${icon("trendUp")}</span>
-          <div class="grow"><h3>Fluxo de caixa — últimos 6 meses</h3></div>
-        </div>
-        ${barChart(fluxo)}
-      </div>
-      <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-gold">${icon("pie")}</span>
-          <div class="grow"><h3>Despesas por categoria</h3></div>
-        </div>
-        ${donut(desp)}
+      <!-- mini KPIs dentro do hero -->
+      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -24px;margin-top:16px">
+        ${[
+          ["Receitas","#6FD4AF",money(k.receitas_mes)],
+          ["Despesas","#E0A060",money(k.despesas_mes)],
+          ["A pagar","#AFC2D6",money(k.a_pagar)],
+        ].map(([lab,cor,val],i) => `
+          <div style="flex:1;padding:12px 14px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"}">
+            <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">${lab}</div>
+            <div style="font-size:13.5px;font-weight:800;color:${cor};font-family:monospace">${val}</div>
+          </div>`).join("")}
       </div>
     </div>
 
-    <div class="grid-2">
-      <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-green">${icon("arrowDown")}</span>
-          <div class="grow"><h3>Próximos recebimentos</h3></div>
-          <button class="btn btn-ghost btn-sm" onclick="setView('receber')">Ver todos</button>
+    <!-- ── ATALHOS RÁPIDOS ── -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      ${[
+        ["plus","Nova despesa","despesa","#082D51"],
+        ["arrowDown","Recebimento","receita","#2F817A"],
+        ["receipt","Ler NF","nfe","#C9A94E"],
+        ["trendUp","Relatórios","relatorios","#305C74"],
+      ].map(([ic,lab,acao,cor]) => `
+        <button onclick="${acao==="despesa"?"formLancamento(null,'despesa')":acao==="receita"?"formLancamento(null,'receita')":acao==="nfe"?"abrirLeitorNFe()":"setView('"+acao+"')"}"
+          style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 8px;border-radius:16px;
+                 border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:all .15s">
+          <div style="width:40px;height:40px;border-radius:12px;background:${cor}18;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2" width="20" height="20">${P[ic]||""}</svg>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:var(--ink-2);text-align:center;line-height:1.3">${lab}</span>
+        </button>`).join("")}
+    </div>
+
+    <!-- ── ALERTAS (só aparece se houver) ── -->
+    ${atrasadas.length ? `
+    <div style="background:rgba(180,80,62,.08);border:1.5px solid rgba(180,80,62,.25);border-radius:14px;
+                padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px"
+         onclick="setView('pagar')" style="cursor:pointer">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(180,80,62,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#B4503E" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13.5px;color:var(--red)">${atrasadas.length} conta${atrasadas.length>1?"s":""} vencida${atrasadas.length>1?"s":""}</div>
+        <div style="font-size:12px;color:var(--red);opacity:.8">${money(atrasadas.reduce((s,l)=>s+l.valor,0))} em atraso — toque para ver</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>` : ""}
+
+    <!-- ── PRÓXIMOS VENCIMENTOS ── -->
+    ${todasVenc.length ? `
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <h3 style="font-size:15px;color:var(--navy)">Próximos vencimentos</h3>
+        <button class="btn btn-ghost btn-sm" onclick="setView('vencimentos')">${icon("clock")} Ver todos</button>
+      </div>
+      ${todasVenc.slice(0,5).map(itemVenc).join("")}
+    </div>` : ""}
+
+    <!-- ── GRÁFICOS ── -->
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <h3 style="font-size:15px;color:var(--navy)">Fluxo de caixa</h3>
+          <div class="sub">Últimos 6 meses</div>
         </div>
-        <div class="venc-list">${lista([...venc.atrasados, ...venc.proximos].filter(x => x.tipo === "receita"), "Nenhum recebimento próximo.")}</div>
+        <button class="btn btn-ghost btn-sm" onclick="setView('relatorios')">${icon("trendUp")} Relatórios</button>
+      </div>
+      <div style="overflow-x:auto">${barChart(fluxo)}</div>
+    </div>
+
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <h3 style="font-size:15px;color:var(--navy)">Despesas por categoria</h3>
+          <div class="sub">Mês atual</div>
+        </div>
+      </div>
+      ${donut(desp)}
+    </div>
+
+    <!-- ── PATRIMÔNIO + JUROS ── -->
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card card-pad">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span class="card-ico i-navy" style="width:34px;height:34px;border-radius:10px">${icon("shield")}</span>
+          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Patrimônio líquido</div></div>
+        </div>
+        <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--navy)">${money(pat.patrimonio_liquido)}</div>
+        <div class="sub" style="margin-top:6px">Contas <b>${money(pat.total_contas)}</b> + Veículos <b>${money(pat.total_veiculos)}</b></div>
+        ${pat.total_financiamentos > 0 ? `<div class="sub" style="color:var(--red)">Financiamentos: − ${money(pat.total_financiamentos)}</div>` : ""}
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%" onclick="setView('relatorios')">${icon("chart")} Ver relatório</button>
       </div>
       <div class="card card-pad">
-        <div class="card-h">
-          <span class="card-ico i-red">${icon("arrowUp")}</span>
-          <div class="grow"><h3>Próximos pagamentos</h3></div>
-          <button class="btn btn-ghost btn-sm" onclick="setView('pagar')">Ver todos</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span class="card-ico i-red" style="width:34px;height:34px;border-radius:10px">${icon("alert")}</span>
+          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Juros pagos no ano</div></div>
         </div>
-        <div class="venc-list">${lista([...venc.atrasados, ...venc.proximos].filter(x => x.tipo === "despesa"), "Nenhum pagamento próximo.")}</div>
+        <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--red)">${money(jur.juros_pago_ano)}</div>
+        <div class="sub" style="margin-top:6px">Este mês: <b>${money(jur.juros_mes)}</b></div>
+        ${jur.juros_a_pagar > 0 ? `<div class="sub" style="color:var(--red)">A pagar: ${money(jur.juros_a_pagar)}</div>` : ""}
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%" onclick="setView('relatorios')">${icon("download")} PDF completo</button>
       </div>
     </div>`;
 
@@ -765,7 +843,6 @@ async function viewDashboard(v) {
     popupVencimentos(venc);
   }
 }
-
 function popupVencimentos(venc) {
   const itens = [...venc.atrasados, ...venc.proximos.filter(x => diasEntre(x.vencimento) <= 3)];
   const totalPagar = itens.filter(x => x.tipo === "despesa").reduce((s, x) => s + x.valor, 0);
