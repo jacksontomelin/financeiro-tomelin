@@ -310,3 +310,40 @@ def job_escutar_grupo():
         import logging; logging.getLogger("tomelin.wa").error("escuta: %s", e)
     finally:
         db.close()
+
+
+# ── DEBUG: captura payloads brutos do gateway ───────────────
+from collections import deque as _deque
+_DEBUG_PAYLOADS: _deque = _deque(maxlen=20)
+
+@router.post("/webhook/debug")
+async def webhook_debug(req: Request):
+    """Endpoint de debug — registra tudo que chega do gateway sem filtro."""
+    try:
+        body = await req.json()
+    except Exception as e:
+        body = {"erro_parse": str(e), "raw": await req.body().decode("utf-8", errors="replace")}
+    _DEBUG_PAYLOADS.appendleft({
+        "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
+        "payload": body,
+    })
+    return {"ok": True, "recebido": body}
+
+@router.get("/debug", dependencies=[Depends(usuario_atual)])
+def debug_log(db: Session = Depends(get_db)):
+    """Retorna os últimos payloads recebidos pelo webhook + estado atual da config."""
+    c = zapapi.config(db)
+    return {
+        "config": {
+            "ativo": c["ativo"],
+            "url": c["url"],
+            "chave_configurada": bool(c["chave"]),
+            "grupo": c["grupo"],
+            "meu_numero": cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "",
+            "endpoint": c["endpoint"],
+        },
+        "webhook_url_principal": "/api/whatsapp/webhook",
+        "webhook_url_debug": "/api/whatsapp/webhook/debug",
+        "ultimos_payloads": list(_DEBUG_PAYLOADS),
+        "ultimos_eventos": list(LOG_EVENTOS),
+    }

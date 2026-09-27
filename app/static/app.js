@@ -1881,30 +1881,96 @@ async function rodarDiagnosticoWA() {
   if (!box) return;
   box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:4px 0">Verificando…</div>`;
   let d;
-  try { d = await api("/api/whatsapp/diagnostico"); }
+  try { d = await api("/api/whatsapp/debug"); }
   catch (e) { box.innerHTML = `<div style="color:var(--red);font-size:13px">${e.message}</div>`; return; }
 
-  const cor = r => /respondido|enviado/.test(r) ? "#25D366" : /FALHOU|erro/.test(r) ? "var(--red)" : "var(--ink-3)";
-  box.innerHTML =
-    d.checks.map(c => `
-      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">
-        <span style="font-size:16px;line-height:1.2;flex-shrink:0">${c.ok?"✅":"❌"}</span>
-        <div style="min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--ink)">${c.nome}</div>
-          ${c.detalhe?`<div style="font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere">${c.detalhe}</div>`:""}
-        </div>
-      </div>`).join("") +
-    (d.eventos.length ? `
-      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;padding-top:10px;margin-top:4px">Últimas mensagens</div>` +
-      d.eventos.slice(0,8).map(e => `
-        <div style="padding:7px 0;border-bottom:1px solid var(--line)">
-          <div style="display:flex;justify-content:space-between;gap:8px">
-            <code style="font-size:12px;color:var(--navy);overflow-wrap:anywhere">${(e.texto||"").replace(/</g,"&lt;")}</code>
-            <span style="font-size:10.5px;color:var(--ink-3);flex-shrink:0">${e.hora}</span>
+  const cor = r => /respondido/.test(r) ? "#25D366" : /erro|FALH/.test(r) ? "var(--red)" : "var(--ink-3)";
+  const cfg = d.config || {};
+
+  // ── CHECKLIST DE CONFIGURAÇÃO ──
+  const checks = [
+    [cfg.ativo,                        "Envio ativado",           cfg.ativo?"":"Ative no passo 1"],
+    [!!cfg.url,                        "URL do gateway",          cfg.url||"não configurada"],
+    [cfg.chave_configurada,            "Chave de API",            cfg.chave_configurada?"configurada":"não configurada"],
+    [!!(cfg.grupo&&cfg.grupo.includes("@g.us")), "Grupo definido",cfg.grupo||"escolha no passo 2"],
+    [!!cfg.meu_numero,                 "Seu número",              cfg.meu_numero||"qualquer membro pode usar"],
+  ];
+
+  // ── URL DO WEBHOOK ──
+  const hookUrl = location.origin + "/api/whatsapp/webhook";
+  const hookDbg  = location.origin + "/api/whatsapp/webhook/debug";
+
+  box.innerHTML = `
+    <!-- checklist -->
+    <div style="margin-bottom:12px">
+      ${checks.map(([ok,nome,det])=>`
+        <div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)">
+          <span style="flex-shrink:0">${ok?"✅":"❌"}</span>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">${nome}</div>
+            ${det?`<div style="font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere">${det}</div>`:""}
           </div>
-          <div style="font-size:11px;color:${cor(e.resultado)}">${e.resultado} · ${e.autor||"—"} · ${e.origem}</div>
-        </div>`).join("")
-      : `<div style="font-size:12.5px;color:var(--ink-3);padding-top:10px">Nenhuma mensagem processada ainda — mande <b>menu</b> no grupo e toque em Verificar.</div>`);
+        </div>`).join("")}
+    </div>
+
+    <!-- URL do webhook -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">URL do webhook (copie para o gateway)</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1.5px solid #25D366;border-radius:12px;margin-bottom:6px">
+      <code style="flex:1;font-size:11.5px;color:var(--navy);overflow-wrap:anywhere">${hookUrl}</code>
+      <button onclick="copiarTexto('${hookUrl}')"
+        style="background:#25D36618;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#128C7E;flex-shrink:0">
+        ${icon("doc")}
+      </button>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-3);margin-bottom:14px">
+      Evento: <b>Mensagem recebida</b> · igual ao Sentinela
+    </div>
+
+    <!-- payloads recebidos -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">
+      Payloads recebidos do gateway (últimos ${(d.ultimos_payloads||[]).length})
+    </div>
+    ${(d.ultimos_payloads||[]).length === 0 ? `
+      <div style="padding:14px;background:rgba(255,193,7,.08);border:1.5px solid rgba(255,193,7,.3);border-radius:12px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:#8A6A1A;margin-bottom:4px">⚠️ Nenhum payload recebido ainda</div>
+        <div style="font-size:12.5px;color:var(--ink-2)">
+          O gateway não está chamando o webhook. Verifique:<br>
+          1. URL cadastrada no painel do gateway (copiada acima)<br>
+          2. Evento: <b>Mensagem recebida</b><br>
+          3. Mande <b>menu</b> no grupo e toque em Verificar novamente
+        </div>
+      </div>` : `
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:10px">
+        ${(d.ultimos_payloads||[]).map(p=>`
+          <div style="padding:10px 12px;border-bottom:1px solid var(--line)">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:var(--ink-3)">${p.hora}</span>
+              <span style="font-size:11px;background:#25D36620;color:#128C7E;padding:1px 6px;border-radius:6px">recebido</span>
+            </div>
+            <pre style="font-size:11px;color:var(--ink);margin:0;overflow-x:auto;white-space:pre-wrap;word-break:break-all">${JSON.stringify(p.payload,null,2).replace(/</g,"&lt;")}</pre>
+          </div>`).join("")}
+      </div>`}
+
+    <!-- eventos processados -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">
+      Comandos processados (últimos ${(d.ultimos_eventos||[]).length})
+    </div>
+    ${(d.ultimos_eventos||[]).length === 0 ? `
+      <div style="font-size:12.5px;color:var(--ink-3);padding:10px 0">
+        Nenhum comando processado. Mande <b>menu</b> no grupo depois de configurar o webhook.
+      </div>` :
+      (d.ultimos_eventos||[]).slice(0,10).map(e=>`
+        <div style="display:flex;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)">
+          <code style="font-size:12px;color:var(--navy);flex:1;overflow-wrap:anywhere">${(e.texto||"").replace(/</g,"&lt;")}</code>
+          <span style="font-size:11px;color:${cor(e.resultado)};flex-shrink:0">${e.resultado}</span>
+          <span style="font-size:10px;color:var(--ink-3);flex-shrink:0">${e.hora}</span>
+        </div>`).join("")}
+
+    <!-- URL debug -->
+    <div style="margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:10px;border:1px solid var(--line)">
+      <div style="font-size:11px;color:var(--ink-3);margin-bottom:3px">URL alternativa para testar o webhook:</div>
+      <code style="font-size:11px;color:var(--ink-2);overflow-wrap:anywhere">${hookDbg}</code>
+    </div>`;
 }
 
 async function salvarGatewayWA() {
