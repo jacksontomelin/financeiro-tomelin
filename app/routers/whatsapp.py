@@ -28,19 +28,27 @@ def _log(texto, resultado, autor=""):
 @router.post("/webhook")
 async def webhook(req: Request, db: Session = Depends(get_db)):
     try:
-        body = await req.json()
-    except Exception:
-        return {"ok": False}
+        raw = await req.body()
+        body = __import__("json").loads(raw)
+    except Exception as e:
+        _DEBUG_PAYLOADS.appendleft({"hora": datetime.now().strftime("%d/%m %H:%M:%S"),
+            "payload": {"erro_parse": str(e), "raw": raw.decode("utf-8", errors="replace")[:500]}})
+        return {"ok": False, "erro": "json inválido"}
+
+    # loga TUDO que chega — antes de qualquer filtro
+    _DEBUG_PAYLOADS.appendleft({"hora": datetime.now().strftime("%d/%m %H:%M:%S"), "payload": body})
 
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
     jid      = str(body.get("jid") or "")
     texto    = str(body.get("texto") or "").strip()
     de_mim   = bool(body.get("deMim", False))
     autor_num = str(body.get("autorNumero") or "")
+    evento   = str(body.get("evento") or "")
 
-    # ignora sem texto
+    # ignora eventos sem texto (status, leitura, etc)
     if not texto:
-        return {"ok": True, "ignorado": "sem texto"}
+        _log(f"[{evento}] sem texto", "ignorado", "")
+        return {"ok": True, "ignorado": f"sem texto (evento={evento})"}
 
     # só o grupo configurado
     grupo = (cfg.get(db, "WHATSAPP_GRUPO", "") or "").strip()
@@ -362,3 +370,15 @@ async def testar_url(req: Request):
         "proto": proto,
         "instrucao": "Copie 'webhook_url' e cadastre no painel zap.unicontroller.com.br → Webhooks com evento 'Mensagem recebida'",
     }
+
+
+@router.get("/webhook/ping")
+@router.post("/webhook/ping")  
+async def webhook_ping(req: Request):
+    """Endpoint público para testar conectividade — o gateway pode chamar isso."""
+    _DEBUG_PAYLOADS.appendleft({
+        "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
+        "payload": {"tipo": "PING", "method": req.method, "host": req.headers.get("host",""), 
+                    "origem": req.client.host if req.client else "desconhecido"}
+    })
+    return {"ok": True, "pong": True, "servidor": "tomelin-financeiro"}
