@@ -376,9 +376,20 @@ async def testar_url(req: Request):
 @router.post("/webhook/ping")  
 async def webhook_ping(req: Request):
     """Endpoint público para testar conectividade — o gateway pode chamar isso."""
+    headers_dict = dict(req.headers)
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
-        "payload": {"tipo": "PING", "method": req.method, "host": req.headers.get("host",""), 
-                    "origem": req.client.host if req.client else "desconhecido"}
+        "payload": {
+            "tipo": "PING", "method": req.method,
+            "host": req.headers.get("host",""),
+            "x-forwarded-for": req.headers.get("x-forwarded-for",""),
+            "x-forwarded-proto": req.headers.get("x-forwarded-proto",""),
+            "origem_ip": req.client.host if req.client else "?"
+        }
     })
-    return {"ok": True, "pong": True, "servidor": "tomelin-financeiro"}
+    return {
+        "ok": True, "pong": True, "servidor": "tomelin-financeiro",
+        "host_recebido": req.headers.get("host",""),
+        "proto": req.headers.get("x-forwarded-proto","http"),
+        "url_webhook": f"{req.headers.get('x-forwarded-proto','http')}://{req.headers.get('x-forwarded-host') or req.headers.get('host','')}/api/whatsapp/webhook"
+    }
