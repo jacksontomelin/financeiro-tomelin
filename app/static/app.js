@@ -1418,296 +1418,470 @@ async function excluirContato(id) {
 /* ============================================================
    VIEW: WHATSAPP (estilo Sentinela)
    ============================================================ */
+const WA_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+
 async function viewWhatsapp(v) {
   let st = {};
   try { st = await api("/api/whatsapp/status"); } catch { st = {}; }
   const webhookUrl = location.origin + "/api/whatsapp/webhook";
-  const conectado = st.conectado === true;
-  const statusTxt = !st.gateway || !st.chave_configurada ? "Gateway não configurado"
-    : st.erro_gateway ? st.erro_gateway
-    : conectado ? ("Conectado" + (st.numero ? " · " + st.numero : ""))
-    : "WhatsApp desconectado no gateway";
-  const passo = (n, ok, titulo, corpo) => `
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;
-          background:${ok ? "var(--teal)" : "var(--bg)"};color:${ok ? "#fff" : "var(--ink-2)"};border:1.5px solid ${ok ? "var(--teal)" : "var(--line)"}">${ok ? "✓" : n}</span>
-        <h3 style="margin:0;font-size:15px;color:var(--navy)">${titulo}</h3>
-      </div>${corpo}
-    </div>`;
+  const ok       = st.conectado === true && st.ativo;
+  const semCfg   = !st.gateway || !st.chave_configurada;
+  const statusTxt = semCfg ? "Não configurado"
+    : st.erro_gateway ? "Erro no gateway"
+    : st.conectado ? (st.numero ? st.numero : "Conectado")
+    : "WhatsApp desconectado";
 
-  const consultas = [
-    ["1 · saldo","Saldo de todas as contas"],["2 · vencer","Atrasados + próximos 7 dias"],["3 · resumo","Resumo do mês"],
-    ["4 · pagar","Contas a pagar"],["5 · receber","Contas a receber"],["6 · patrimonio","Contas + veículos"],
-    ["7 · juros","Juros e multas"],["8 · metas","Metas e progresso"],["9 · categorias","Lista de categorias"],["10 · contas","Saldo por conta"],
-    ["fluxo","Gráfico 6 meses"],["gastos","Top categorias do mês"],["hoje","Resumo do dia"],["semana","Movimentos da semana"],
-    ["projecao","Saldo projetado 3 meses"],["parcelas","Parcelas de cartão"],["carros","Veículos e financiamentos"],
-    ["proximo mes","Contas do mês que vem"],["dica","Dica personalizada"],["menu · mais","Menu de comandos"],
-  ];
-  const acoes = [
-    ["despesa 150 mercado","Lança despesa (categoria automática)"],["receita 3000 salario","Lança receita"],
-    ["baixa 42","Dá baixa no lançamento #42"],["buscar aluguel","Busca lançamentos"],["ultimo","Último lançamento"],
-    ["aporte 500 reserva","Aporta em meta"],["nova conta Nubank","Cadastra conta"],["nova cat Pets","Cadastra categoria"],
-    ["nf https://...","Consulta NF-e pelo QR code"],["ajuda baixa","Ajuda de qualquer comando"],
-  ];
-  const pdfs = [
-    ["recibo 42","Recibo #42 em PDF"],["recibo cupom 42","Recibo estilo impressora matricial"],
-    ["balancete","Balancete do mês em PDF"],["balancete cupom","Balancete estilo cupom"],["patrimonio pdf","Patrimônio em PDF"],
-  ];
-  const api_v1 = [
-    ["GET","/api/v1/status","—","Conexão do WhatsApp"],
-    ["POST","/api/v1/enviar","jid|numero, texto","Enviar texto"],
-    ["POST","/api/v1/enviar-anexo","multipart: arquivo, jid|numero, caption","Enviar arquivo (PDF, imagem…)"],
-    ["GET","/api/v1/chats","—","Últimas 200 conversas"],
-    ["GET","/api/v1/grupos","?busca=","Todos os grupos (jid + nome)"],
-    ["GET","/api/v1/mensagens","?jid=&limite=","Mensagens de um chat"],
-    ["POST","/api/v1/send-image","jid|numero, url, caption","Imagem por URL"],
-    ["POST","/api/v1/send-document","jid|numero, url, fileName, mimetype","Documento por URL"],
-    ["POST","/api/v1/send-video","jid|numero, url, caption","Vídeo por URL"],
-    ["POST","/api/v1/send-audio","jid|numero, url","Áudio por URL"],
-    ["POST","/api/v1/send-location","jid|numero, lat, lng, nome","Localização"],
-    ["POST","/api/v1/send-contact","jid|numero, nome, telefone","Cartão de contato"],
-    ["POST","/api/v1/send-reaction","msgId, emoji","Reagir a mensagem"],
-    ["POST","/api/v1/reply","msgId, texto","Responder citando"],
-    ["POST","/api/v1/delete-message","msgId","Apagar para todos"],
-    ["POST","/api/v1/read-message","jid|numero","Marcar como lida"],
-  ];
-  const chip = (arr, cor) => `<div class="wa-chips">${arr.map(([c,d]) => `
-      <div class="wa-chip"><code style="color:${cor}">${c}</code><span>${d}</span></div>`).join("")}</div>`;
+  // ── helpers ──────────────────────────────────────────────
+  const stepCircle = (n, done) =>
+    `<div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+       font-size:12px;font-weight:800;transition:all .2s;
+       background:${done?"#25D366":"var(--bg)"};color:${done?"#fff":"var(--ink-3)"};
+       border:2px solid ${done?"#25D366":"var(--line)"}">${done?"✓":n}</div>`;
 
+  const section = (titulo, sub, ico, corpo, accent="#25D366") =>
+    `<div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);overflow:hidden;margin-bottom:14px">
+       <div style="display:flex;align-items:center;gap:12px;padding:16px 18px 0">
+         <div style="width:38px;height:38px;border-radius:12px;background:${accent}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${accent}">${ico}</div>
+         <div><div style="font-weight:800;font-size:15px;color:var(--ink)">${titulo}</div>
+           <div style="font-size:12px;color:var(--ink-3);margin-top:1px">${sub}</div></div>
+       </div>
+       <div style="padding:14px 18px 18px">${corpo}</div>
+     </div>`;
+
+  const cmdChip = (cmd, desc, cor="#128C7E") =>
+    `<div style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:var(--bg);border-radius:12px;border:1px solid var(--line);min-width:0">
+       <code style="font-size:12.5px;font-weight:700;color:${cor};overflow-wrap:anywhere">${cmd}</code>
+       <span style="font-size:11.5px;color:var(--ink-2);line-height:1.3">${desc}</span>
+     </div>`;
+
+  const cmdGrid = (arr, cor) =>
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px">${arr.map(([c,d])=>cmdChip(c,d,cor)).join("")}</div>`;
+
+  // ── conteúdo principal ────────────────────────────────────
   v.innerHTML = `
-    <div class="wa-card" style="margin-bottom:16px">
-      <div class="wa-ico">${icon("whatsapp")}</div>
-      <div class="grow" style="min-width:0">
-        <div class="t">WhatsApp — central financeira</div>
-        <div class="s"><span class="status-dot ${conectado && st.ativo ? "on" : "off"}"></span>${statusTxt}${!st.ativo && st.gateway ? " · envio desativado" : ""}</div>
+
+  <!-- HERO VERDE -->
+  <div style="background:linear-gradient(135deg,#075E54 0%,#128C7E 55%,#25D366 100%);
+              border-radius:22px;padding:24px 22px 20px;margin-bottom:16px;position:relative;overflow:hidden">
+    <!-- bolhas decorativas -->
+    <div style="position:absolute;right:-20px;top:-20px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
+    <div style="position:absolute;right:30px;bottom:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+      <div style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.15);
+           display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
+      <div>
+        <div style="font-size:19px;font-weight:900;color:#fff;line-height:1.1">Central WhatsApp</div>
+        <div style="font-size:12.5px;color:rgba(255,255,255,.65);margin-top:3px">Comandos financeiros no grupo</div>
       </div>
-      <button class="btn btn-green btn-sm" onclick="testarWhatsapp(this)" ${st.ativo && st.grupo ? "" : "disabled"}>${icon("send")}<span>Testar</span></button>
     </div>
 
-    ${passo(1, !!(st.gateway && st.chave_configurada && !st.erro_gateway), "Conectar ao gateway", `
+    <!-- status pill -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);
+         border-radius:20px;padding:7px 14px;margin-bottom:18px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${ok?"#25D366":semCfg?"#aaa":"#FF6B6B"};
+        ${ok?"box-shadow:0 0 0 3px rgba(37,211,102,.35)":""}"></span>
+      <span style="font-size:13px;font-weight:700;color:#fff">${statusTxt}</span>
+      ${ok?`<span style="font-size:11px;color:rgba(255,255,255,.5)">· respondendo a cada 4s</span>`:""}
+    </div>
+
+    <!-- mini-stats -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden">
+      ${[
+        ["🤖","Escuta","a cada 4s"],
+        ["📎","PDFs","no grupo"],
+        ["⚡","Respostas","instantâneas"],
+      ].map(([e,t,s])=>`
+        <div style="background:rgba(0,0,0,.2);padding:12px 10px;text-align:center">
+          <div style="font-size:20px;margin-bottom:4px">${e}</div>
+          <div style="font-size:12px;font-weight:700;color:#fff">${t}</div>
+          <div style="font-size:10.5px;color:rgba(255,255,255,.5)">${s}</div>
+        </div>`).join("")}
+    </div>
+  </div>
+
+  <!-- BOTÕES DE AÇÃO RÁPIDA -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <button onclick="testarWhatsapp(this)" ${st.ativo&&st.grupo?"":'disabled style="opacity:.45"'}
+      style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;
+             background:#25D366;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;
+             box-shadow:0 4px 14px rgba(37,211,102,.4);transition:all .15s">
+      ${WA_SVG} Testar agora
+    </button>
+    <button onclick="rodarDiagnosticoWA()"
+      style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;
+             background:var(--card);color:var(--navy);font-weight:700;font-size:14px;
+             border:1.5px solid var(--line);cursor:pointer;transition:all .15s">
+      ${icon("shield")} Diagnóstico
+    </button>
+  </div>
+
+  <!-- DIAGNÓSTICO (expande) -->
+  <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:#128C7E18;display:flex;align-items:center;justify-content:center;color:#128C7E">${icon("shield")}</div>
+        <div><div style="font-weight:700;color:var(--ink)">Diagnóstico</div>
+          <div style="font-size:12px;color:var(--ink-3)">Verificação em tempo real</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="rodarDiagnosticoWA()">${icon("refresh")} Verificar</button>
+    </div>
+    <div id="wa-diag" style="padding:0 18px 16px"><div style="font-size:13px;color:var(--ink-3)">Toque em Verificar para checar a conexão.</div></div>
+  </div>
+
+  <!-- PASSO 1: GATEWAY -->
+  <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
+      ${stepCircle(1, !!(st.gateway && st.chave_configurada && !st.erro_gateway))}
+      <div>
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">Conectar ao gateway</div>
+        <div style="font-size:12px;color:var(--ink-3)">${st.gateway||"zap.unicontroller.com.br"}</div>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
       <div class="frm">
         <div class="campo full"><label>URL do gateway</label>
-          <input id="wa-url" value="${st.gateway || "https://zap.unicontroller.com.br"}" placeholder="https://zap.unicontroller.com.br"></div>
-        <div class="campo full"><label>Chave de API</label>
-          <input id="wa-chave" type="password" placeholder="${st.chave_configurada ? "•••••••• (já configurada — deixe em branco para manter)" : "Gere em zap.unicontroller.com.br → API Keys"}"></div>
+          <input id="wa-url" value="${st.gateway||"https://zap.unicontroller.com.br"}" placeholder="https://zap.unicontroller.com.br"></div>
+        <div class="campo full"><label>Chave de API <span style="font-weight:400;color:var(--ink-3)">(API Keys no painel do gateway)</span></label>
+          <input id="wa-chave" type="password" placeholder="${st.chave_configurada?"••••••••  (já salva — deixe em branco para manter)":"Cole a chave gerada no painel"}"></div>
         <div class="campo full" style="flex-direction:row;align-items:center;gap:10px">
-          <label class="switch"><input type="checkbox" id="wa-ativo" ${st.ativo ? "checked" : ""}><span class="slider"></span></label>
-          <span style="font-size:13.5px;color:var(--ink)">Ativar envio de mensagens</span></div>
+          <label class="switch"><input type="checkbox" id="wa-ativo" ${st.ativo?"checked":""}><span class="slider"></span></label>
+          <span style="font-size:13.5px;color:var(--ink);font-weight:600">Ativar envio de mensagens</span>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="salvarGatewayWA()">${icon("check")}Salvar e verificar</button>`)}
+      <button onclick="salvarGatewayWA()"
+        style="margin-top:14px;width:100%;padding:12px 16px;border-radius:12px;background:#128C7E;color:#fff;
+               font-weight:700;font-size:14px;border:none;cursor:pointer;display:flex;align-items:center;
+               justify-content:center;gap:8px;transition:opacity .15s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar e verificar conexão
+      </button>
+    </div>
+  </div>
 
-    ${passo(2, !!st.grupo, "Grupo e número do responsável", `
-
-      <!-- Seletor de grupo -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">Grupo de controle</div>
-
-        ${st.grupo ? `
-        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(37,211,102,.07);border:1.5px solid rgba(37,211,102,.3);border-radius:14px;margin-bottom:10px">
-          <div style="width:40px;height:40px;border-radius:12px;background:#25D366;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--ink)">Grupo configurado</div>
-            <div style="font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${st.grupo}</div>
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()">${icon("edit")}</button>
-        </div>` : `
-        <div class="dica azul" style="margin-bottom:10px">
-          <span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("alert")}</span>
-          <div>Selecione abaixo o grupo da família onde os comandos serão respondidos.</div>
-        </div>`}
-
-        <button class="btn btn-ghost btn-sm" id="btn-listar-grupos" onclick="carregarGruposWA()"
-          ${st.gateway && st.chave_configurada ? "" : "disabled"}>
-          ${icon("users")} ${st.grupo ? "Trocar grupo" : "Listar grupos e escolher"}
-        </button>
-        <div id="wa-grupos" style="margin-top:10px"></div>
+  <!-- PASSO 2: GRUPO + NÚMERO -->
+  <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
+      ${stepCircle(2, !!st.grupo)}
+      <div>
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">Grupo e seu número</div>
+        <div style="font-size:12px;color:var(--ink-3)">${st.grupo||"Nenhum grupo configurado"}</div>
       </div>
+    </div>
+    <div style="padding:16px 18px">
 
-      <!-- Número do responsável -->
-      <div style="border-top:1px solid var(--line);padding-top:16px">
-        <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">Seu número do WhatsApp</div>
+      <!-- grupo atual -->
+      ${st.grupo?`
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(37,211,102,.07);
+           border:1.5px solid rgba(37,211,102,.3);border-radius:14px;margin-bottom:12px">
+        <div style="width:38px;height:38px;border-radius:11px;background:#25D366;
+             display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--ink);font-size:13.5px">Grupo configurado ✓</div>
+          <div style="font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${st.grupo}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()">${icon("edit")}</button>
+      </div>`:`
+      <div style="padding:12px 14px;background:rgba(255,193,7,.08);border:1.5px solid rgba(255,193,7,.3);border-radius:14px;margin-bottom:12px;font-size:13px;color:var(--ink-2)">
+        ⚠️ Selecione abaixo qual grupo receberá as respostas.
+      </div>`}
 
-        <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg);border:1.5px solid var(--line);border-radius:14px">
-          <div style="width:40px;height:40px;border-radius:12px;background:#25D366;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </div>
+      <button onclick="carregarGruposWA()" ${st.gateway&&st.chave_configurada?"":'disabled style="opacity:.5"'}
+        style="width:100%;padding:11px;border-radius:12px;background:var(--bg);color:var(--navy);
+               font-weight:700;font-size:13.5px;border:1.5px solid var(--line);cursor:pointer;
+               display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        ${icon("users")} ${st.grupo?"Trocar grupo":"Listar meus grupos e escolher"}
+      </button>
+      <div id="wa-grupos"></div>
+
+      <!-- número -->
+      <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:4px">
+        <div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:10px">Seu número</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg);border:1.5px solid var(--line);border-radius:14px">
+          <div style="width:36px;height:36px;border-radius:10px;background:#25D366;
+               display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:11.5px;color:var(--ink-3);font-weight:600;margin-bottom:4px">DDI + DDD + número (só dígitos)</div>
-            <input id="wa-meunumero" value="${st.meu_numero || ""}" placeholder="5547999990000"
-              style="border:none;background:transparent;font-size:15px;font-weight:600;color:var(--ink);width:100%;padding:0;font-family:monospace"
+            <div style="font-size:10.5px;color:var(--ink-3);font-weight:600;margin-bottom:3px">DDI+DDD+número, só dígitos</div>
+            <input id="wa-meunumero" value="${st.meu_numero||""}" placeholder="5547999990000"
+              style="border:none;background:transparent;font-size:15px;font-weight:700;color:var(--ink);
+                     width:100%;padding:0;font-family:monospace;outline:none"
               oninput="this.value=this.value.replace(/[^0-9]/g,'');_previewNumeroWA(this.value)">
           </div>
-          ${st.meu_numero ? `<span style="font-size:18px">✅</span>` : `<span style="font-size:18px;opacity:.3">📱</span>`}
+          <span id="wa-num-ico" style="font-size:20px">${st.meu_numero?"✅":"📱"}</span>
         </div>
-
-        <div id="wa-num-preview" style="margin-top:8px;font-size:12.5px;color:var(--ink-2)">
-          ${st.meu_numero ? `<span style="color:var(--teal)">✓ Somente você controla o sistema.</span>` : "Deixe em branco para aceitar comandos de qualquer membro do grupo."}
+        <div id="wa-num-preview" style="margin-top:8px;font-size:12.5px;color:${st.meu_numero?"#128C7E":"var(--ink-3)"}">
+          ${st.meu_numero?"✓ Somente você controla o sistema.":"Deixe em branco para qualquer membro do grupo usar."}
         </div>
-
-        <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="salvarNumeroWA()">
-          ${icon("check")} Salvar número
+        <button onclick="salvarNumeroWA()"
+          style="margin-top:12px;padding:10px 20px;border-radius:12px;background:#075E54;color:#fff;
+                 font-weight:700;font-size:13.5px;border:none;cursor:pointer;
+                 display:inline-flex;align-items:center;gap:7px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+          Salvar número
         </button>
-      </div>`)}
-
-    ${passo(3, false, "Webhook (opcional)", `
-      <div class="dica verde" style="margin-bottom:10px"><span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
-        <div>O sistema já <b>lê o grupo sozinho</b> a cada 4 segundos, inclusive o que você digita. O webhook só deixa a resposta instantânea.</div></div>
-      <div class="sub" style="margin-bottom:8px">No painel do WhatsApp → <b>Webhooks</b>:</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <code id="wa-hook" style="flex:1;min-width:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-size:12px;overflow-wrap:anywhere">${webhookUrl}</code>
-        <button class="btn-icon" title="Copiar" onclick="copiarTexto('${webhookUrl}')">${icon("doc")}</button>
-      </div>
-      <div class="sub" style="margin-top:8px">O painel do gateway aceita <b>um evento por webhook</b>: cadastre esta URL <b>duas vezes</b> — uma com "Mensagem recebida" e outra com "Mensagem enviada" (os comandos que você digita chegam como "enviada").</div>`)}
-
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div class="card-h">
-        <span class="card-ico i-navy">${icon("shield")}</span>
-        <div class="grow"><h3>Diagnóstico</h3><div class="sub">Por que um comando foi (ou não) respondido</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="rodarDiagnosticoWA()">${icon("refresh")}<span>Verificar</span></button>
-      </div>
-      <div id="wa-diag"><div class="sub">Verificando…</div></div>
-    </div>
-
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span><div class="grow"><h3>Consultas</h3><div class="sub">Digite no grupo</div></div></div>
-      ${chip(consultas, "var(--teal)")}
-    </div>
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div class="card-h"><span class="card-ico i-gold">${icon("edit")}</span><div class="grow"><h3>Cadastros e ações</h3><div class="sub">O sistema reage com ✅ quando registra</div></div></div>
-      ${chip(acoes, "var(--navy)")}
-    </div>
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div class="card-h"><span class="card-ico i-navy">${icon("download")}</span><div class="grow"><h3>PDFs direto no grupo</h3><div class="sub">O arquivo chega como anexo</div></div></div>
-      ${chip(pdfs, "var(--red)")}
-    </div>
-
-    <div class="card card-pad" style="margin-bottom:12px">
-      <div class="card-h" style="cursor:pointer" onclick="document.getElementById('wa-apidoc').classList.toggle('hidden')">
-        <span class="card-ico i-navy">${icon("terminal")}</span>
-        <div class="grow"><h3>API do gateway (v1)</h3><div class="sub">Header <code>X-API-Key</code> · toque para ver os ${api_v1.length} endpoints</div></div>
-      </div>
-      <div id="wa-apidoc" class="hidden" style="margin-top:10px">
-        ${api_v1.map(([m,p,b,d]) => `
-          <div style="padding:10px 0;border-bottom:1px solid var(--line)">
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:${m === "GET" ? "var(--teal)" : "var(--navy)"}">${m}</span>
-              <code style="font-size:12.5px;color:var(--ink);overflow-wrap:anywhere">${p}</code>
-            </div>
-            <div class="sub" style="margin-top:3px">${d}${b !== "—" ? ` · <code style="font-size:11.5px">${b}</code>` : ""}</div>
-          </div>`).join("")}
-        <div class="sub" style="margin-top:10px">Webhook enviado pelo gateway: <code style="font-size:11.5px">{ evento, jid, deMim, tipo, texto, autorNome, autorNumero, id, ts, midia }</code></div>
       </div>
     </div>
+  </div>
 
-    <div class="dica verde">
-      <span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
-      <div>Automático: alerta de vencimentos às ${String(st.alerta_hora ?? 8).padStart(2, "0")}:00 (só quando há algo) ${st.resumo_semanal ? "· resumo na segunda-feira" : ""} ${st.fechamento_diario ? "· fechamento do dia" : ""}.</div>
-    </div>`;
+  <!-- PASSO 3: WEBHOOK -->
+  <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
+      ${stepCircle(3, false)}
+      <div>
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">Webhook <span style="font-size:12px;font-weight:600;background:#25D36618;color:#128C7E;padding:2px 8px;border-radius:10px;margin-left:4px">Opcional</span></div>
+        <div style="font-size:12px;color:var(--ink-3)">O sistema já lê o grupo a cada 4s — webhook deixa instantâneo</div>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+      <div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Painel do gateway → <b>Webhooks</b> → Adicionar <b>duas vezes</b> esta URL:<br>uma com evento <b>Mensagem recebida</b>, outra com <b>Mensagem enviada</b>.</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:12px">
+        <code style="flex:1;min-width:0;font-size:11.5px;color:var(--navy);overflow-wrap:anywhere">${webhookUrl}</code>
+        <button onclick="copiarTexto('${webhookUrl}')" title="Copiar"
+          style="width:32px;height:32px;border-radius:9px;background:#25D36618;border:none;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;color:#128C7E;flex-shrink:0">
+          ${icon("doc")}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMANDOS: CONSULTAS -->
+  ${section("Consultas financeiras", "Digite qualquer um no grupo", WA_SVG, `
+    ${cmdGrid([
+      ["1 · saldo","Saldo de todas as contas"],
+      ["2 · vencer","Atrasados + próx. 7 dias"],
+      ["3 · resumo","Resultado do mês"],
+      ["4 · pagar","Contas a pagar"],
+      ["5 · receber","Contas a receber"],
+      ["6 · patrimonio","Contas + veículos"],
+      ["7 · juros","Juros no ano"],
+      ["8 · metas","Metas financeiras"],
+      ["9 · categorias","Lista de categorias"],
+      ["10 · contas","Saldo por conta"],
+      ["hoje","Resumo do dia"],
+      ["semana","Movimentos da semana"],
+      ["fluxo","Gráfico 6 meses"],
+      ["gastos","Top categorias"],
+      ["projecao","Saldo previsto"],
+      ["proximo mes","Mês que vem"],
+      ["parcelas","Parcelas de cartão"],
+      ["carros","Veículos e fin."],
+      ["dica","Dica personalizada"],
+      ["menu","Lista de comandos"],
+    ], "#128C7E")}`, "#25D366")}
+
+  <!-- COMANDOS: AÇÕES -->
+  ${section("Lançamentos e ações", "O sistema reage com ✅ ao registrar", icon("edit"), `
+    ${cmdGrid([
+      ["despesa 150 mercado","Registra uma despesa"],
+      ["receita 3000 salario","Registra uma receita"],
+      ["baixa 42","Dá baixa no lançamento"],
+      ["buscar aluguel","Busca lançamentos"],
+      ["ultimo","Último lançamento"],
+      ["aporte 500 reserva","Deposita numa meta"],
+      ["nova conta Nubank","Cria conta bancária"],
+      ["nova cat Pets","Cria categoria"],
+      ["nf https://...","Consulta NF-e"],
+      ["ajuda baixa","Ajuda de qualquer cmd"],
+    ], "#075E54")}`, "#34B7F1")}
+
+  <!-- COMANDOS: PDFs -->
+  ${section("PDFs direto no grupo", "O arquivo chega como anexo no chat", icon("download"), `
+    ${cmdGrid([
+      ["recibo 42","Recibo #42 em PDF"],
+      ["recibo cupom 42","Estilo impressora"],
+      ["balancete","Balancete do mês"],
+      ["balancete cupom","Balancete cupom"],
+      ["patrimonio pdf","Patrimônio em PDF"],
+    ], "#B4503E")}`, "#FF6B35")}
+
+  <!-- API v1 (expansível) -->
+  <div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);margin-bottom:14px;overflow:hidden">
+    <div onclick="document.getElementById('wa-api-body').classList.toggle('hidden')"
+         style="display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer">
+      <div style="width:36px;height:36px;border-radius:10px;background:#075E5418;color:#075E54;display:flex;align-items:center;justify-content:center">${icon("terminal")}</div>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">API pública v1</div>
+        <div style="font-size:12px;color:var(--ink-3)">16 endpoints · header X-API-Key · toque para expandir</div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="18" height="18"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div id="wa-api-body" class="hidden" style="padding:0 18px 18px">
+      ${[
+        ["GET","/api/v1/status","Conexão do WhatsApp"],
+        ["POST","/api/v1/enviar","Enviar texto · {jid|numero, texto}"],
+        ["POST","/api/v1/enviar-anexo","Enviar arquivo (PDF, imagem) · multipart"],
+        ["GET","/api/v1/chats","Últimas 200 conversas"],
+        ["GET","/api/v1/grupos","Todos os grupos · ?busca="],
+        ["GET","/api/v1/mensagens","Mensagens de um chat · ?jid=&limite="],
+        ["POST","/api/v1/send-image","Imagem por URL"],
+        ["POST","/api/v1/send-document","Documento por URL"],
+        ["POST","/api/v1/send-video","Vídeo por URL"],
+        ["POST","/api/v1/send-audio","Áudio por URL"],
+        ["POST","/api/v1/send-location","Localização · {lat,lng,nome}"],
+        ["POST","/api/v1/send-contact","Cartão de contato"],
+        ["POST","/api/v1/send-reaction","Reagir · {msgId, emoji}"],
+        ["POST","/api/v1/reply","Responder citando · {msgId, texto}"],
+        ["POST","/api/v1/delete-message","Apagar para todos · {msgId}"],
+        ["POST","/api/v1/read-message","Marcar como lida"],
+      ].map(([m,p,d])=>`
+        <div style="display:flex;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)">
+          <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;
+            background:${m==="GET"?"#128C7E":"#075E54"};flex-shrink:0">${m}</span>
+          <div style="min-width:0">
+            <code style="font-size:12.5px;color:var(--ink);display:block;overflow-wrap:anywhere">${p}</code>
+            <span style="font-size:11.5px;color:var(--ink-3)">${d}</span>
+          </div>
+        </div>`).join("")}
+    </div>
+  </div>
+
+  <!-- AUTOMAÇÕES -->
+  <div style="background:linear-gradient(135deg,#075E54,#128C7E);border-radius:18px;padding:18px 20px">
+    <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Automações ativas</div>
+    ${[
+      ["⏰","Alerta diário",`Vencimentos às ${String(st.alerta_hora??8).padStart(2,"0")}:00 (só quando há algo pendente)`],
+      ["📊","Resumo semanal",st.resumo_semanal?"Todo dia segunda-feira":"Desativado"],
+      ["🌙","Fechamento do dia",st.fechamento_diario?`Contas pagas do dia às ${String(st.fechamento_hora??20).padStart(2,"0")}:00`:"Desativado"],
+      ["🤖","Escuta do grupo","Lê e responde mensagens novas a cada 4 segundos"],
+    ].map(([e,t,d])=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)">
+        <span style="font-size:20px;flex-shrink:0">${e}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#fff">${t}</div>
+          <div style="font-size:11.5px;color:rgba(255,255,255,.55)">${d}</div>
+        </div>
+      </div>`).join("")}
+  </div>`;
 }
+
+
 
 async function rodarDiagnosticoWA() {
   const box = document.getElementById("wa-diag");
   if (!box) return;
-  box.innerHTML = `<div class="sub">Verificando…</div>`;
+  box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:4px 0">Verificando…</div>`;
   let d;
-  try { d = await api("/api/whatsapp/diagnostico"); } catch (e) { box.innerHTML = `<div class="sub" style="color:var(--red)">${e.message}</div>`; return; }
-  const linha = (ok, nome, det) => `
-    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">
-      <span style="font-size:15px;line-height:1.3">${ok ? "✅" : "❌"}</span>
-      <div style="min-width:0"><div style="font-size:13.5px;font-weight:600;color:var(--ink)">${nome}</div>
-        ${det ? `<div class="sub" style="font-size:12px;overflow-wrap:anywhere">${det}</div>` : ""}</div>
-    </div>`;
-  const cor = r => /respondido|PDF .* enviado/.test(r) ? "var(--teal)" : /FALHOU|erro/.test(r) ? "var(--red)" : "var(--ink-3)";
-  box.innerHTML = d.checks.map(c => linha(c.ok, c.nome, c.detalhe)).join("") +
-    `<div style="margin-top:14px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Últimas mensagens processadas</div>` +
-    (d.eventos.length ? d.eventos.slice(0, 12).map(e => `
-      <div style="padding:8px 0;border-bottom:1px solid var(--line)">
-        <div style="display:flex;justify-content:space-between;gap:8px">
-          <code style="font-size:12.5px;color:var(--navy);overflow-wrap:anywhere">${(e.texto || "").replace(/</g,"&lt;")}</code>
-          <span class="sub" style="font-size:11px;flex-shrink:0">${e.hora}</span></div>
-        <div style="font-size:11.5px;color:${cor(e.resultado)}">${e.resultado} · ${e.autor || "—"} · via ${e.origem}</div>
-      </div>`).join("")
-      : `<div class="sub" style="padding:8px 0">Nenhuma mensagem processada ainda. Mande <b>menu</b> no grupo e toque em Verificar.</div>`);
-}
+  try { d = await api("/api/whatsapp/diagnostico"); }
+  catch (e) { box.innerHTML = `<div style="color:var(--red);font-size:13px">${e.message}</div>`; return; }
 
-function _previewNumeroWA(v) {
-  const el = document.getElementById("wa-num-preview");
-  if (!el) return;
-  if (!v) { el.innerHTML = "Deixe em branco para aceitar comandos de qualquer membro do grupo."; el.style.color = ""; return; }
-  // formata visualmente: +55 47 99999-0000
-  const d = v.replace(/\D/g, "");
-  let fmt = d;
-  if (d.length >= 2)  fmt = "+" + d.slice(0,2) + " " + d.slice(2);
-  if (d.length >= 4)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4);
-  if (d.length >= 9)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4,9) + "-" + d.slice(9);
-  el.innerHTML = d.length >= 10 ? `<span style="color:var(--teal)">✓ ${fmt} — somente você controla o sistema.</span>`
-    : `<span style="color:var(--ink-2)">${fmt} — continue digitando…</span>`;
-}
-
-async function salvarNumeroWA() {
-  const n = ($("#wa-meunumero")?.value || "").replace(/\D/g,"").trim();
-  try {
-    await api("/api/configuracoes", {method:"POST", body:JSON.stringify({WHATSAPP_MEU_NUMERO: n})});
-    const el = document.getElementById("wa-num-preview");
-    if (el) el.innerHTML = n ? `<span style="color:var(--teal)">✅ ${n} salvo — somente você controla o sistema.</span>`
-      : `<span style="color:var(--ink-2)">Qualquer membro do grupo pode usar os comandos.</span>`;
-    toast(n ? "Número salvo!" : "Filtro removido.", "ok");
-    rodarDiagnosticoWA();
-  } catch(e) { toast(e.message, "err"); }
+  const cor = r => /respondido|enviado/.test(r) ? "#25D366" : /FALHOU|erro/.test(r) ? "var(--red)" : "var(--ink-3)";
+  box.innerHTML =
+    d.checks.map(c => `
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">
+        <span style="font-size:16px;line-height:1.2;flex-shrink:0">${c.ok?"✅":"❌"}</span>
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${c.nome}</div>
+          ${c.detalhe?`<div style="font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere">${c.detalhe}</div>`:""}
+        </div>
+      </div>`).join("") +
+    (d.eventos.length ? `
+      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;padding-top:10px;margin-top:4px">Últimas mensagens</div>` +
+      d.eventos.slice(0,8).map(e => `
+        <div style="padding:7px 0;border-bottom:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <code style="font-size:12px;color:var(--navy);overflow-wrap:anywhere">${(e.texto||"").replace(/</g,"&lt;")}</code>
+            <span style="font-size:10.5px;color:var(--ink-3);flex-shrink:0">${e.hora}</span>
+          </div>
+          <div style="font-size:11px;color:${cor(e.resultado)}">${e.resultado} · ${e.autor||"—"} · ${e.origem}</div>
+        </div>`).join("")
+      : `<div style="font-size:12.5px;color:var(--ink-3);padding-top:10px">Nenhuma mensagem processada ainda — mande <b>menu</b> no grupo e toque em Verificar.</div>`);
 }
 
 async function salvarGatewayWA() {
   const dados = {
-    WHATSAPP_API_URL: $("#wa-url").value.trim(),
-    WHATSAPP_ATIVO: $("#wa-ativo").checked ? "true" : "false",
+    WHATSAPP_API_URL: (document.getElementById("wa-url")?.value || "").trim(),
+    WHATSAPP_ATIVO: document.getElementById("wa-ativo")?.checked ? "true" : "false",
     WHATSAPP_ENDPOINT_ENVIAR: "/api/v1/enviar",
   };
-  const chave = $("#wa-chave").value.trim();
+  const chave = (document.getElementById("wa-chave")?.value || "").trim();
   if (chave) dados.WHATSAPP_API_TOKEN = chave;
   try {
     await api("/api/configuracoes", { method: "POST", body: JSON.stringify(dados) });
     const st = await api("/api/whatsapp/status");
     if (st.erro_gateway) toast(st.erro_gateway, "err");
-    else toast(st.conectado ? "Gateway conectado!" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
+    else toast(st.conectado ? "Gateway conectado! ✅" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
     setView("whatsapp");
   } catch (e) { toast(e.message, "err"); }
 }
 
 async function carregarGruposWA() {
-  const box = $("#wa-grupos");
-  box.innerHTML = `<div class="sub">Buscando grupos…</div>`;
+  const box = document.getElementById("wa-grupos");
+  if (!box) return;
+  box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:8px 0">Buscando grupos…</div>`;
   const r = await api("/api/whatsapp/grupos");
-  if (!r.ok) { box.innerHTML = `<div class="dica vermelho"><span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("alert")}</span><div>${r.erro}</div></div>`; return; }
-  if (!r.grupos.length) { box.innerHTML = `<div class="sub">Nenhum grupo encontrado.</div>`; return; }
+  if (!r.ok || !r.grupos.length) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--red);padding:8px 0">${r.erro || "Nenhum grupo encontrado."}</div>`;
+    return;
+  }
   box.innerHTML = `
-    <input placeholder="Filtrar grupos…" oninput="filtrarGruposWA(this.value)" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:8px">
-    <div style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:10px">
+    <input placeholder="Filtrar grupos…" oninput="filtrarGruposWA(this.value)"
+      style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;
+             background:var(--bg);margin-bottom:8px;font-size:13.5px">
+    <div style="max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:12px">
       ${r.grupos.map(g => `
-        <div class="wa-grupo" data-nome="${(g.nome || "").toLowerCase()}" onclick="escolherGrupoWA('${g.jid}')"
-             style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer">
-          <span class="card-ico i-green" style="width:30px;height:30px;border-radius:9px">${icon("users")}</span>
-          <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome}</div>
-            <div class="sub" style="font-size:11px;overflow-wrap:anywhere">${g.jid}</div></div>
+        <div class="wa-grupo" data-nome="${(g.nome||"").toLowerCase()}" onclick="escolherGrupoWA('${g.jid}')"
+          style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer">
+          <div style="width:32px;height:32px;border-radius:9px;background:#25D36618;display:flex;align-items:center;justify-content:center;color:#25D366;flex-shrink:0">
+            ${icon("users")}
+          </div>
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome}</div>
+            <div style="font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.jid}</div>
+          </div>
         </div>`).join("")}
     </div>`;
 }
+
 function filtrarGruposWA(q) {
   q = q.toLowerCase();
-  document.querySelectorAll(".wa-grupo").forEach(el => el.style.display = el.dataset.nome.includes(q) ? "" : "none");
+  document.querySelectorAll(".wa-grupo").forEach(el =>
+    el.style.display = el.dataset.nome.includes(q) ? "" : "none");
 }
+
 async function escolherGrupoWA(jid) {
   try {
     await api("/api/whatsapp/grupo", { method: "POST", body: JSON.stringify({ jid }) });
-    toast("Grupo definido!", "ok"); setView("whatsapp");
+    toast("Grupo definido! ✅", "ok");
+    setView("whatsapp");
   } catch (e) { toast(e.message, "err"); }
 }
+
 function copiarTexto(t) {
-  (navigator.clipboard?.writeText(t) || Promise.reject()).then(() => toast("Copiado!", "ok"))
+  (navigator.clipboard?.writeText(t) || Promise.reject())
+    .then(() => toast("URL copiada!", "ok"))
     .catch(() => { prompt("Copie a URL:", t); });
 }
+
+function _previewNumeroWA(v) {
+  const el = document.getElementById("wa-num-preview");
+  const ico = document.getElementById("wa-num-ico");
+  if (!el) return;
+  const d = v.replace(/\D/g, "");
+  if (!d) {
+    el.innerHTML = "Deixe em branco para qualquer membro do grupo usar.";
+    el.style.color = "var(--ink-3)";
+    if (ico) ico.textContent = "📱";
+    return;
+  }
+  let fmt = "+" + d;
+  if (d.length >= 2)  fmt = "+" + d.slice(0,2) + " " + d.slice(2);
+  if (d.length >= 4)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4);
+  if (d.length >= 9)  fmt = "+" + d.slice(0,2) + " " + d.slice(2,4) + " " + d.slice(4,9) + "-" + d.slice(9);
+  el.innerHTML = d.length >= 10 ? `✓ ${fmt} — somente você controla o sistema.` : `${fmt}…`;
+  el.style.color = d.length >= 10 ? "#128C7E" : "var(--ink-3)";
+  if (ico) ico.textContent = d.length >= 10 ? "✅" : "📱";
+}
+
+async function salvarNumeroWA() {
+  const n = (document.getElementById("wa-meunumero")?.value || "").replace(/\D/g, "").trim();
+  try {
+    await api("/api/configuracoes", { method: "POST", body: JSON.stringify({ WHATSAPP_MEU_NUMERO: n }) });
+    toast(n ? `Número ${n} salvo! ✅` : "Filtro removido.", "ok");
+    rodarDiagnosticoWA();
+  } catch (e) { toast(e.message, "err"); }
+}
+
 async function testarWhatsapp(btn) {
   const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = icon("refresh", "spin") + "Enviando...";
   try {
