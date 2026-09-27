@@ -27,4 +27,3 @@ services:
       EMPRESA_CIDADE: ${EMPRESA_CIDADE:-Blumenau/SC}
     ports:
       - "8000:8000"
-      - "8788:8000"
