@@ -95,7 +95,7 @@ def processar_mensagem(m: dict, db, origem: str = "webhook") -> dict:
         autor_raw = (m.get("autor_num") or "").replace("+","").replace("-","").replace(" ","")
         eh_meu = m.get("deMim") or (autor_raw and autor_raw.endswith(meu_num[-8:]))
         if not eh_meu:
-            _log(m, "webhook", "ignorado: não é o dono")
+            _log(m, origem, "ignorado: não é o dono")
             return {"ok": True, "ignorado": "não é o dono"}
 
     try:
@@ -190,9 +190,24 @@ def teste(db: Session = Depends(get_db)):
 _ESCUTA = {"ultimo_ts": None, "ultima_leitura": None, "erro": None}
 
 
-def _ts(v) -> datetime | None:
+def _ts(v) -> "datetime | None":
+    """Converte qualquer formato de timestamp para datetime aware (UTC)."""
+    from datetime import timezone as _tz
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v if v.tzinfo else v.replace(tzinfo=_tz.utc)
+    if isinstance(v, (int, float)):
+        n = float(v)
+        return datetime.fromtimestamp(n / 1000 if n > 1e10 else n, tz=_tz.utc)
+    s = str(v).strip()
+    import re as _re
+    if _re.match(r"^\d{10,13}$", s):
+        n = int(s)
+        return datetime.fromtimestamp(n / 1000 if n > 1e10 else n, tz=_tz.utc)
     try:
-        return datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=_tz.utc)
     except Exception:
         return None
 
@@ -223,9 +238,10 @@ def job_escutar_grupo():
         jid = _resolver_grupo(c, db)
         meu_num = (cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "").replace("+","").replace("-","").replace(" ","")
         msgs = zapapi.mensagens(jid, 15, db) or []
-        _ESCUTA["ultima_leitura"] = datetime.now().strftime("%d/%m %H:%M:%S"); _ESCUTA["erro"] = None
+        _ESCUTA["ultima_leitura"] = datetime.now().strftime("%d/%m %H:%M:%S")
+        _ESCUTA["erro"] = None
         tss = [_ts(x.get("ts")) for x in msgs if _ts(x.get("ts"))]
-        if _ESCUTA["ultimo_ts"] is None:            # primeira leitura: só marca o ponto de partida
+        if _ESCUTA["ultimo_ts"] is None:
             _ESCUTA["ultimo_ts"] = max(tss) if tss else datetime.now(timezone.utc)
             return
         limite_idade = datetime.now(timezone.utc) - timedelta(minutes=5)
@@ -234,22 +250,32 @@ def job_escutar_grupo():
             if not t or t <= _ESCUTA["ultimo_ts"]:
                 continue
             _ESCUTA["ultimo_ts"] = t
-            if t.tzinfo and t < limite_idade:       # mensagem antiga (servidor ficou fora) → não responde
+            if t.tzinfo and t < limite_idade:
                 continue
-            autor_raw = (x.get("autor_numero") or "").replace("+","").replace("-","").replace(" ","")
+
+            # campo correto do banco: de_mim (booleano)
             de_mim = bool(x.get("de_mim"))
+            autor_raw = (x.get("autor_numero") or "").replace("+","").replace("-","").replace(" ","")
+
             if meu_num:
+                # mensagens suas: de_mim=True E autor_numero=NULL → aceita pela flag de_mim
+                # mensagens de outros: autor_numero preenchido → compara com meu_num
                 eh_meu = de_mim or (autor_raw and autor_raw.endswith(meu_num[-8:]))
                 if not eh_meu:
                     continue
+
             processar_mensagem({
-                "evento": "sent" if de_mim else "received", "jid": jid,
-                "texto": (x.get("texto") or "").strip(), "id": x.get("id"),
+                "evento": "sent" if de_mim else "received",
+                "jid": jid,
+                "texto": (x.get("texto") or "").strip(),
+                "id": x.get("id"),
                 "autor_num": autor_raw,
-                "deMim": de_mim, "autor": x.get("autor_nome") or x.get("autor_numero") or "",
+                "deMim": de_mim,
+                "autor": x.get("autor_nome") or autor_raw or "",
             }, db, origem="escuta")
     except Exception as e:
         _ESCUTA["erro"] = str(e)
+        import logging; logging.getLogger("tomelin.whatsapp").error("escuta: %s", e)
     finally:
         db.close()
 
