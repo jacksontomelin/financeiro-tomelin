@@ -37,8 +37,13 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
 
     # loga TUDO que chega — antes de qualquer filtro
     import logging as _lg
-    _lg.getLogger("tomelin.webhook").warning("PAYLOAD RECEBIDO: %s", body)
-    _DEBUG_PAYLOADS.appendleft({"hora": datetime.now().strftime("%d/%m %H:%M:%S"), "payload": body})
+    client_ip = req.headers.get("x-forwarded-for","") or (req.client.host if req.client else "?")
+    _lg.getLogger("tomelin.webhook").warning("PAYLOAD de %s: %s", client_ip, body)
+    _DEBUG_PAYLOADS.appendleft({
+        "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
+        "ip": client_ip,
+        "payload": body
+    })
 
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
     jid      = str(body.get("jid") or "")
