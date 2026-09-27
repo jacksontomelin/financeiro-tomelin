@@ -1423,7 +1423,10 @@ const WA_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="
 async function viewWhatsapp(v) {
   let st = {};
   try { st = await api("/api/whatsapp/status"); } catch { st = {}; }
-  const webhookUrl = location.origin + "/api/whatsapp/webhook";
+  // URL direta por IP:porta — igual ao Sentinela (bypassa o Traefik)
+  const _host = location.hostname;
+  const webhookUrl = `http://189.126.105.8:8788/api/whatsapp/webhook`;
+  const webhookUrlAlt = location.origin + "/api/whatsapp/webhook";
   const ok       = st.conectado === true && st.ativo;
   const semCfg   = !st.gateway || !st.chave_configurada;
   const statusTxt = semCfg ? "Não configurado"
@@ -1746,11 +1749,23 @@ async function viewWhatsapp(v) {
       </div>
     </div>
     <div style="padding:16px 18px">
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(37,211,102,.07);border:1.5px solid rgba(37,211,102,.3);border-radius:12px;margin-bottom:12px">
-        <span style="font-size:20px;flex-shrink:0">⚡</span>
-        <div style="font-size:13px;color:var(--ink-2)">
-          No painel <b>zap.unicontroller.com.br → Webhooks</b>, adicione esta URL com evento <b>"Mensagem recebida"</b>.<br>
-          <span style="color:#128C7E;font-weight:700">Só um evento, só uma vez — igual ao Sentinela.</span>
+      <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(7,94,84,.05));border:2px solid rgba(37,211,102,.4);border-radius:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:800;color:#128C7E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
+          ⚡ URL por IP direto — igual ao Sentinela (recomendado)
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.05);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+          <code style="flex:1;font-size:12.5px;color:var(--navy);font-weight:700;overflow-wrap:anywhere">http://189.126.105.8:8788/api/whatsapp/webhook</code>
+          <button onclick="copiarTexto('http://189.126.105.8:8788/api/whatsapp/webhook')"
+            style="background:#25D366;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:#fff;font-size:12px;font-weight:700;flex-shrink:0">
+            Copiar
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:12px;color:var(--ink-2)">Evento:</span>
+          <span style="background:#25D366;color:#fff;font-size:12px;font-weight:800;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-3)">
+          ⚠️ Apague o webhook antigo com a URL do domínio e cadastre este com o IP direto.
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:12px">
@@ -1897,7 +1912,8 @@ async function rodarDiagnosticoWA() {
   ];
 
   // ── URL DO WEBHOOK ──
-  const hookUrl = location.origin + "/api/whatsapp/webhook";
+  const hookUrl = "http://189.126.105.8:8788/api/whatsapp/webhook";
+  const hookUrlAlt = location.origin + "/api/whatsapp/webhook";
   const hookDbg  = location.origin + "/api/whatsapp/webhook/debug";
 
   box.innerHTML = `
