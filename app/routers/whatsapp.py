@@ -36,6 +36,8 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         return {"ok": False, "erro": "json inválido"}
 
     # loga TUDO que chega — antes de qualquer filtro
+    import logging as _lg
+    _lg.getLogger("tomelin.webhook").warning("PAYLOAD RECEBIDO: %s", body)
     _DEBUG_PAYLOADS.appendleft({"hora": datetime.now().strftime("%d/%m %H:%M:%S"), "payload": body})
 
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
