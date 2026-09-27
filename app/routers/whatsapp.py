@@ -119,6 +119,7 @@ def status(db: Session = Depends(get_db)):
         "resumo_semanal": cfg.get_bool(db, "RESUMO_SEMANAL", True),
         "fechamento_diario": cfg.get_bool(db, "FECHAMENTO_DIARIO", True),
         "fechamento_hora": cfg.get_int(db, "FECHAMENTO_HORA", 20),
+        "tunnel_url": cfg.get(db, "WHATSAPP_TUNNEL_URL", "") or "",
         "conectado": None, "erro_gateway": None, "numero": None,
     }
     if c["url"] and c["chave"]:
@@ -395,3 +396,26 @@ async def webhook_ping(req: Request):
         "proto": req.headers.get("x-forwarded-proto","http"),
         "url_webhook": f"{req.headers.get('x-forwarded-proto','http')}://{req.headers.get('x-forwarded-host') or req.headers.get('host','')}/api/whatsapp/webhook"
     }
+
+
+# ── URL do túnel (salvo pelo start.sh quando cloudflared sobe) ──
+_TUNNEL_URL: list = []  # [url] — lista de 1 elemento para ser mutável
+
+@router.post("/tunnel-url")
+async def salvar_tunnel_url(body: dict, db: Session = Depends(get_db)):
+    """Chamado pelo start.sh quando o túnel Cloudflare sobe."""
+    url = (body.get("url") or "").strip()
+    if url:
+        if _TUNNEL_URL:
+            _TUNNEL_URL[0] = url
+        else:
+            _TUNNEL_URL.append(url)
+        # Salva nas configurações para mostrar na tela
+        cfg.set_many(db, {"WHATSAPP_TUNNEL_URL": url})
+        import logging; logging.getLogger("tomelin.webhook").warning("TUNNEL URL: %s", url)
+    return {"ok": True, "url": url}
+
+@router.get("/tunnel-url", dependencies=[Depends(usuario_atual)])
+def get_tunnel_url(db: Session = Depends(get_db)):
+    url = cfg.get(db, "WHATSAPP_TUNNEL_URL", "") or ""
+    return {"url": url}
