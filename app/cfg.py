@@ -15,6 +15,7 @@ DEFS = [
     ("WHATSAPP_API_TOKEN",       "Chave de API do gateway (painel do WhatsApp → API Keys)",           ""),
     ("WHATSAPP_GRUPO",           "JID do grupo de controle (escolha na tela WhatsApp)",               ""),
     ("WHATSAPP_ENDPOINT_ENVIAR", "Endpoint de envio da API v1 (padrão /api/v1/enviar)",               "/api/v1/enviar"),
+    ("WHATSAPP_MEU_NUMERO",      "Seu número com DDA (ex: 5547999990000) — só responde comandos seus",   ""),
     ("WHATSAPP_ESCUTA",          "Ler comandos direto do grupo a cada 4s (não depende de webhook)",   "true"),
     ("RECIBO_WHATSAPP_AUTO",     "Enviar recibo automático ao dar baixa",                             "true"),
     # ---- Alertas ----

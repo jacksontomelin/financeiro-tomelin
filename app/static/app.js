@@ -1420,10 +1420,16 @@ async function viewWhatsapp(v) {
       </div>
       <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="salvarGatewayWA()">${icon("check")}Salvar e verificar</button>`)}
 
-    ${passo(2, !!st.grupo, "Escolher o grupo da família", `
+    ${passo(2, !!st.grupo, "Escolher o grupo e seu número", `
       <div class="sub" style="margin-bottom:10px">Grupo atual: <b>${st.grupo || "nenhum"}</b></div>
       <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()" ${st.gateway && st.chave_configurada ? "" : "disabled"}>${icon("users")}Listar meus grupos</button>
-      <div id="wa-grupos" style="margin-top:10px"></div>`)}
+      <div id="wa-grupos" style="margin-top:10px"></div>
+      <div class="campo full" style="margin-top:12px"><label>Seu número (com DDI+DDD, só dígitos)</label>
+        <input id="wa-meunumero" value="${st.meu_numero || ""}" placeholder="5547999990000"
+          style="font-size:14px" oninput="this.value=this.value.replace(/\D/g,'')">
+        <div class="sub" style="margin-top:4px">Igual ao Sentinela — o sistema só responde comandos seus. Deixe em branco para responder qualquer membro do grupo.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="salvarNumeroWA()">${icon("check")}Salvar número</button>`)}
 
     ${passo(3, false, "Webhook (opcional)", `
       <div class="dica verde" style="margin-bottom:10px"><span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
@@ -1504,6 +1510,15 @@ async function rodarDiagnosticoWA() {
         <div style="font-size:11.5px;color:${cor(e.resultado)}">${e.resultado} · ${e.autor || "—"} · via ${e.origem}</div>
       </div>`).join("")
       : `<div class="sub" style="padding:8px 0">Nenhuma mensagem processada ainda. Mande <b>menu</b> no grupo e toque em Verificar.</div>`);
+}
+
+async function salvarNumeroWA() {
+  const n = ($("#wa-meunumero").value || "").replace(/\D/g,"").trim();
+  try {
+    await api("/api/configuracoes", {method:"POST", body:JSON.stringify({WHATSAPP_MEU_NUMERO: n})});
+    toast(n ? `Número ${n} salvo — só você controla o sistema.` : "Filtro removido — qualquer membro pode usar os comandos.", "ok");
+    rodarDiagnosticoWA();
+  } catch(e) { toast(e.message, "err"); }
 }
 
 async function salvarGatewayWA() {
@@ -3066,7 +3081,7 @@ Object.assign(window, {
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
   _toggleItensCompra, verParcelasCompra,
-  rodarDiagnosticoWA, salvarGatewayWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
+  rodarDiagnosticoWA, salvarGatewayWA, salvarNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

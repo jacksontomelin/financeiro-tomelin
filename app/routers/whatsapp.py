@@ -89,6 +89,15 @@ def processar_mensagem(m: dict, db, origem: str = "webhook") -> dict:
         return {"ok": True, "ignorado": "fora do grupo de controle"}
     destino = m["jid"] or alvo
 
+    # verifica se é o dono (igual ao Sentinela): deMim=true OU autorNumero bate com meu número
+    meu_num = (cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "").replace("+","").replace("-","").replace(" ","")
+    if meu_num:
+        autor_raw = (m.get("autor_num") or "").replace("+","").replace("-","").replace(" ","")
+        eh_meu = m.get("deMim") or (autor_raw and autor_raw.endswith(meu_num[-8:]))
+        if not eh_meu:
+            _log(m, "webhook", "ignorado: não é o dono")
+            return {"ok": True, "ignorado": "não é o dono"}
+
     try:
         arq = whatsapp.processar_arquivo(m["texto"], db)
     except Exception as e:
@@ -135,7 +144,7 @@ def status(db: Session = Depends(get_db)):
     info = {
         "ativo": c["ativo"], "gateway": c["url"] or None,
         "chave_configurada": bool(c["chave"]), "grupo": c["grupo"] or None,
-        "endpoint": c["endpoint"],
+        "endpoint": c["endpoint"], "meu_numero": cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "",
         "alerta_hora": cfg.get_int(db, "ALERTA_HORA", 8),
         "alerta_dias_antes": cfg.get_int(db, "ALERTA_DIAS_ANTES", 3),
         "resumo_semanal": cfg.get_bool(db, "RESUMO_SEMANAL", True),
@@ -212,6 +221,7 @@ def job_escutar_grupo():
         if not cfg.get_bool(db, "WHATSAPP_ESCUTA", True):
             return
         jid = _resolver_grupo(c, db)
+        meu_num = (cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "").replace("+","").replace("-","").replace(" ","")
         msgs = zapapi.mensagens(jid, 15, db) or []
         _ESCUTA["ultima_leitura"] = datetime.now().strftime("%d/%m %H:%M:%S"); _ESCUTA["erro"] = None
         tss = [_ts(x.get("ts")) for x in msgs if _ts(x.get("ts"))]
@@ -226,10 +236,17 @@ def job_escutar_grupo():
             _ESCUTA["ultimo_ts"] = t
             if t.tzinfo and t < limite_idade:       # mensagem antiga (servidor ficou fora) → não responde
                 continue
+            autor_raw = (x.get("autor_numero") or "").replace("+","").replace("-","").replace(" ","")
+            de_mim = bool(x.get("de_mim"))
+            if meu_num:
+                eh_meu = de_mim or (autor_raw and autor_raw.endswith(meu_num[-8:]))
+                if not eh_meu:
+                    continue
             processar_mensagem({
-                "evento": "sent" if x.get("de_mim") else "received", "jid": jid,
+                "evento": "sent" if de_mim else "received", "jid": jid,
                 "texto": (x.get("texto") or "").strip(), "id": x.get("id"),
-                "deMim": bool(x.get("de_mim")), "autor": x.get("autor_nome") or x.get("autor_numero") or "",
+                "autor_num": autor_raw,
+                "deMim": de_mim, "autor": x.get("autor_nome") or x.get("autor_numero") or "",
             }, db, origem="escuta")
     except Exception as e:
         _ESCUTA["erro"] = str(e)
