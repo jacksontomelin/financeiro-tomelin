@@ -347,3 +347,18 @@ def debug_log(db: Session = Depends(get_db)):
         "ultimos_payloads": list(_DEBUG_PAYLOADS),
         "ultimos_eventos": list(LOG_EVENTOS),
     }
+
+
+@router.get("/testar-url")
+async def testar_url(req: Request):
+    """Retorna a URL pública deste servidor — confirma que o webhook está acessível."""
+    host = req.headers.get("x-forwarded-host") or req.headers.get("host") or ""
+    proto = req.headers.get("x-forwarded-proto") or "https"
+    base = f"{proto}://{host}" if host else ""
+    return {
+        "webhook_url": f"{base}/api/whatsapp/webhook",
+        "debug_url": f"{base}/api/whatsapp/webhook/debug",
+        "host": host,
+        "proto": proto,
+        "instrucao": "Copie 'webhook_url' e cadastre no painel zap.unicontroller.com.br → Webhooks com evento 'Mensagem recebida'",
+    }

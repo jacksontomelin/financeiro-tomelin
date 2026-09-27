@@ -1914,16 +1914,25 @@ async function rodarDiagnosticoWA() {
     </div>
 
     <!-- URL do webhook -->
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">URL do webhook (copie para o gateway)</div>
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1.5px solid #25D366;border-radius:12px;margin-bottom:6px">
-      <code style="flex:1;font-size:11.5px;color:var(--navy);overflow-wrap:anywhere">${hookUrl}</code>
-      <button onclick="copiarTexto('${hookUrl}')"
-        style="background:#25D36618;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;color:#128C7E;flex-shrink:0">
-        ${icon("doc")}
-      </button>
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">
+      ⚡ URL do webhook — cadastre no gateway
     </div>
-    <div style="font-size:11.5px;color:var(--ink-3);margin-bottom:14px">
-      Evento: <b>Mensagem recebida</b> · igual ao Sentinela
+    <div style="padding:14px;background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(7,94,84,.05));border:2px solid rgba(37,211,102,.4);border-radius:14px;margin-bottom:10px">
+      <div style="font-size:11px;color:#128C7E;font-weight:700;margin-bottom:6px">
+        zap.unicontroller.com.br → Webhooks → Adicionar
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.04);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+        <code id="wa-hook-url" style="flex:1;font-size:12px;color:var(--navy);overflow-wrap:anywhere;font-weight:700">${hookUrl}</code>
+        <button onclick="copiarTexto('${hookUrl}')"
+          style="background:#25D366;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:#fff;flex-shrink:0;font-size:12px;font-weight:700">
+          Copiar
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--ink-2)">Evento:</span>
+        <span style="font-size:12px;font-weight:800;background:#25D366;color:#fff;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
+        <span style="font-size:12px;color:var(--ink-3)">— só este, uma vez</span>
+      </div>
     </div>
 
     <!-- payloads recebidos -->
@@ -1932,12 +1941,20 @@ async function rodarDiagnosticoWA() {
     </div>
     ${(d.ultimos_payloads||[]).length === 0 ? `
       <div style="padding:14px;background:rgba(255,193,7,.08);border:1.5px solid rgba(255,193,7,.3);border-radius:12px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:#8A6A1A;margin-bottom:4px">⚠️ Nenhum payload recebido ainda</div>
-        <div style="font-size:12.5px;color:var(--ink-2)">
-          O gateway não está chamando o webhook. Verifique:<br>
-          1. URL cadastrada no painel do gateway (copiada acima)<br>
-          2. Evento: <b>Mensagem recebida</b><br>
-          3. Mande <b>menu</b> no grupo e toque em Verificar novamente
+        <div style="font-size:13px;font-weight:700;color:#8A6A1A;margin-bottom:8px">⚠️ Gateway não está chamando o webhook</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <span style="width:20px;height:20px;border-radius:50%;background:#C9A94E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">1</span>
+            <span style="font-size:12.5px;color:var(--ink-2)">Acesse <b>zap.unicontroller.com.br</b> → <b>Webhooks</b> → <b>Adicionar</b></span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <span style="width:20px;height:20px;border-radius:50%;background:#C9A94E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">2</span>
+            <span style="font-size:12.5px;color:var(--ink-2)">Cole a URL acima e selecione evento <b>Mensagem recebida</b></span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <span style="width:20px;height:20px;border-radius:50%;background:#C9A94E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">3</span>
+            <span style="font-size:12.5px;color:var(--ink-2)">Mande <b>menu</b> no grupo e toque em <b>Verificar</b> aqui</span>
+          </div>
         </div>
       </div>` : `
       <div style="max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:10px">
