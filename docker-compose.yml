@@ -25,5 +25,9 @@ services:
       FIPE_API_TOKEN: ${FIPE_API_TOKEN:-}
       EMPRESA_NOME: ${EMPRESA_NOME:-Tomelin Gestão Financeira}
       EMPRESA_CIDADE: ${EMPRESA_CIDADE:-Blumenau/SC}
-    ports:
-      - "8000:8000"
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
