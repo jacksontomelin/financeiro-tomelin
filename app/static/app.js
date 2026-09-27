@@ -1344,117 +1344,180 @@ async function excluirContato(id) {
 async function viewWhatsapp(v) {
   let st = {};
   try { st = await api("/api/whatsapp/status"); } catch { st = {}; }
-  const ativo = !!st.ativo;
+  const webhookUrl = location.origin + "/api/whatsapp/webhook";
+  const conectado = st.conectado === true;
+  const statusTxt = !st.gateway || !st.chave_configurada ? "Gateway não configurado"
+    : st.erro_gateway ? st.erro_gateway
+    : conectado ? ("Conectado" + (st.numero ? " · " + st.numero : ""))
+    : "WhatsApp desconectado no gateway";
+  const passo = (n, ok, titulo, corpo) => `
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;
+          background:${ok ? "var(--teal)" : "var(--bg)"};color:${ok ? "#fff" : "var(--ink-2)"};border:1.5px solid ${ok ? "var(--teal)" : "var(--line)"}">${ok ? "✓" : n}</span>
+        <h3 style="margin:0;font-size:15px;color:var(--navy)">${titulo}</h3>
+      </div>${corpo}
+    </div>`;
 
   const consultas = [
-    { n:"1",  c:"saldo",       d:"Saldo de todas as contas" },
-    { n:"2",  c:"vencer",      d:"Atrasados + próximos 7 dias" },
-    { n:"3",  c:"resumo",      d:"Resumo do mês" },
-    { n:"4",  c:"pagar",       d:"Contas a pagar" },
-    { n:"5",  c:"receber",     d:"Contas a receber" },
-    { n:"6",  c:"patrimonio",  d:"Contas + veículos" },
-    { n:"7",  c:"juros",       d:"Juros e multas do ano" },
-    { n:"8",  c:"metas",       d:"Metas financeiras e progresso" },
-    { n:"9",  c:"categorias",  d:"Lista de categorias" },
-    { n:"10", c:"contas",      d:"Saldos por conta bancária" },
-    { n:"0",  c:"menu",        d:"Exibe o menu completo" },
+    ["1 · saldo","Saldo de todas as contas"],["2 · vencer","Atrasados + próximos 7 dias"],["3 · resumo","Resumo do mês"],
+    ["4 · pagar","Contas a pagar"],["5 · receber","Contas a receber"],["6 · patrimonio","Contas + veículos"],
+    ["7 · juros","Juros e multas"],["8 · metas","Metas e progresso"],["9 · categorias","Lista de categorias"],["10 · contas","Saldo por conta"],
+    ["fluxo","Gráfico 6 meses"],["gastos","Top categorias do mês"],["hoje","Resumo do dia"],["semana","Movimentos da semana"],
+    ["projecao","Saldo projetado 3 meses"],["parcelas","Parcelas de cartão"],["carros","Veículos e financiamentos"],
+    ["proximo mes","Contas do mês que vem"],["dica","Dica personalizada"],["menu · mais","Menu de comandos"],
   ];
-  const cadastros = [
-    { ex:"despesa 150 mercado",        d:"Lança despesa (categoria sugerida auto)" },
-    { ex:"despesa 1.500 aluguel",      d:"Aceita qualquer formato de valor" },
-    { ex:"receita 3000 salario",       d:"Lança receita" },
-    { ex:"baixa 42",                   d:"Dá baixa no lançamento #42" },
-    { ex:"buscar aluguel",             d:"Busca lançamentos por texto" },
-    { ex:"ultimo",                     d:"Último lançamento cadastrado" },
-    { ex:"aporte 500 reserva",         d:"Aporta em meta financeira" },
-    { ex:"nf https://sat.sef.sc.gov.br/...", d:"Consulta NF-e pelo QR code" },
+  const acoes = [
+    ["despesa 150 mercado","Lança despesa (categoria automática)"],["receita 3000 salario","Lança receita"],
+    ["baixa 42","Dá baixa no lançamento #42"],["buscar aluguel","Busca lançamentos"],["ultimo","Último lançamento"],
+    ["aporte 500 reserva","Aporta em meta"],["nova conta Nubank","Cadastra conta"],["nova cat Pets","Cadastra categoria"],
+    ["nf https://...","Consulta NF-e pelo QR code"],["ajuda baixa","Ajuda de qualquer comando"],
   ];
-  const extras = [
-    { ex:"fluxo",             d:"Gráfico ASCII receitas x despesas (6 meses)" },
-    { ex:"gastos",            d:"Top categorias de gasto do mês" },
-    { ex:"hoje",              d:"Resumo do dia — vence e pagos" },
-    { ex:"semana",            d:"Movimentos da semana atual" },
-    { ex:"projecao",          d:"Projeção de saldo: 3 meses" },
-    { ex:"parcelas",          d:"Parcelas de cartão pendentes" },
-    { ex:"carros",            d:"Veículos e financiamentos" },
-    { ex:"dica",              d:"Dica financeira personalizada" },
-    { ex:"nova conta Nubank", d:"Cadastra conta bancária" },
-    { ex:"nova cat Mercado",  d:"Cadastra categoria de despesa" },
-    { ex:"mais",              d:"Exibe o menu completo com todos os comandos" },
-    { ex:"ajuda baixa",       d:"Ajuda detalhada de qualquer comando" },
-    { ex:"proximo mes",       d:"Contas previstas para o próximo mês" },
+  const pdfs = [
+    ["recibo 42","Recibo #42 em PDF"],["recibo cupom 42","Recibo estilo impressora matricial"],
+    ["balancete","Balancete do mês em PDF"],["balancete cupom","Balancete estilo cupom"],["patrimonio pdf","Patrimônio em PDF"],
   ];
+  const api_v1 = [
+    ["GET","/api/v1/status","—","Conexão do WhatsApp"],
+    ["POST","/api/v1/enviar","jid|numero, texto","Enviar texto"],
+    ["POST","/api/v1/enviar-anexo","multipart: arquivo, jid|numero, caption","Enviar arquivo (PDF, imagem…)"],
+    ["GET","/api/v1/chats","—","Últimas 200 conversas"],
+    ["GET","/api/v1/grupos","?busca=","Todos os grupos (jid + nome)"],
+    ["GET","/api/v1/mensagens","?jid=&limite=","Mensagens de um chat"],
+    ["POST","/api/v1/send-image","jid|numero, url, caption","Imagem por URL"],
+    ["POST","/api/v1/send-document","jid|numero, url, fileName, mimetype","Documento por URL"],
+    ["POST","/api/v1/send-video","jid|numero, url, caption","Vídeo por URL"],
+    ["POST","/api/v1/send-audio","jid|numero, url","Áudio por URL"],
+    ["POST","/api/v1/send-location","jid|numero, lat, lng, nome","Localização"],
+    ["POST","/api/v1/send-contact","jid|numero, nome, telefone","Cartão de contato"],
+    ["POST","/api/v1/send-reaction","msgId, emoji","Reagir a mensagem"],
+    ["POST","/api/v1/reply","msgId, texto","Responder citando"],
+    ["POST","/api/v1/delete-message","msgId","Apagar para todos"],
+    ["POST","/api/v1/read-message","jid|numero","Marcar como lida"],
+  ];
+  const chip = (arr, cor) => `<div class="wa-chips">${arr.map(([c,d]) => `
+      <div class="wa-chip"><code style="color:${cor}">${c}</code><span>${d}</span></div>`).join("")}</div>`;
 
   v.innerHTML = `
-    <div class="wa-card" style="margin-bottom:18px">
+    <div class="wa-card" style="margin-bottom:16px">
       <div class="wa-ico">${icon("whatsapp")}</div>
-      <div class="grow">
-        <div class="t">WhatsApp — Central de controle financeiro</div>
-        <div class="s"><span class="status-dot ${ativo ? "on" : "off"}"></span>
-          ${ativo ? "Integração ativa com " + (st.gateway || "gateway") : "Desativada — configure as variáveis no Coolify"}</div>
+      <div class="grow" style="min-width:0">
+        <div class="t">WhatsApp — central financeira</div>
+        <div class="s"><span class="status-dot ${conectado && st.ativo ? "on" : "off"}"></span>${statusTxt}${!st.ativo && st.gateway ? " · envio desativado" : ""}</div>
       </div>
-      <button class="btn btn-green" onclick="testarWhatsapp(this)" ${ativo ? "" : "disabled"}>${icon("send")}Testar</button>
+      <button class="btn btn-green btn-sm" onclick="testarWhatsapp(this)" ${st.ativo && st.grupo ? "" : "disabled"}>${icon("send")}<span>Testar</span></button>
     </div>
 
-    <div class="dica azul" style="margin-bottom:16px">
-      <span style="flex-shrink:0;width:22px;height:22px;display:flex">${icon("whatsapp")}</span>
-      <div>Adicione o número do WhatsApp no grupo de controle e configure <b>WHATSAPP_GRUPO</b> no Coolify com o ID do grupo (termina em @g.us). O sistema responde automaticamente aos comandos abaixo.</div>
+    ${passo(1, !!(st.gateway && st.chave_configurada && !st.erro_gateway), "Conectar ao gateway", `
+      <div class="frm">
+        <div class="campo full"><label>URL do gateway</label>
+          <input id="wa-url" value="${st.gateway || "https://zap.unicontroller.com.br"}" placeholder="https://zap.unicontroller.com.br"></div>
+        <div class="campo full"><label>Chave de API</label>
+          <input id="wa-chave" type="password" placeholder="${st.chave_configurada ? "•••••••• (já configurada — deixe em branco para manter)" : "Gere em zap.unicontroller.com.br → API Keys"}"></div>
+        <div class="campo full" style="flex-direction:row;align-items:center;gap:10px">
+          <label class="switch"><input type="checkbox" id="wa-ativo" ${st.ativo ? "checked" : ""}><span class="slider"></span></label>
+          <span style="font-size:13.5px;color:var(--ink)">Ativar envio de mensagens</span></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="salvarGatewayWA()">${icon("check")}Salvar e verificar</button>`)}
+
+    ${passo(2, !!st.grupo, "Escolher o grupo da família", `
+      <div class="sub" style="margin-bottom:10px">Grupo atual: <b>${st.grupo || "nenhum"}</b></div>
+      <button class="btn btn-ghost btn-sm" onclick="carregarGruposWA()" ${st.gateway && st.chave_configurada ? "" : "disabled"}>${icon("users")}Listar meus grupos</button>
+      <div id="wa-grupos" style="margin-top:10px"></div>`)}
+
+    ${passo(3, false, "Cadastrar o webhook no gateway", `
+      <div class="sub" style="margin-bottom:8px">No painel do WhatsApp → <b>Webhooks</b>, adicione esta URL com os eventos <b>received</b> e <b>sent</b>:</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <code id="wa-hook" style="flex:1;min-width:0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-size:12px;overflow-wrap:anywhere">${webhookUrl}</code>
+        <button class="btn-icon" title="Copiar" onclick="copiarTexto('${webhookUrl}')">${icon("doc")}</button>
+      </div>
+      <div class="sub" style="margin-top:8px">Com <b>sent</b> ativo, os comandos que você mesmo digita no grupo também são respondidos.</div>`)}
+
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span><div class="grow"><h3>Consultas</h3><div class="sub">Digite no grupo</div></div></div>
+      ${chip(consultas, "var(--teal)")}
+    </div>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="card-h"><span class="card-ico i-gold">${icon("edit")}</span><div class="grow"><h3>Cadastros e ações</h3><div class="sub">O sistema reage com ✅ quando registra</div></div></div>
+      ${chip(acoes, "var(--navy)")}
+    </div>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="card-h"><span class="card-ico i-navy">${icon("download")}</span><div class="grow"><h3>PDFs direto no grupo</h3><div class="sub">O arquivo chega como anexo</div></div></div>
+      ${chip(pdfs, "var(--red)")}
     </div>
 
-    <div class="grid-2" style="grid-template-columns:1fr 1.2fr;gap:16px">
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-navy">${icon("cog")}</span><div class="grow"><h3>Configuração</h3></div></div>
-        <table style="width:100%;font-size:13px">
-          <tbody>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Gateway</td><td style="text-align:right;font-size:12px;font-family:monospace">${st.gateway || "—"}</td></tr>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Grupo</td><td style="text-align:right;font-size:12px;font-family:monospace">${st.grupo || "—"}</td></tr>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Alerta diário</td><td style="text-align:right">${st.alerta_hora != null ? String(st.alerta_hora).padStart(2,"0")+":00" : "—"}</td></tr>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Antecedência</td><td style="text-align:right">${st.alerta_dias_antes ?? "—"} dia(s)</td></tr>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Resumo semanal</td><td style="text-align:right">${st.resumo_semanal ? "Ativo (seg.)" : "Desativado"}</td></tr>
-            <tr><td style="padding:6px 0;color:var(--ink-3)">Fechamento diário</td><td style="text-align:right">${st.fechamento_diario ? "Ativo" : "Desativado"}</td></tr>
-          </tbody>
-        </table>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <div class="card-h" style="cursor:pointer" onclick="document.getElementById('wa-apidoc').classList.toggle('hidden')">
+        <span class="card-ico i-navy">${icon("terminal")}</span>
+        <div class="grow"><h3>API do gateway (v1)</h3><div class="sub">Header <code>X-API-Key</code> · toque para ver os ${api_v1.length} endpoints</div></div>
       </div>
-
-      <div class="card card-pad">
-        <div class="card-h"><span class="card-ico i-green">${icon("whatsapp")}</span>
-          <div class="grow"><h3>Consultas</h3><div class="sub">Número ou palavra-chave</div></div></div>
-        <div class="cmd-grid">
-          ${consultas.map(c => `<div class="cmd"><span class="n">${c.n}</span><div><div class="c">${c.c}</div><div class="dsc">${c.d}</div></div></div>`).join("")}
-        </div>
-      </div>
-    </div>
-
-    <div class="card card-pad" style="margin-top:16px">
-      <div class="card-h"><span class="card-ico i-gold">${icon("edit")}</span>
-        <div class="grow"><h3>Cadastros e ações pelo WhatsApp</h3><div class="sub">Envie o comando no grupo e o sistema processa na hora</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px">
-        ${cadastros.map(c => `
-          <div style="background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--line)">
-            <div style="font-family:monospace;font-size:12.5px;color:var(--navy);font-weight:600;margin-bottom:4px">${c.ex}</div>
-            <div style="font-size:12px;color:var(--ink-2)">${c.d}</div>
+      <div id="wa-apidoc" class="hidden" style="margin-top:10px">
+        ${api_v1.map(([m,p,b,d]) => `
+          <div style="padding:10px 0;border-bottom:1px solid var(--line)">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:${m === "GET" ? "var(--teal)" : "var(--navy)"}">${m}</span>
+              <code style="font-size:12.5px;color:var(--ink);overflow-wrap:anywhere">${p}</code>
+            </div>
+            <div class="sub" style="margin-top:3px">${d}${b !== "—" ? ` · <code style="font-size:11.5px">${b}</code>` : ""}</div>
           </div>`).join("")}
+        <div class="sub" style="margin-top:10px">Webhook enviado pelo gateway: <code style="font-size:11.5px">{ evento, jid, deMim, tipo, texto, autorNome, autorNumero, id, ts, midia }</code></div>
       </div>
     </div>
 
-    <div class="card card-pad" style="margin-top:16px">
-      <div class="card-h"><span class="card-ico i-navy">${icon("trendUp")}</span>
-        <div class="grow"><h3>Análises e automações</h3><div class="sub">Consultas avançadas e cadastros rápidos</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px">
-        ${extras.map(c => `
-          <div style="background:var(--bg);border-radius:10px;padding:12px 14px;border:1px solid var(--line)">
-            <div style="font-family:monospace;font-size:12.5px;color:var(--teal,#2F817A);font-weight:600;margin-bottom:4px">${c.ex}</div>
-            <div style="font-size:12px;color:var(--ink-2)">${c.d}</div>
-          </div>`).join("")}
-      </div>
-    </div>
-
-    <div class="dica verde" style="margin-top:16px">
-      <span style="flex-shrink:0;width:20px;height:20px;display:flex;margin-top:1px">${icon("checkCircle")}</span>
-      <div>Automático: alerta de vencimentos às ${st.alerta_hora != null ? String(st.alerta_hora).padStart(2,"0") : "08"}:00 (só quando há algo pendente) e resumo semanal na segunda-feira. Silencioso quando tudo está em dia — igual ao Sentinela.</div>
+    <div class="dica verde">
+      <span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("checkCircle")}</span>
+      <div>Automático: alerta de vencimentos às ${String(st.alerta_hora ?? 8).padStart(2, "0")}:00 (só quando há algo) ${st.resumo_semanal ? "· resumo na segunda-feira" : ""} ${st.fechamento_diario ? "· fechamento do dia" : ""}.</div>
     </div>`;
+}
+
+async function salvarGatewayWA() {
+  const dados = {
+    WHATSAPP_API_URL: $("#wa-url").value.trim(),
+    WHATSAPP_ATIVO: $("#wa-ativo").checked ? "true" : "false",
+    WHATSAPP_ENDPOINT_ENVIAR: "/api/v1/enviar",
+  };
+  const chave = $("#wa-chave").value.trim();
+  if (chave) dados.WHATSAPP_API_TOKEN = chave;
+  try {
+    await api("/api/configuracoes", { method: "POST", body: JSON.stringify(dados) });
+    const st = await api("/api/whatsapp/status");
+    if (st.erro_gateway) toast(st.erro_gateway, "err");
+    else toast(st.conectado ? "Gateway conectado!" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
+    setView("whatsapp");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function carregarGruposWA() {
+  const box = $("#wa-grupos");
+  box.innerHTML = `<div class="sub">Buscando grupos…</div>`;
+  const r = await api("/api/whatsapp/grupos");
+  if (!r.ok) { box.innerHTML = `<div class="dica vermelho"><span style="flex-shrink:0;width:20px;height:20px;display:flex">${icon("alert")}</span><div>${r.erro}</div></div>`; return; }
+  if (!r.grupos.length) { box.innerHTML = `<div class="sub">Nenhum grupo encontrado.</div>`; return; }
+  box.innerHTML = `
+    <input placeholder="Filtrar grupos…" oninput="filtrarGruposWA(this.value)" style="width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:8px">
+    <div style="max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:10px">
+      ${r.grupos.map(g => `
+        <div class="wa-grupo" data-nome="${(g.nome || "").toLowerCase()}" onclick="escolherGrupoWA('${g.jid}')"
+             style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer">
+          <span class="card-ico i-green" style="width:30px;height:30px;border-radius:9px">${icon("users")}</span>
+          <div style="min-width:0;flex:1"><div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome}</div>
+            <div class="sub" style="font-size:11px;overflow-wrap:anywhere">${g.jid}</div></div>
+        </div>`).join("")}
+    </div>`;
+}
+function filtrarGruposWA(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll(".wa-grupo").forEach(el => el.style.display = el.dataset.nome.includes(q) ? "" : "none");
+}
+async function escolherGrupoWA(jid) {
+  try {
+    await api("/api/whatsapp/grupo", { method: "POST", body: JSON.stringify({ jid }) });
+    toast("Grupo definido!", "ok"); setView("whatsapp");
+  } catch (e) { toast(e.message, "err"); }
+}
+function copiarTexto(t) {
+  (navigator.clipboard?.writeText(t) || Promise.reject()).then(() => toast("Copiado!", "ok"))
+    .catch(() => { prompt("Copie a URL:", t); });
 }
 async function testarWhatsapp(btn) {
   const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = icon("refresh", "spin") + "Enviando...";
@@ -2967,6 +3030,7 @@ Object.assign(window, {
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
   _toggleItensCompra, verParcelasCompra,
+  salvarGatewayWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 

@@ -1384,3 +1384,18 @@ html.dark .btab-item.on::before{background:#AFC2D6}
   .modal-f{ padding:12px 14px; flex-wrap:wrap }
   .modal-f .btn{ flex:1; justify-content:center }
 }
+
+/* ── WhatsApp: chips de comando e switch ── */
+.wa-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:6px}
+.wa-chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.wa-chip code{font-size:12.5px;font-weight:700;overflow-wrap:anywhere}
+.wa-chip span{font-size:11.5px;color:var(--ink-2)}
+.wa-grupo:hover{background:var(--bg)}
+.hidden{display:none !important}
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;inset:0;background:var(--line);border-radius:24px;transition:.2s;cursor:pointer}
+.switch .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch input:checked + .slider{background:var(--teal)}
+.switch input:checked + .slider::before{transform:translateX(18px)}
+@media(max-width:520px){.wa-chips{grid-template-columns:1fr 1fr}.wa-chip span{font-size:11px}}

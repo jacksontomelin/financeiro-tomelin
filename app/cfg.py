@@ -12,9 +12,9 @@ DEFS = [
     # ---- WhatsApp ----
     ("WHATSAPP_ATIVO",           "Ativar envio de mensagens pelo WhatsApp",                          "false"),
     ("WHATSAPP_API_URL",         "URL do gateway WhatsApp (ex.: https://zap.unicontroller.com.br)",  ""),
-    ("WHATSAPP_API_TOKEN",       "Token Bearer do gateway",                                           ""),
-    ("WHATSAPP_GRUPO",           "ID ou nome do grupo de controle financeiro",                        ""),
-    ("WHATSAPP_ENDPOINT_ENVIAR", "Endpoint de envio (padrão /api/enviar)",                           "/api/enviar"),
+    ("WHATSAPP_API_TOKEN",       "Chave de API do gateway (painel do WhatsApp → API Keys)",           ""),
+    ("WHATSAPP_GRUPO",           "JID do grupo de controle (escolha na tela WhatsApp)",               ""),
+    ("WHATSAPP_ENDPOINT_ENVIAR", "Endpoint de envio da API v1 (padrão /api/v1/enviar)",               "/api/v1/enviar"),
     ("RECIBO_WHATSAPP_AUTO",     "Enviar recibo automático ao dar baixa",                             "true"),
     # ---- Alertas ----
     ("ALERTA_HORA",              "Hora do alerta diário de vencimentos (0-23)",                       "8"),

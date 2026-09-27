@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Envia recibo automático no WhatsApp sempre que uma conta é marcada como paga
     RECIBO_WHATSAPP_AUTO: bool = True
     # Caminho do endpoint de envio no gateway. {msg} e {grupo} são preenchidos no payload.
-    WHATSAPP_ENDPOINT_ENVIAR: str = "/api/enviar"
+    WHATSAPP_ENDPOINT_ENVIAR: str = "/api/v1/enviar"
     WHATSAPP_ATIVO: bool = False
 
     # ---- Alertas automáticos de vencimento ----

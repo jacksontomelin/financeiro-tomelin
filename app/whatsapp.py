@@ -46,35 +46,20 @@ MENU = (
     "`receita 2000 salario` — lança receita\n"
     "`baixa 42` — dá baixa no lançamento #42\n"
     "`buscar pagamento` — busca lançamentos\n\n"
+    "*📎 PDFs no grupo:*\n"
+    "`recibo 42` — recibo em PDF (`recibo cupom 42` = estilo cupom)\n"
+    "`balancete` — balancete do mês em PDF\n"
+    "`patrimonio pdf` — patrimônio em PDF\n\n"
     "*📄 Nota Fiscal:*\n"
     "`nf https://...` — lê QR code da NF-e\n\n"
     "Digite *menu* para ver isto novamente."
 )
 
 
-def enviar(mensagem: str, grupo: str | None = None) -> bool:
-    """Envia mensagem ao grupo via gateway Baileys."""
-    if not settings.WHATSAPP_ATIVO or not settings.WHATSAPP_API_URL:
-        log.info("[whatsapp desativado] %s", mensagem.replace("\n", " | ")[:120])
-        return False
-    grupo = grupo or settings.WHATSAPP_GRUPO
-    url = settings.WHATSAPP_API_URL.rstrip("/") + settings.WHATSAPP_ENDPOINT_ENVIAR
-    headers = {}
-    if settings.WHATSAPP_API_TOKEN:
-        headers["Authorization"] = f"Bearer {settings.WHATSAPP_API_TOKEN}"
-    payload = {
-        "grupo": grupo, "group": grupo, "para": grupo, "to": grupo,
-        "mensagem": mensagem, "message": mensagem, "texto": mensagem, "text": mensagem,
-    }
-    try:
-        r = httpx.post(url, json=payload, headers=headers, timeout=20)
-        ok = r.status_code < 300
-        if not ok:
-            log.warning("Gateway respondeu %s: %s", r.status_code, r.text[:200])
-        return ok
-    except Exception as e:
-        log.error("Falha ao enviar WhatsApp: %s", e)
-        return False
+def enviar(mensagem: str, grupo: str | None = None, db=None) -> bool:
+    """Envia texto ao grupo de controle via API v1 do gateway (config do painel)."""
+    from . import zapapi
+    return zapapi.enviar_texto(mensagem, grupo, db=db)
 
 
 def _brl(v) -> str:
@@ -1048,3 +1033,70 @@ def _texto_lembrete_mes_seguinte(db: Session) -> str:
     if len(prox_mes) > 10:
         linhas.append(f"... e mais {len(prox_mes)-10}")
     return "\n".join(linhas)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#  COMANDOS QUE ENVIAM ARQUIVO (PDF) NO GRUPO — via /api/v1/enviar-anexo
+# ════════════════════════════════════════════════════════════════════════════
+def processar_arquivo(texto: str, db: Session):
+    """
+    Retorna (bytes, nome_arquivo, legenda) quando o comando pede um PDF,
+    ou None se não for comando de arquivo.
+      recibo 42            → recibo PDF do lançamento #42
+      recibo cupom 42      → recibo estilo impressora matricial
+      balancete [cupom]    → balancete do mês atual
+      patrimonio pdf       → demonstrativo de patrimônio
+    """
+    t = (texto or "").strip().lower()
+    partes = t.split()
+    if not partes:
+        return None
+    cupom = "cupom" in partes or "matricial" in partes
+
+    if partes[0] == "recibo" and len(partes) >= 2:
+        num = next((p.lstrip("#") for p in partes[1:] if p.lstrip("#").isdigit()), None)
+        if not num:
+            return None
+        from sqlalchemy.orm import joinedload
+        l = (db.query(models.Lancamento)
+             .options(joinedload(models.Lancamento.categoria),
+                      joinedload(models.Lancamento.contato),
+                      joinedload(models.Lancamento.conta))
+             .filter(models.Lancamento.id == int(num)).first())
+        if not l:
+            return ("ERRO", f"❌ Lançamento #{num} não encontrado.")
+        cat = l.categoria.nome if l.categoria else ""
+        conta = l.conta.nome if l.conta else ""
+        contato = l.contato.nome if l.contato else ""
+        if cupom:
+            from .pdf_matricial import recibo_matricial as gerar
+        else:
+            from .pdf import recibo as gerar
+        pdf = gerar(l, categoria=cat, conta=conta, contato=contato)
+        return (pdf, f"recibo-{l.id:04d}.pdf", f"🧾 Recibo #{l.id:04d} — {l.descricao} · {_brl(l.valor_total)}")
+
+    if partes[0] in ("balancete", "relatorio", "relatório"):
+        from calendar import monthrange
+        hoje = date.today()
+        de, ate = hoje.replace(day=1), hoje.replace(day=monthrange(hoje.year, hoje.month)[1])
+        d = service.balancete(db, de, ate)
+        label = f"{de.strftime('%d/%m/%Y')} a {ate.strftime('%d/%m/%Y')}"
+        if cupom:
+            from .pdf_matricial import balancete_matricial as gerar
+        else:
+            from .pdf import balancete as gerar
+        pdf = gerar(label, d["receitas"], d["despesas"], d["total_receitas"], d["total_despesas"], d["juros"])
+        return (pdf, f"balancete-{de.isoformat()}.pdf", f"📊 Balancete {label}")
+
+    if partes[0] in ("patrimonio", "patrimônio") and ("pdf" in partes or cupom):
+        p = service.patrimonio(db)
+        contas = [(c["nome"], c["saldo"]) for c in p["contas"]]
+        veic = [(v["nome"], v["valor"], v["financiamento"], v["liquido"]) for v in p["veiculos"]]
+        if cupom:
+            from .pdf_matricial import patrimonio_matricial as gerar
+        else:
+            from .pdf import patrimonio as gerar
+        pdf = gerar(contas, veic, p["total_contas"], p["total_veiculos"], p["total_financiamentos"])
+        return (pdf, "patrimonio.pdf", "🏛️ Demonstrativo de patrimônio")
+
+    return None
