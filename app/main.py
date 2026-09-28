@@ -44,6 +44,10 @@ from apscheduler.triggers.cron import CronTrigger
 import pytz
 
 from .config import settings
+try:
+    from .version import VERSION, BUILD, BUILD_DATE
+except Exception:
+    VERSION, BUILD, BUILD_DATE = '2.0.0', 'dev', ''
 from .database import Base, engine
 from . import seed, whatsapp
 from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas
@@ -100,7 +104,7 @@ for r in (auth.router, categorias.router, contas.router, contatos.router,
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "app": settings.APP_NOME}
+    return {"ok": True, "app": settings.APP_NOME, "version": VERSION, "build": BUILD, "build_date": BUILD_DATE}
 
 
 @app.get("/api/config")

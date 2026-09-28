@@ -8,3 +8,4 @@ venv/
 smoke_test.db
 node_modules/
 .DS_Store
+app/version.py

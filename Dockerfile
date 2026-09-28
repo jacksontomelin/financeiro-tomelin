@@ -14,7 +14,8 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-COPY app ./app
+COPY . .
+RUN python3 generate_version.py
 
 EXPOSE 8000
 
