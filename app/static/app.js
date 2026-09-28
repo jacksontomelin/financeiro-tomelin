@@ -362,7 +362,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.74.0 · 3d2e2a7</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -3362,12 +3362,7 @@ async function render() {
   aplicarTema(temaAtual());
   if (!State.token) { renderLogin(); return; }
   renderApp();
-  // versão dinâmica
-  try {
-    const info = await fetch("/api/health").then(r=>r.json());
-    const el = document.getElementById("sb-version");
-    if (el && info.version) el.textContent = `v${info.version} · ${info.build}`;
-  } catch {}
+
   marcarNav();
   try {
     await setView(State.view || "dashboard");
