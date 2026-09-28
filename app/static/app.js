@@ -395,6 +395,7 @@ function renderApp() {
           <div class="sub" id="tb-sub"></div>
         </div>
         <div class="grow"></div>
+        <button class="btn-icon hide-mob" title="Tour do sistema" onclick="iniciarTour()" style="background:linear-gradient(135deg,#C9A94E,#B8963B);border:none;color:#fff">${icon("alert")}</button>
         <button class="btn-icon" title="Tema claro/escuro" onclick="toggleTema()">${icon(temaAtual() === "dark" ? "sun" : "moon")}</button>
         <button class="btn-icon" title="Atualizar" onclick="setView(State.view)">${icon("refresh")}</button>
       </header>
@@ -3656,6 +3657,232 @@ async function buscaMobileQuery(q) {
   } catch { res.innerHTML = `<div style="padding:20px 16px;color:var(--red)">Erro na busca.</div>`; }
 }
 
+
+/* ============================================================
+   TOUR INTERATIVO — guia completo do sistema
+   ============================================================ */
+const TOUR_PASSOS = [
+  {
+    titulo: "👋 Bem-vindo ao Tomelin Gestão Financeira!",
+    texto: "Este tour vai te mostrar todas as telas e funcionalidades. Toque em <b>Próximo</b> para navegar ou <b>Pular</b> para sair a qualquer momento.",
+    acao: null,
+    destaque: null,
+  },
+  {
+    titulo: "🏠 Dashboard — Visão geral",
+    texto: "A tela principal mostra seu <b>saldo consolidado</b>, receitas e despesas do mês, alertas de vencimento e atalhos rápidos.",
+    acao: () => setView("dashboard"),
+    destaque: null,
+  },
+  {
+    titulo: "💰 Hero card — Saldo",
+    texto: "O card escuro no topo mostra seu <b>saldo total</b> somando todas as contas, o resultado do mês (verde = positivo, vermelho = negativo) e os 3 KPIs principais.",
+    acao: () => setView("dashboard"),
+    destaque: ".dash-hero, [style*='#06243F'], [style*='#082D51'][style*='border-radius:22px']",
+  },
+  {
+    titulo: "⚡ Atalhos rápidos",
+    texto: "4 botões logo abaixo do hero: <b>Nova despesa</b>, <b>Recebimento</b>, <b>Ler NF</b> e <b>Relatórios</b>. Os mais usados estão sempre à mão.",
+    acao: () => setView("dashboard"),
+    destaque: null,
+  },
+  {
+    titulo: "🔔 Vencimentos",
+    texto: "Contas <b>atrasadas e próximas</b> dos próximos 7 dias aparecem aqui. O número vermelho no menu mostra quantas precisam de atenção.",
+    acao: () => setView("vencimentos"),
+    destaque: "#badge-venc",
+  },
+  {
+    titulo: "💸 Contas a pagar",
+    texto: "Lista de todas as <b>despesas pendentes e pagas</b>. Filtre por status (pendente, atrasado, pago), categoria ou busque por descrição. Toque em uma linha para dar baixa, editar ou gerar recibo.",
+    acao: () => setView("pagar"),
+    destaque: null,
+  },
+  {
+    titulo: "✅ Dar baixa",
+    texto: "Toque no botão <b>✓</b> de qualquer lançamento para registrar o pagamento. Você define a data, conta e eventuais juros/multa.",
+    acao: () => setView("pagar"),
+    destaque: ".btn-green",
+  },
+  {
+    titulo: "💵 Contas a receber",
+    texto: "Suas <b>receitas pendentes e recebidas</b>. Mesmo sistema das despesas — filtre, busque, confirme recebimento.",
+    acao: () => setView("receber"),
+    destaque: null,
+  },
+  {
+    titulo: "📋 Todos os lançamentos",
+    texto: "<b>Extrato completo</b>: receitas e despesas juntas, ordenadas por data. Exporte para CSV com o botão Exportar.",
+    acao: () => setView("lancamentos"),
+    destaque: null,
+  },
+  {
+    titulo: "🛒 Compras e cartões",
+    texto: "Registre <b>compras parceladas no cartão</b>. O sistema controla cada parcela, data de vencimento e progresso de pagamento.",
+    acao: () => setView("compras"),
+    destaque: null,
+  },
+  {
+    titulo: "🎯 Metas financeiras",
+    texto: "Crie <b>objetivos de poupança</b>: reserva de emergência, viagem, carro. Cada meta tem barra de progresso, prazo e aporte avulso.",
+    acao: () => setView("metas"),
+    destaque: null,
+  },
+  {
+    titulo: "📊 Relatórios",
+    texto: "Balancete do período, projeção dos próximos 6 meses, patrimônio líquido e juros pagos. Todos disponíveis em <b>PDF</b> (padrão ou estilo cupom).",
+    acao: () => setView("relatorios"),
+    destaque: null,
+  },
+  {
+    titulo: "🚗 Veículos",
+    texto: "Cadastre seus veículos com valor FIPE atualizado, financiamento e custo mensal. O patrimônio líquido inclui os veículos automaticamente.",
+    acao: () => setView("veiculos"),
+    destaque: null,
+  },
+  {
+    titulo: "🏦 Contas e carteiras",
+    texto: "Gerencie suas <b>contas bancárias, carteiras e cartões</b>. O saldo de cada uma aparece no dashboard e nos relatórios.",
+    acao: () => setView("contas"),
+    destaque: null,
+  },
+  {
+    titulo: "🏷️ Categorias",
+    texto: "Organize seus lançamentos por categoria (Moradia, Alimentação, Saúde...). As categorias aparecem nos <b>gráficos de despesas</b> do dashboard.",
+    acao: () => setView("categorias"),
+    destaque: null,
+  },
+  {
+    titulo: "👥 Contatos",
+    texto: "Clientes, fornecedores, pessoas. Vincule um contato a qualquer lançamento para saber <b>quem pagou ou recebeu</b>.",
+    acao: () => setView("contatos"),
+    destaque: null,
+  },
+  {
+    titulo: "💬 WhatsApp",
+    texto: "Control tudo pelo grupo da família. Mande <b>saldo</b>, <b>vencer</b>, <b>resumo</b>, <b>menu</b> e muito mais. Configure o webhook aqui para respostas instantâneas.",
+    acao: () => setView("whatsapp"),
+    destaque: null,
+  },
+  {
+    titulo: "👨‍👩‍👧 Família",
+    texto: "Adicione membros da família com e-mail e senha próprios. Cada um acessa o sistema com seu login. O papel <b>Admin</b> dá acesso total.",
+    acao: () => setView("usuarios"),
+    destaque: null,
+  },
+  {
+    titulo: "⚙️ Configurações",
+    texto: "Personalize alertas de vencimento, horários de envio no WhatsApp, logo da empresa, dados do cabeçalho dos PDFs e muito mais.",
+    acao: () => setView("configuracoes"),
+    destaque: null,
+  },
+  {
+    titulo: "📱 Menu mobile",
+    texto: "No celular, o menu fica na <b>barra inferior</b>: Início, Vencer, botão + (novo lançamento), Extrato e Mais. O botão + abre atalhos para registrar receita, despesa, NF ou compra.",
+    acao: () => setView("dashboard"),
+    destaque: ".btab",
+  },
+  {
+    titulo: "🧾 Ler Nota Fiscal",
+    texto: "Aponte a câmera para o QR code de qualquer NF-e ou cole o link. O sistema lê os itens da nota e pré-preenche o lançamento automaticamente.",
+    acao: () => setView("dashboard"),
+    destaque: null,
+  },
+  {
+    titulo: "🔍 Busca rápida",
+    texto: "No desktop, use a <b>barra de busca</b> no topo. No celular, toque na <b>lupa</b> — abre uma busca fullscreen de lançamentos e contatos.",
+    acao: () => setView("dashboard"),
+    destaque: ".busca-global-wrap, .show-mob[title='Buscar']",
+  },
+  {
+    titulo: "✅ Tour concluído!",
+    texto: "Você conheceu todas as telas do sistema. Para voltar ao início, toque em <b>Dashboard</b>. Qualquer dúvida, mande <b>ajuda</b> no grupo do WhatsApp!",
+    acao: () => setView("dashboard"),
+    destaque: null,
+  },
+];
+
+let _TOUR_PASSO = 0;
+let _TOUR_ATIVO = false;
+
+function iniciarTour() {
+  _TOUR_PASSO = 0;
+  _TOUR_ATIVO = true;
+  mostrarPassoTour();
+}
+
+function fecharTour() {
+  _TOUR_ATIVO = false;
+  document.getElementById("tour-overlay")?.remove();
+  document.querySelectorAll(".tour-destaque").forEach(el => el.classList.remove("tour-destaque"));
+}
+
+async function mostrarPassoTour() {
+  if (!_TOUR_ATIVO) return;
+  const p = TOUR_PASSOS[_TOUR_PASSO];
+  const total = TOUR_PASSOS.length;
+
+  // executa ação da tela
+  if (p.acao) {
+    try { await p.acao(); } catch {}
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  // destaca elemento
+  document.querySelectorAll(".tour-destaque").forEach(el => el.classList.remove("tour-destaque"));
+  if (p.destaque) {
+    const sels = p.destaque.split(",").map(s => s.trim());
+    for (const sel of sels) {
+      const el = document.querySelector(sel);
+      if (el) { el.classList.add("tour-destaque"); break; }
+    }
+  }
+
+  // remove overlay anterior
+  document.getElementById("tour-overlay")?.remove();
+
+  // cria card do tour
+  const ov = document.createElement("div");
+  ov.id = "tour-overlay";
+  ov.innerHTML = `
+    <div class="tour-card">
+      <div class="tour-prog">
+        <div class="tour-bar" style="width:${Math.round((_TOUR_PASSO / (total-1)) * 100)}%"></div>
+      </div>
+      <div class="tour-step">${_TOUR_PASSO + 1} de ${total}</div>
+      <div class="tour-titulo">${p.titulo}</div>
+      <div class="tour-texto">${p.texto}</div>
+      <div class="tour-btns">
+        <button onclick="fecharTour()" class="tour-btn-pular">Pular tour</button>
+        <div style="display:flex;gap:8px">
+          ${_TOUR_PASSO > 0 ? `<button onclick="tourAnterior()" class="tour-btn-nav">← Anterior</button>` : ""}
+          <button onclick="tourProximo()" class="tour-btn-prox">
+            ${_TOUR_PASSO === total - 1 ? "Concluir ✓" : "Próximo →"}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+async function tourProximo() {
+  if (_TOUR_PASSO < TOUR_PASSOS.length - 1) {
+    _TOUR_PASSO++;
+    await mostrarPassoTour();
+  } else {
+    fecharTour();
+    setView("dashboard");
+    toast("Tour concluído! 🎉", "ok");
+  }
+}
+
+async function tourAnterior() {
+  if (_TOUR_PASSO > 0) {
+    _TOUR_PASSO--;
+    await mostrarPassoTour();
+  }
+}
+
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
@@ -3682,7 +3909,8 @@ Object.assign(window, {
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
   _toggleItensCompra, verParcelasCompra,
-  rodarDiagnosticoWA, salvarGatewayWA, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
+  rodarDiagnosticoWA, salvarGatewayWA,
+  iniciarTour, fecharTour, tourProximo, tourAnterior, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
 
