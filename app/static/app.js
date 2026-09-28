@@ -525,6 +525,7 @@ async function setView(id) {
   toggleSidebar(false);
   marcarNav();
   const v = $("#view");
+  if (!v) return;
   v.innerHTML = `<div class="empty" style="padding:80px">${icon("refresh", "spin")}<p>Carregando...</p></div>`;
   try {
     if (id === "dashboard") await viewDashboard(v);
@@ -1125,8 +1126,7 @@ async function confirmarBaixa(id) {
       data_pagamento: $("#b-data").value, conta_id: +$("#b-conta").value || null,
       juros: parseFloat($("#b-juros").value || "0"), multa: parseFloat($("#b-multa").value || "0"),
     }) });
-    fecharModal(); toast("Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
-    abrirPDF(`/api/lancamentos/${id}/recibo.pdf`);
+    fecharModal(); toast("Baixa registrada ✅", "ok"); await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
 }
 
