@@ -2361,20 +2361,31 @@ async function viewRelatorios(v) {
   const deLabel = PERIODO.de ? dataBR(PERIODO.de) : "";
   const ateLabel = PERIODO.ate ? dataBR(PERIODO.ate) : "";
 
-  // linha de categoria com barra visual de proporção
-  const linhaCat = (arr, total, cor) => {
+  const clicavel = `cursor:pointer;transition:all .15s;user-select:none`;
+  const hoverEfect = `onmouseover="this.style.transform='scale(1.01)';this.style.boxShadow='0 4px 16px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''"`;
+
+  // linha de categoria clicável — filtra o extrato por categoria
+  const linhaCat = (arr, total, cor, tipo) => {
     if (!arr?.length) return `<div class="meta" style="padding:12px 0">Sem lançamentos no período.</div>`;
     return arr.map(([nome, val]) => {
       const pct = total ? Math.round(val / total * 100) : 0;
-      return `<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-          <span style="font-size:13.5px;color:var(--ink)">${nome}</span>
-          <span class="mono-num" style="font-size:13.5px;font-weight:700">${money(val)}</span>
+      const cat = State.cats.find(c => c.nome === nome);
+      const catId = cat?.id || "";
+      return `<div style="margin-bottom:12px;${clicavel};padding:8px;border-radius:10px;margin-left:-8px;margin-right:-8px"
+        ${hoverEfect}
+        onclick="FILTRO.cat=${catId};FILTRO.status='';window._tipoFixo='${tipo}';setView('${tipo === "receita" ? "receber" : "pagar"}')"
+        title="Ver lançamentos de ${nome}">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center">
+          <span style="font-size:13.5px;color:var(--ink);font-weight:600">${nome}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mono-num" style="font-size:13.5px;font-weight:700">${money(val)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
         <div style="background:var(--bg);border-radius:4px;height:5px">
           <div style="background:${cor};width:${pct}%;height:100%;border-radius:4px;transition:width .4s"></div>
         </div>
-        <div class="sub" style="margin-top:2px;font-size:11px">${pct}% do total</div>
+        <div class="sub" style="margin-top:2px;font-size:11px">${pct}% do total · toque para ver os lançamentos</div>
       </div>`;
     }).join("");
   };
@@ -2396,7 +2407,6 @@ async function viewRelatorios(v) {
           <button class="btn btn-primary" onclick="aplicarPeriodo()">${icon("filter")}Aplicar</button>
         </div>
       </div>
-      <!-- Botões PDF compactos -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
         <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Cupom</button>
@@ -2404,47 +2414,52 @@ async function viewRelatorios(v) {
       </div>
     </div>
 
-    <!-- KPIs do período -->
+    <!-- KPIs clicáveis -->
     <div class="kpi-grid" style="margin-bottom:16px">
-      <div class="kpi ${resPos ? "green" : "red"}">
+      <div class="kpi ${resPos ? "green" : "red"}" style="${clicavel}" ${hoverEfect}
+           onclick="setView('lancamentos')" title="Ver todos os lançamentos do período">
         <div class="lab"><span class="i i-${resPos ? "green" : "red"}">${icon(resPos ? "trendUp" : "arrowUp")}</span>Resultado</div>
         <div class="val mono-num">${money(bal.resultado)}</div>
         <div class="meta">${deLabel} → ${ateLabel}</div>
       </div>
-      <div class="kpi navy">
+      <div class="kpi navy" style="${clicavel}" ${hoverEfect}
+           onclick="setView('veiculos')" title="Ver patrimônio detalhado">
         <div class="lab"><span class="i i-navy">${icon("wallet")}</span>Patrimônio líquido</div>
         <div class="val mono-num">${money(pat.patrimonio_liquido)}</div>
         <div class="meta">contas + veículos − dívidas</div>
       </div>
-      <div class="kpi gold">
+      <div class="kpi gold" style="${clicavel}" ${hoverEfect}
+           onclick="setView('pagar')" title="Ver lançamentos com juros">
         <div class="lab"><span class="i i-gold">${icon("alert")}</span>Juros no ano</div>
         <div class="val mono-num">${money(jur.juros_pago_ano)}</div>
         <div class="meta">a pagar: ${money(jur.juros_a_pagar)}</div>
       </div>
     </div>
 
-    <!-- Balancete: Receitas -->
+    <!-- Receitas clicáveis por categoria -->
     <div class="card card-pad" style="margin-bottom:14px">
-      <div class="card-h" style="margin-bottom:14px">
+      <div class="card-h" style="margin-bottom:14px;${clicavel}" ${hoverEfect} onclick="setView('receber')">
         <span class="card-ico i-green">${icon("trendUp")}</span>
         <div class="grow">
           <h3 style="color:var(--teal)">Receitas do período</h3>
-          <div class="sub">Total: <b class="mono-num">${money(bal.total_receitas)}</b></div>
+          <div class="sub">Total: <b class="mono-num">${money(bal.total_receitas)}</b> · toque para ver todas</div>
         </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      ${linhaCat(bal.receitas, bal.total_receitas, "var(--teal)")}
+      ${linhaCat(bal.receitas, bal.total_receitas, "var(--teal)", "receita")}
     </div>
 
-    <!-- Balancete: Despesas -->
+    <!-- Despesas clicáveis por categoria -->
     <div class="card card-pad" style="margin-bottom:14px">
-      <div class="card-h" style="margin-bottom:14px">
+      <div class="card-h" style="margin-bottom:14px;${clicavel}" ${hoverEfect} onclick="setView('pagar')">
         <span class="card-ico i-gold">${icon("arrowUp")}</span>
         <div class="grow">
           <h3 style="color:var(--gold-2)">Despesas do período</h3>
-          <div class="sub">Total: <b class="mono-num">${money(bal.total_despesas)}</b></div>
+          <div class="sub">Total: <b class="mono-num">${money(bal.total_despesas)}</b> · toque para ver todas</div>
         </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
-      ${linhaCat(bal.despesas, bal.total_despesas, "var(--gold)")}
+      ${linhaCat(bal.despesas, bal.total_despesas, "var(--gold)", "despesa")}
     </div>
 
     <!-- Projeção -->
@@ -2459,38 +2474,71 @@ async function viewRelatorios(v) {
       <div style="overflow-x:auto;margin-top:8px">${barChart(proj)}</div>
     </div>
 
-    <!-- Patrimônio -->
+    <!-- Patrimônio — cada linha clicável -->
     <div class="card card-pad" style="margin-bottom:14px">
       <div class="card-h" style="margin-bottom:16px">
         <span class="card-ico i-navy">${icon("shield")}</span>
-        <div class="grow"><h3>Patrimônio</h3></div>
+        <div class="grow"><h3>Patrimônio detalhado</h3></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+             background:var(--bg);border-radius:12px;${clicavel}" ${hoverEfect}
+             onclick="setView('contas')" title="Ver contas e carteiras">
           <div style="display:flex;align-items:center;gap:10px">
             <span class="card-ico i-navy" style="width:32px;height:32px;border-radius:9px">${icon("bank")}</span>
-            <span style="font-size:13.5px;color:var(--ink)">Contas e aplicações</span>
+            <div>
+              <div style="font-size:13.5px;color:var(--ink);font-weight:600">Contas e aplicações</div>
+              <div class="sub" style="font-size:11px">Toque para ver as contas</div>
+            </div>
           </div>
-          <span class="mono-num" style="font-weight:700">${money(pat.total_contas)}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mono-num" style="font-weight:700">${money(pat.total_contas)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--bg);border-radius:12px">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+             background:var(--bg);border-radius:12px;${clicavel}" ${hoverEfect}
+             onclick="setView('veiculos')" title="Ver veículos">
           <div style="display:flex;align-items:center;gap:10px">
             <span class="card-ico i-green" style="width:32px;height:32px;border-radius:9px">${icon("car")}</span>
-            <span style="font-size:13.5px;color:var(--ink)">Veículos</span>
+            <div>
+              <div style="font-size:13.5px;color:var(--ink);font-weight:600">Veículos</div>
+              <div class="sub" style="font-size:11px">Toque para ver os veículos</div>
+            </div>
           </div>
-          <span class="mono-num" style="font-weight:700">${money(pat.total_veiculos)}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mono-num" style="font-weight:700">${money(pat.total_veiculos)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>
+
         ${pat.total_financiamentos > 0 ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(180,80,62,.06);border-radius:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+             background:rgba(180,80,62,.06);border-radius:12px;${clicavel}" ${hoverEfect}
+             onclick="setView('veiculos')" title="Ver financiamentos">
           <div style="display:flex;align-items:center;gap:10px">
             <span class="card-ico i-red" style="width:32px;height:32px;border-radius:9px">${icon("alert")}</span>
-            <span style="font-size:13.5px;color:var(--ink)">Financiamentos</span>
+            <div>
+              <div style="font-size:13.5px;color:var(--ink);font-weight:600">Financiamentos</div>
+              <div class="sub" style="font-size:11px">Toque para ver os financiamentos</div>
+            </div>
           </div>
-          <span class="mono-num val-desp" style="font-weight:700">− ${money(pat.total_financiamentos)}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mono-num val-desp" style="font-weight:700">− ${money(pat.total_financiamentos)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
         </div>` : ""}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;margin-top:4px">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
+             background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;margin-top:4px;
+             ${clicavel}" ${hoverEfect} onclick="abrirPDF('/api/relatorios/patrimonio.pdf')"
+             title="Baixar PDF do patrimônio">
           <span style="font-size:14px;font-weight:700;color:#fff">Patrimônio líquido</span>
-          <span class="mono-num" style="font-size:20px;font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="mono-num" style="font-size:20px;font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" width="16" height="16">${P.download||""}</svg>
+          </div>
         </div>
       </div>
     </div>`;
