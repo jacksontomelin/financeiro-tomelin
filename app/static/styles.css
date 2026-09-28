@@ -33,10 +33,11 @@
   --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+html,body{height:100%;overflow-x:hidden}
 body{
   font-family:var(--font); background:var(--bg); color:var(--ink);
   -webkit-font-smoothing:antialiased; font-size:15px; line-height:1.5;
+  overflow-x:hidden;
 }
 a{color:inherit;text-decoration:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
@@ -81,7 +82,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 /* ============================================================
    LAYOUT
    ============================================================ */
-.app{display:flex;min-height:100dvh}
+.app{display:flex;min-height:100dvh;overflow-x:hidden}
 
 /* --- sidebar (estilo NaPista) --- */
 .sidebar{
@@ -113,7 +114,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .sb-foot button:hover{background:rgba(255,255,255,.08);color:#fff}
 
 /* --- conteúdo --- */
-.main{flex:1;margin-left:var(--sidebar);min-width:0;display:flex;flex-direction:column}
+.main{flex:1;margin-left:var(--sidebar);min-width:0;display:flex;flex-direction:column;overflow-x:hidden}
 .topbar{
   position:sticky;top:var(--safe-top);z-index:30;background:rgba(246,248,251,.86);backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);padding:16px 30px;display:flex;align-items:center;gap:16px;
@@ -122,7 +123,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .topbar h2{font-size:19px;font-weight:800;color:var(--navy);letter-spacing:-.02em}
 .topbar .sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
 .topbar .grow{flex:1}
-.content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%}
+.content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%;overflow-x:hidden}
 
 /* ============================================================
    COMPONENTES
@@ -1400,3 +1401,10 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 .switch input:checked + .slider::before{transform:translateX(18px)}
 @media(max-width:520px){.wa-chips{grid-template-columns:1fr 1fr}.wa-chip span{font-size:11px}}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Scrollbar discreta — não estoura o layout */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
+* { scrollbar-width:thin; scrollbar-color:var(--line) transparent }
