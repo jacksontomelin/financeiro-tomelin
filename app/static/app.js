@@ -449,9 +449,8 @@ function marcarNav() {
   });
 
   const m = META[State.view] || {};
-  const tt = $("#tb-title"), ts = $("#tb-sub");
-  if (tt) tt.textContent = m.nome || "";
-  if (ts) ts.textContent = m.sub || "";
+  try { const tt = $("#tb-title"); if (tt) tt.textContent = m.nome || ""; } catch {}
+  try { const ts = $("#tb-sub"); if (ts) ts.textContent = m.sub || ""; } catch {}
 }
 
 /* FAB (+) — abre mini-menu de novo lançamento */
@@ -932,6 +931,7 @@ async function recarregarTabela() {
   const itens = await api("/api/lancamentos" + q);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
   const tb = $("#tb");
+  if (!tb) return;
   if (!itens.length) {
     tb.innerHTML = `<tr><td colspan="7"><div class="empty">${icon("wallet")}<p>Nenhum lançamento encontrado.</p></div></td></tr>`;
     return;
@@ -1894,7 +1894,7 @@ async function viewWhatsapp(v) {
 
 async function rodarDiagnosticoWA() {
   const box = document.getElementById("wa-diag");
-  if (!box) return;
+  if (!box) return;  // tela não está aberta
   box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:4px 0">Verificando…</div>`;
   let d;
   try { d = await api("/api/whatsapp/debug"); }
@@ -2026,7 +2026,7 @@ async function salvarGatewayWA() {
 
 async function carregarGruposWA() {
   const box = document.getElementById("wa-grupos");
-  if (!box) return;
+  if (!box) { toast("Abra a tela WhatsApp primeiro.", "err"); return; }
   box.innerHTML = `<div style="padding:12px 0;text-align:center;color:var(--ink-3);font-size:13px">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"
          style="animation:spin 1s linear infinite;vertical-align:middle">
@@ -2135,7 +2135,7 @@ function _previewNumeroWA(v) {
   if (st2) st2.textContent = completo ? "✅" : "";
   if (ico) ico.textContent = completo ? "✅" : "➕";
   if (nome) nome.textContent = completo ? (State.nome || "Jackson Tomelin") : "Não configurado";
-  if (avatar) {
+  if (avatar && avatar.style !== undefined) {
     avatar.style.background = completo
       ? "linear-gradient(135deg,#25D366,#128C7E)"
       : "var(--line)";
@@ -3331,6 +3331,14 @@ document.addEventListener("click", (e) => {
   r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
   btn.appendChild(r);
   r.addEventListener("animationend", () => r.remove());
+});
+
+window.addEventListener("error", (e) => {
+  if (e.message && e.message.includes("innerHTML")) {
+    console.error("NULL innerHTML em:", e.filename, "linha:", e.lineno, "col:", e.colno, e.error?.stack?.split("\n")[1]);
+    const box = document.getElementById("wa-diag") || document.getElementById("view");
+    if (box) box.innerHTML = `<div style="padding:20px;color:var(--red)">Erro JS: ${e.message} (linha ${e.lineno})</div>`;
+  }
 });
 
 document.addEventListener("keydown", (e) => {
