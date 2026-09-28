@@ -359,7 +359,11 @@ function renderApp() {
     <aside class="sidebar" id="sb">
       <div class="sb-brand">
         <span class="sb-logo">${LOGO_MARK}</span>
-        <div><div class="t">Tomelin</div><div class="s">Gestão Financeira</div></div>
+        <div>
+          <div class="t">Tomelin</div>
+          <div class="s">Gestão Financeira</div>
+          <div style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.0.0</div>
+        </div>
       </div>
       <nav class="sb-nav">
         ${NAV.map(n => n.sec
