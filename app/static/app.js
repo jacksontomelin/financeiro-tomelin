@@ -368,7 +368,7 @@ function renderApp() {
       <nav class="sb-nav">
         ${NAV.map(n => n.sec
           ? `<div class="sb-sec">${n.sec}</div>`
-          : `<a class="nav-item" data-id="${n.id}" onclick="setView('${n.id}')">
+          : `<a class="nav-item" data-id="${n.id}" data-nome="${n.nome}" onclick="setView('${n.id}')" title="${n.nome}">
                ${icon(n.ic)}<span>${n.nome}</span>
                ${n.badge ? `<span class="nav-badge hidden" id="badge-venc"></span>` : ""}
              </a>`).join("")}
