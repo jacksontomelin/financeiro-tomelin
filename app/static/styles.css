@@ -33,7 +33,7 @@
   --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow-x:hidden}
+html,body{height:100%;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}
 body{
   font-family:var(--font); background:var(--bg); color:var(--ink);
   -webkit-font-smoothing:antialiased; font-size:15px; line-height:1.5;
@@ -123,7 +123,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .topbar h2{font-size:19px;font-weight:800;color:var(--navy);letter-spacing:-.02em}
 .topbar .sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
 .topbar .grow{flex:1}
-.content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%;overflow-x:hidden}
+.content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}
 
 /* ============================================================
    COMPONENTES
@@ -1403,11 +1403,12 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Scrollbar discreta — não estoura o layout */
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px}
-::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
-* { scrollbar-width:thin; scrollbar-color:var(--line) transparent }
+/* Scrollbar invisível em todo o sistema */
+*::-webkit-scrollbar { width: 0; height: 0; background: transparent }
+* { scrollbar-width: none; -ms-overflow-style: none }
+/* Exceção: tabelas e listas longas que precisam de indicação */
+.tbl-wrap::-webkit-scrollbar { width: 4px; height: 4px }
+.tbl-wrap { scrollbar-width: thin; scrollbar-color: var(--line) transparent }
 
 /* ══════════════════════════════════════════════════════
    TOUR INTERATIVO
@@ -1523,3 +1524,6 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 @media(max-width: 820px) {
   #tour-overlay { bottom: 90px; }
 }
+
+.content::-webkit-scrollbar{display:none}
+.sb-nav::-webkit-scrollbar{display:none}
