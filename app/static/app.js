@@ -259,65 +259,60 @@ function _statusLogin() {
 }
 
 function renderLogin() {
-  const IMGS = [
-    "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=900&q=80",
-    "https://images.unsplash.com/photo-1607863680198-23d4b2565df0?w=900&q=80",
-    "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900&q=80",
-    "https://images.unsplash.com/photo-1579621970588-a35d0e7ab9b6?w=900&q=80",
-    "https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?w=900&q=80",
-  ];
-  const img = IMGS[Math.floor(Math.random() * IMGS.length)];
   const ua = _ultimoAcesso();
+  root().innerHTML = `
+    <div class="login-app">
+      <!-- topo: logo grande centralizada -->
+      <div class="login-app-top">
+        <div class="login-app-logo-wrap">
+          <img src="/static/icons/logo-mark.png" class="login-app-logo-img" alt="Tomelin">
+        </div>
+        <div class="login-app-brand">Tomelin</div>
+        <div class="login-app-sub">Gestão Financeira da Família</div>
+      </div>
 
-  // SVG icons inline para os cards (sem emoji)
-  const svgWallet = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>';
-  const svgUsers = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>';
-  const svgDoc = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
-  const svgShield = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" width="28" height="28"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      <!-- card do formulário -->
+      <div class="login-app-card">
+        <h2 class="login-app-titulo">Acesse sua conta</h2>
 
-  root().innerHTML =
-    '<div class="login-split">' +
-      '<div class="login-photo" style="background-image:url(\'' + img + '\')">' +
-        '<div class="login-photo-overlay"></div>' +
-        '<div class="login-photo-content">' +
-          '<div class="lp-logo">' + LOGO_LOCKUP + '</div>' +
-          '<div class="lp-tagline">' +
-            '<div class="lp-t1">UNINDO TUDO</div>' +
-            '<div class="lp-t2">CONTROLANDO TUDO</div>' +
-          '</div>' +
-          '<div class="lp-cards">' +
-            '<div class="lp-card"><span class="lp-card-ic">' + svgWallet + '</span><div><b>Controle total</b><br>Receitas, despesas e patrimônio</div></div>' +
-            '<div class="lp-card"><span class="lp-card-ic">' + svgUsers + '</span><div><b>Para toda família</b><br>Cada membro com seu acesso</div></div>' +
-            '<div class="lp-card"><span class="lp-card-ic">' + svgDoc + '</span><div><b>Relatórios em PDF</b><br>Balancete e patrimônio</div></div>' +
-          '</div>' +
-          '<div id="lp-status" class="lp-status">' + svgShield + ' <span>Verificando sistema...</span></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="login-form-side">' +
-        '<div class="login-form-wrap">' +
-          '<div class="lf-header">' +
-            '<div class="lf-logo-sm">' + LOGO_LOCKUP + '</div>' +
-            '<h2 class="lf-titulo">Acesse sua conta</h2>' +
-            '<p class="lf-sub">Gestão financeira da família</p>' +
-          '</div>' +
-          (ua ? '<div class="lf-ultimo-acesso">' + icon("clock") + ' ' + ua + '</div>' : '') +
-          '<form onsubmit="fazerLogin(event)" autocomplete="on">' +
-            '<div class="campo"><label>E-mail</label>' +
-              '<input id="l-email" type="email" autocomplete="username" placeholder="seu@email.com.br" required></div>' +
-            '<div class="campo" style="position:relative"><label>Senha</label>' +
-              '<input id="l-senha" type="password" autocomplete="current-password" placeholder="••••••••" required>' +
-              '<button type="button" class="btn-ver-senha" onclick="toggleSenha()" title="Mostrar senha">' + icon("eye") + '</button></div>' +
-            '<div id="l-erro" class="login-erro hidden"></div>' +
-            '<button id="l-btn" type="submit" class="btn btn-primary btn-login">' +
-              icon("send") + '<span id="l-btn-txt">Entrar</span></button>' +
-          '</form>' +
-          '<div class="lf-footer">' +
-            '<span>Tomelin Gestao Financeira</span>' +
-            '<span>v1.0</span>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+        ${ua ? `<div class="lf-ultimo-acesso">${icon("clock")} ${ua}</div>` : ""}
+
+        <form onsubmit="fazerLogin(event)" autocomplete="on" style="display:flex;flex-direction:column;gap:14px">
+          <div class="login-campo">
+            <label class="login-label">E-mail</label>
+            <div class="login-input-wrap">
+              <span class="login-input-ic">${icon("user")}</span>
+              <input id="l-email" type="email" autocomplete="username"
+                placeholder="seu@email.com.br" required class="login-input">
+            </div>
+          </div>
+          <div class="login-campo">
+            <label class="login-label">Senha</label>
+            <div class="login-input-wrap">
+              <span class="login-input-ic">${icon("lock") || "🔒"}</span>
+              <input id="l-senha" type="password" autocomplete="current-password"
+                placeholder="••••••••" required class="login-input" style="padding-right:44px">
+              <button type="button" class="btn-ver-senha" onclick="toggleSenha()">${icon("eye")}</button>
+            </div>
+          </div>
+          <div id="l-erro" class="login-erro hidden"></div>
+          <button id="l-btn" type="submit" class="btn btn-primary btn-login">
+            ${icon("send")}<span id="l-btn-txt">Entrar</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- rodapé -->
+      <div class="login-app-footer">
+        <span id="sb-version-login" style="font-size:11px;opacity:.5">v2.0</span>
+      </div>
+    </div>`;
+
+  // busca versão
+  fetch("/api/health").then(r=>r.json()).then(d=>{
+    const el = document.getElementById("sb-version-login");
+    if (el && d.version) el.textContent = "v" + d.version + " · " + d.build;
+  }).catch(()=>{});
 
   _statusLogin();
 }
@@ -362,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.80.0 · d8fce32</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.81.0 · 36c54f3</div>
         </div>
       </div>
       <nav class="sb-nav">

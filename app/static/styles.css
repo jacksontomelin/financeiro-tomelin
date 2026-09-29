@@ -51,34 +51,193 @@ input,select,textarea{font-family:inherit;font-size:14px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .mono-num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 
-/* ============================================================
-   LOGIN
-   ============================================================ */
-.login-wrap{
-  min-height:100dvh; display:grid; place-items:center; padding:24px;
-  background:
-    radial-gradient(1000px 600px at 15% -10%, rgba(55,176,110,.16), transparent 60%),
-    radial-gradient(900px 500px at 110% 10%, rgba(201,169,78,.14), transparent 55%),
-    linear-gradient(160deg,#05203A,#0E3A63 60%,#082D51);
+
+/* ══════════════════════════════════════════════════════
+   LOGIN — estilo app mobile
+   ══════════════════════════════════════════════════════ */
+.login-app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(160deg, #05203A 0%, #0E3A63 50%, #082D51 100%);
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 }
-.login-card{
-  width:100%; max-width:400px; background:var(--card); border-radius:var(--r-lg);
-  padding:38px 34px 30px; box-shadow:var(--shadow-lg);
+
+/* ── topo com logo ── */
+.login-app-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 32px;
+  text-align: center;
 }
-.login-logo{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:26px}
-.login-lockup{width:210px;max-width:72%;height:auto;display:block}
-.login-logo h1{font-size:21px;color:var(--navy);font-weight:800;letter-spacing:-.02em;text-align:center}
-.login-logo span{font-size:13px;color:var(--gold);font-weight:600;letter-spacing:.04em}
-.login-card form{display:flex;flex-direction:column;gap:16px}
-.login-card .campo{display:flex;flex-direction:column;gap:7px}
-.login-card label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
-.login-card input{
-  padding:12px 14px;border:1.5px solid var(--line);border-radius:var(--r-sm);
-  background:var(--bg-2);transition:border-color .15s,box-shadow .15s;
+.login-app-logo-wrap {
+  width: 100px;
+  height: 100px;
+  background: #fff;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
 }
-.login-card input:focus{outline:none;border-color:var(--navy-soft);box-shadow:0 0 0 3px rgba(29,76,120,.12);background:#fff}
-.login-erro{font-size:13px;color:var(--red);background:var(--red-soft);padding:9px 12px;border-radius:8px}
-.login-hint{margin-top:16px;font-size:11.5px;color:var(--ink-3);text-align:center;line-height:1.6}
+.login-app-logo-img {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+}
+.login-app-brand {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -.02em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.login-app-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,.55);
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+/* ── card do formulário ── */
+.login-app-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card);
+  border-radius: 28px 28px 0 0;
+  padding: 32px 28px 28px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,.15);
+}
+.login-app-titulo {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 22px;
+}
+html.dark .login-app-titulo { color: var(--ink); }
+
+/* ── campos ── */
+.login-campo { display: flex; flex-direction: column; gap: 7px; }
+.login-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.login-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.login-input-ic {
+  position: absolute;
+  left: 14px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.login-input-ic svg { width: 18px; height: 18px; }
+.login-input {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  font-size: 15px;
+  color: var(--ink);
+  box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
+  -webkit-appearance: none;
+}
+.login-input:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(8,45,81,.1);
+  background: var(--card);
+}
+.btn-ver-senha {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+.btn-ver-senha svg { width: 20px; height: 20px; }
+
+/* ── botão entrar ── */
+.btn-login {
+  width: 100%;
+  justify-content: center;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 14px;
+  margin-top: 4px;
+  gap: 10px;
+  box-shadow: 0 6px 20px rgba(8,45,81,.3);
+}
+.btn-login svg { width: 20px; height: 20px; }
+
+/* ── último acesso ── */
+.lf-ultimo-acesso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 18px;
+}
+.lf-ultimo-acesso svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── erro ── */
+.login-erro {
+  font-size: 13px;
+  color: var(--red);
+  background: rgba(180,80,62,.08);
+  border: 1px solid rgba(180,80,62,.2);
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+/* ── rodapé ── */
+
+
+/* desktop: centraliza o card, mostra os dois lados */
+@media(min-width: 768px) {
+  .login-app {
+    justify-content: center;
+    padding: 0;
+  }
+  .login-app-top {
+    flex: none;
+    padding: 40px 24px 24px;
+  }
+  .login-app-logo-wrap { width: 80px; height: 80px; border-radius: 22px; }
+  .login-app-logo-img { width: 58px; height: 58px; }
+  .login-app-brand { font-size: 26px; }
+  .login-app-card {
+    border-radius: 24px;
+    max-width: 400px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.2);
+    margin-bottom: 32px;
+  }
+}
 
 /* ============================================================
    LAYOUT
@@ -709,85 +868,30 @@ html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); 
 /* ============================================================
    LOGIN SPLIT-SCREEN (foto + formulário)
    ============================================================ */
-.login-split {
-  display: flex;
-  min-height: 100dvh;
-  background: var(--bg);
-}
+
 
 /* ---- Lado esquerdo: foto ---- */
-.login-photo {
-  flex: 1;
-  min-height: 100dvh;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  display: none; /* esconde no mobile */
-}
-@media(min-width:768px){ .login-photo { display: flex; } }
 
-.login-photo-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(8,45,81,.85) 0%, rgba(47,129,122,.65) 100%);
-}
-.login-photo-content {
-  position: relative;
-  z-index: 2;
-  padding: 48px 44px;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  justify-content: center;
-  width: 100%;
-}
-.lp-logo .login-lockup { height: 56px; width: auto; filter: brightness(0) invert(1); }
 
-.lp-tagline { }
-.lp-t1 { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: var(--gold); }
-.lp-t2 { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: rgba(255,255,255,.7); }
 
-.lp-cards { display: flex; flex-direction: column; gap: 12px; }
-.lp-card {
-  display: flex; align-items: center; gap: 14px;
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: 12px;
-  padding: 14px 18px;
-  color: #fff;
-  font-size: 13.5px;
-  backdrop-filter: blur(4px);
-}
-.lp-card-ic { font-size: 22px; flex-shrink: 0; }
 
-.lp-status {
-  font-size: 12px;
-  color: rgba(255,255,255,.65);
-  padding: 8px 14px;
-  background: rgba(255,255,255,.08);
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.15);
-}
+
+
+
+
+
+
+
+
+
+
 
 /* ---- Lado direito: formulário ---- */
-.login-form-side {
-  flex: 0 0 420px;
-  max-width: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 28px;
-  background: var(--card);
-  overflow-y: auto;
-}
-@media(min-width:768px){ .login-form-side { padding: 40px 36px; } }
-@media(max-width:767px){ .login-form-side { flex: 1; max-width: 100%; } }
 
-.login-form-wrap { width: 100%; max-width: 380px; }
 
-.lf-saudacao { font-size: 13px; color: var(--teal); font-weight: 600; margin-bottom: 4px; }
-.lf-titulo { font-size: 26px; font-weight: 800; color: var(--navy); margin: 0 0 6px; }
-.lf-sub { font-size: 13.5px; color: var(--ink-2); margin: 0 0 20px; }
+
+
+
 
 .lf-ultimo-acesso {
   display: flex; align-items: center; gap: 8px;
@@ -807,48 +911,36 @@ html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); 
 }
 .btn-ver-senha svg { width: 18px; height: 18px; }
 
-.lf-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 28px; padding-top: 16px;
-  border-top: 1px solid var(--line);
-  font-size: 12px; color: var(--ink-3);
-}
+
 
 /* mobile: centralizado sem foto */
 @media(max-width:767px){
-  .login-split { justify-content: center; background: var(--card); }
-  .login-form-side { max-width: 100%; }
-}
-
+  
+  
 /* dark mode */
-html.dark .login-form-side { background: var(--card); }
-html.dark .lf-titulo { color: var(--ink); }
-
+html.dark 
 /* Login form header */
-.lf-header { text-align: left; margin-bottom: 20px; }
-.lf-logo-sm { display: none; margin-bottom: 12px; }
-.lf-logo-sm .login-lockup { height: 36px; width: auto; }
-@media(max-width:767px){ .lf-logo-sm { display: block; } }
-.lf-titulo { font-size: 22px; font-weight: 800; color: var(--navy); margin: 0 0 4px; line-height: 1.2; }
-.lf-sub { font-size: 13px; color: var(--ink-2); margin: 0; }
+
+
+
+@media(max-width:767px){  }
+
+
 
 /* Status inline */
-.lp-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.7);
-  padding: 8px 14px; background: rgba(255,255,255,.08); border-radius: 8px; border: 1px solid rgba(255,255,255,.12); }
-.lp-status svg { flex-shrink: 0; }
+
+
 
 /* lp-card icon */
-.lp-card-ic { flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,.12); }
+
 
 /* Login form tweaks */
-.login-form-wrap { width: 100%; max-width: 340px; }
+
 .btn-login { width: 100%; justify-content: center; padding: 12px; font-size: 14.5px; margin-top: 6px; gap: 8px; }
 .btn-login svg { width: 18px; height: 18px; }
-.lf-footer { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 14px;
-  border-top: 1px solid var(--line); font-size: 11px; color: var(--ink-3); }
 
-html.dark .lf-titulo { color: var(--ink); }
+
+html.dark 
 
 /* ============================================================
    BUSCA GLOBAL
@@ -1559,18 +1651,9 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 .sb-nav::-webkit-scrollbar{display:none}
 
 /* ── Login form: campo, label, input ── */
-.login-form-wrap form { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
-.login-form-wrap .campo { display: flex; flex-direction: column; gap: 6px; }
-.login-form-wrap .campo label {
-  font-size: 12.5px; font-weight: 700; color: var(--ink-2);
-  text-transform: uppercase; letter-spacing: .04em;
-}
-.login-form-wrap .campo input {
-  padding: 13px 14px; border: 1.5px solid var(--line); border-radius: 12px;
-  background: var(--bg); font-size: 15px; color: var(--ink);
-  transition: border-color .15s, box-shadow .15s; width: 100%; box-sizing: border-box;
-}
-.login-form-wrap .campo input:focus {
-  outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(8,45,81,.1);
-}
+
+
+
+
+
 .login-form-wrap .campo[style*="position:relative"] input { padding-right: 44px; }
