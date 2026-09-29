@@ -362,7 +362,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.77.0 · 1df09aa</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.78.0 · 6407d3d</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -900,24 +900,27 @@ async function viewLancamentos(v, tipoFixo) {
   const titulo = tipoFixo === "despesa" ? "Contas a pagar" : tipoFixo === "receita" ? "Contas a receber" : "Todos os lançamentos";
   const cats = State.cats.filter(c => !tipoFixo || c.tipo === tipoFixo);
   v.innerHTML = `
-    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
-      <div class="seg" id="seg-status">
-        <button data-s="" class="on" onclick="filtroStatus('')">Todos</button>
-        <button data-s="pendente" onclick="filtroStatus('pendente')">Pendentes</button>
-        <button data-s="atrasado" onclick="filtroStatus('atrasado')">Atrasados</button>
-        <button data-s="pago" onclick="filtroStatus('pago')">Pagos</button>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="seg" id="seg-status" style="flex:1;min-width:0">
+          <button data-s="" class="on" onclick="filtroStatus('')">Todos</button>
+          <button data-s="pendente" onclick="filtroStatus('pendente')">Pendentes</button>
+          <button data-s="atrasado" onclick="filtroStatus('atrasado')">Atrasados</button>
+          <button data-s="pago" onclick="filtroStatus('pago')">Pagos</button>
+        </div>
+        <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">+ Novo</button>
       </div>
-      <div class="search"><span>${icon("search")}</span>
-        <input class="search-i" id="busca" placeholder="Buscar descrição..." oninput="debBusca(this.value)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="search" style="flex:1"><span>${icon("search")}</span>
+          <input class="search-i" id="busca" placeholder="Buscar..." oninput="debBusca(this.value)">
+        </div>
+        <select id="fcat" onchange="filtroCat(this.value)" style="flex:1;max-width:180px">
+          <option value="">Todas categorias</option>
+          ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')">↓ CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
       </div>
-      <select id="fcat" onchange="filtroCat(this.value)">
-        <option value="">Todas categorias</option>
-        ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
-      </select>
-      <div class="grow"></div>
-      <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')">${icon("download")}Exportar</button>
-      <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">${icon("plus")}Novo</button>
-      <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">${icon("receipt")}NF-e</button>
     </div>
     <div id="lanc-lista" style="display:flex;flex-direction:column;gap:8px"></div>`;
   FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = "";
@@ -982,10 +985,8 @@ async function recarregarTabela() {
       <div style="display:flex;align-items:flex-start;gap:12px">
         <!-- ícone de tipo -->
         <div style="width:42px;height:42px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-             background:${rec ? "rgba(47,129,122,.15)" : "rgba(180,80,62,.12)"};margin-top:1px">
-          <svg viewBox="0 0 24 24" fill="none" stroke="${rec ? "#2F817A" : "#B4503E"}" stroke-width="2" width="20" height="20">
-            ${rec ? P.arrowDown || "" : P.arrowUp || ""}
-          </svg>
+             background:${rec ? "rgba(47,129,122,.15)" : "rgba(180,80,62,.12)"};margin-top:1px;font-size:20px">
+          ${rec ? "↓" : "↑"}
         </div>
         <!-- info principal -->
         <div style="flex:1;min-width:0">
@@ -1013,12 +1014,12 @@ async function recarregarTabela() {
       <!-- botões de ação — linha separada -->
       <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
         ${podeBaixar
-          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})">${icon("check")}Dar baixa</button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})">${icon("refresh")}Estornar</button>`}
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})">${icon("edit")}Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">${icon("receipt")}Recibo</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})">${icon("whatsapp")}WA</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">${icon("trash")}</button>
+          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})">✓ Dar baixa</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})">↩ Estornar</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})">✎ Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">⎙ Recibo</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})">📲 WA</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">✕</button>
       </div>
     </div>`;
   }).join("");
