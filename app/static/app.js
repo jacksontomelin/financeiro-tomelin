@@ -362,7 +362,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.75.0 · 60b1a74</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.76.0 · 20a0e44</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -889,7 +889,7 @@ async function viewLancamentos(v, tipoFixo) {
   const titulo = tipoFixo === "despesa" ? "Contas a pagar" : tipoFixo === "receita" ? "Contas a receber" : "Todos os lançamentos";
   const cats = State.cats.filter(c => !tipoFixo || c.tipo === tipoFixo);
   v.innerHTML = `
-    <div class="toolbar">
+    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
       <div class="seg" id="seg-status">
         <button data-s="" class="on" onclick="filtroStatus('')">Todos</button>
         <button data-s="pendente" onclick="filtroStatus('pendente')">Pendentes</button>
@@ -904,17 +904,11 @@ async function viewLancamentos(v, tipoFixo) {
         ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
       </select>
       <div class="grow"></div>
-      <button class="btn btn-ghost" onclick="exportarCSV('${tipoFixo || ''}')">${icon("download")}Exportar</button>
-      <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">${icon("plus")}Novo ${tipoFixo === 'receita' ? 'recebimento' : tipoFixo === 'despesa' ? 'pagamento' : 'lançamento'}</button>
-      <button class="btn btn-ghost" onclick="abrirLeitorNFe()">${icon("receipt")}Ler Nota Fiscal</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')">${icon("download")}Exportar</button>
+      <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">${icon("plus")}Novo</button>
+      <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">${icon("receipt")}NF-e</button>
     </div>
-    <div class="card"><div class="tbl-wrap"><table id="tbl">
-      <thead><tr>
-        <th>Descrição</th><th>Categoria</th>${tipoFixo ? "" : "<th>Tipo</th>"}
-        <th>Vencimento</th><th>Situação</th><th class="num">Valor</th><th style="width:120px"></th>
-      </tr></thead>
-      <tbody id="tb"></tbody>
-    </table></div></div>`;
+    <div id="lanc-lista" style="display:flex;flex-direction:column;gap:8px"></div>`;
   FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = "";
   window._tipoFixo = tipoFixo;
   await recarregarTabela();
@@ -940,35 +934,82 @@ async function recarregarTabela() {
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
   const itens = await api("/api/lancamentos" + q);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
-  const tb = $("#tb");
-  if (!tb) return;
+
+  const lista = document.getElementById("lanc-lista");
+  if (!lista) return;
+
   if (!itens.length) {
-    tb.innerHTML = `<tr><td colspan="7"><div class="empty">${icon("wallet")}<p>Nenhum lançamento encontrado.</p></div></td></tr>`;
+    lista.innerHTML = `<div class="empty">${icon("wallet")}<p>Nenhum lançamento encontrado.</p></div>`;
     return;
   }
-  tb.innerHTML = itens.map(l => {
+
+  // cores e estilos por status
+  const STATUS_COR = {
+    pago:     { bg: "rgba(47,129,122,.08)",  borda: "rgba(47,129,122,.3)",  txt: "#1A6B63",  label: "Pago ✓"     },
+    pendente: { bg: "rgba(201,169,78,.08)",  borda: "rgba(201,169,78,.3)",  txt: "#8A6A1A",  label: "Pendente"   },
+    atrasado: { bg: "rgba(180,80,62,.09)",   borda: "rgba(180,80,62,.35)",  txt: "var(--red)", label: "Atrasado ⚠" },
+  };
+
+  lista.innerHTML = itens.map(l => {
     const rec = l.tipo === "receita";
+    const st  = STATUS_COR[l.status] || STATUS_COR.pendente;
     const catCor = (State.cats.find(c => c.id === l.categoria_id) || {}).cor || "#7E8C9A";
     const podeBaixar = l.status !== "pago";
-    return `<tr>
-      <td><div style="display:flex;align-items:center;gap:10px">${l.contato_logo ? avatarLogo(l.contato_logo, l.contato_nome || l.descricao, 30) : ""}<div><div class="cell-desc">${l.descricao}</div>${l.conta_nome ? `<div class="cell-sub">${l.conta_nome}</div>` : ""}${l.status || l.data_vencimento || l.categoria_nome ? `<div class="mob-meta"><span class="tag ${l.status}">${l.status === 'pago' ? 'Pago' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>${l.data_vencimento ? `<span class="mob-sub">${dataBR(l.data_vencimento)}</span>` : ""}${l.categoria_nome ? `<span class="mob-sub">${l.categoria_nome}</span>` : ""}</div>` : ""}</div></div></td>
-      <td class="hide-mob">${l.categoria_nome ? `<span class="cat-chip"><span class="dot" style="background:${catCor}"></span>${l.categoria_nome}</span>` : "—"}</td>
-      ${tf ? "" : `<td class="hide-mob"><span class="tag ${rec ? 'rec' : 'desp'}">${rec ? 'Receita' : 'Despesa'}</span></td>`}
-      <td class="hide-mob">${dataBR(l.data_vencimento)}</td>
-      <td class="hide-mob"><span class="tag ${l.status}">${l.status === 'pago' ? 'Pago' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span></td>
-      <td class="num ${rec ? 'val-rec' : 'val-desp'}"><span class="hide-mob">${rec ? '+' : '−'} </span>${money(l.valor)}</td>
-      <td>
-        <div style="display:flex;gap:5px;justify-content:flex-end">
-          ${podeBaixar ? `<button class="btn-icon" title="Dar baixa" onclick="formBaixaId(${l.id})">${icon("check")}</button>`
-                       : `<button class="btn-icon" title="Estornar" onclick="estornar(${l.id})">${icon("refresh")}</button>`}
-          <button class="btn-icon" title="Recibo em PDF" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">${icon("receipt")}</button>
-          <button class="btn-icon" title="Recibo estilo cupom" onclick="abrirPDF('/api/lancamentos/${l.id}/recibo.pdf?estilo=matricial')">${icon("terminal")}</button>
-          <button class="btn-icon" title="Enviar recibo no WhatsApp" onclick="reciboWhats(${l.id})">${icon("whatsapp")}</button>
-          <button class="btn-icon" title="Editar" onclick="formLancamentoId(${l.id})">${icon("edit")}</button>
-          <button class="btn-icon" title="Excluir" onclick="excluirLanc(${l.id})">${icon("trash")}</button>
+    const d = l.data_vencimento ? diasEntre(l.data_vencimento) : null;
+    const quando = l.status === "atrasado" && d !== null
+      ? `Venceu há ${Math.abs(d)}d`
+      : d === 0 ? "Vence hoje"
+      : d === 1 ? "Vence amanhã"
+      : l.data_vencimento ? dataBR(l.data_vencimento)
+      : "Sem vencimento";
+
+    return `<div style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
+                cursor:pointer;transition:all .15s"
+              onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 14px rgba(8,45,81,.1)'"
+              onmouseout="this.style.transform='';this.style.boxShadow=''"
+              onclick="formLancamentoId(${l.id})">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <!-- ícone de tipo -->
+        <div style="width:42px;height:42px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+             background:${rec ? "rgba(47,129,122,.15)" : "rgba(180,80,62,.12)"};margin-top:1px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${rec ? "#2F817A" : "#B4503E"}" stroke-width="2" width="20" height="20">
+            ${rec ? P.arrowDown || "" : P.arrowUp || ""}
+          </svg>
         </div>
-      </td>
-    </tr>`;
+        <!-- info principal -->
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${l.descricao}</div>
+            <div style="font-family:monospace;font-size:16px;font-weight:800;color:${rec ? "var(--teal)" : "var(--red)"};flex-shrink:0">
+              ${rec ? "+" : "−"} ${money(l.valor)}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px">
+            <!-- status badge -->
+            <span style="font-size:11.5px;font-weight:700;color:${st.txt};background:${st.bg};
+                         border:1px solid ${st.borda};border-radius:20px;padding:2px 9px">${st.label}</span>
+            <!-- quando -->
+            <span style="font-size:12px;color:${l.status === "atrasado" ? "var(--red)" : "var(--ink-3)"}">${quando}</span>
+            <!-- categoria -->
+            ${l.categoria_nome ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-3)">
+              <span style="width:8px;height:8px;border-radius:50%;background:${catCor};flex-shrink:0"></span>${l.categoria_nome}
+            </span>` : ""}
+            <!-- conta -->
+            ${l.conta_nome ? `<span style="font-size:12px;color:var(--ink-3)">· ${l.conta_nome}</span>` : ""}
+          </div>
+        </div>
+      </div>
+      <!-- botões de ação — linha separada -->
+      <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
+        ${podeBaixar
+          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})">${icon("check")}Dar baixa</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})">${icon("refresh")}Estornar</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})">${icon("edit")}Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">${icon("receipt")}Recibo</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})">${icon("whatsapp")}WA</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">${icon("trash")}</button>
+      </div>
+    </div>`;
   }).join("");
 }
 
