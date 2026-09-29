@@ -1,7 +1,7 @@
 /* Service Worker — Tomelin Gestão Financeira
    Network-first para o shell (sempre busca a versão mais nova primeiro);
    cache só como fallback offline. Nunca faz cache de chamadas /api. */
-const CACHE = "tomelin-v6";
+const CACHE = "tomelin-v7";
 const SHELL = [
   "/", "/static/styles.css", "/static/app.js",
   "/static/icons/logo-mark.png", "/static/icons/logo-lockup.png", "/manifest.json"
@@ -32,4 +32,8 @@ self.addEventListener("fetch", (e) => {
       })
       .catch(() => caches.match(e.request).then((hit) => hit || caches.match("/")))
   );
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
