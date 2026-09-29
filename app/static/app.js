@@ -362,7 +362,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.76.0 · 20a0e44</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.77.0 · 1df09aa</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -459,6 +459,14 @@ function marcarNav() {
 }
 
 /* FAB (+) — abre mini-menu de novo lançamento */
+function _atalhoClick(btn) {
+  const a = btn.dataset.acao;
+  if (a === "despesa") formLancamento(null,"despesa");
+  else if (a === "receita") formLancamento(null,"receita");
+  else if (a === "nfe") abrirLeitorNFe();
+  else setView(a);
+}
+
 function abrirFabMenu() {
   abrirModal(`
     <div class="modal" style="max-width:340px">
@@ -687,10 +695,12 @@ async function viewDashboard(v) {
     const rec = l.tipo === "receita";
     const quando = atras ? `Venceu ${dataBRcurto(l.vencimento)} · há ${Math.abs(d)}d`
       : d === 0 ? "Vence hoje" : d === 1 ? "Vence amanhã" : `Vence em ${d} dias`;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)">
-      <div style="width:36px;height:36px;border-radius:12px;background:${atras?"rgba(180,80,62,.1)":rec?"rgba(47,129,122,.1)":"rgba(201,169,78,.1)"};
+    return `<div onclick="formLancamentoId(${l.id})" style="display:flex;align-items:center;gap:12px;padding:12px 8px;border-bottom:1px solid var(--line);
+          cursor:pointer;border-radius:10px;transition:background .15s;margin:0 -8px"
+        onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+      <div style="width:38px;height:38px;border-radius:12px;background:${atras?"rgba(180,80,62,.1)":rec?"rgba(47,129,122,.1)":"rgba(201,169,78,.1)"};
            display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="${atras?"#B4503E":rec?"#2F817A":"#C9A94E"}" stroke-width="2" width="16" height="16">
+        <svg viewBox="0 0 24 24" fill="none" stroke="${atras?"#B4503E":rec?"#2F817A":"#C9A94E"}" stroke-width="2" width="18" height="18">
           ${rec ? '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
                 : '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>'}
         </svg>
@@ -699,9 +709,12 @@ async function viewDashboard(v) {
         <div style="font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
         <div style="font-size:11.5px;color:${atras?"var(--red)":"var(--ink-3)"};margin-top:1px">${quando}${l.categoria?" · "+l.categoria:""}</div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:13.5px;font-weight:700;font-family:monospace;color:${atras?"var(--red)":rec?"var(--teal)":"var(--ink)"}">${money(l.valor)}</div>
-        ${atras ? `<div style="font-size:10px;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;margin-top:2px">Atrasado</div>` : ""}
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+        <div style="font-size:14px;font-weight:700;font-family:monospace;color:${atras?"var(--red)":rec?"var(--teal)":"var(--ink)"}">${money(l.valor)}</div>
+        <button onclick="event.stopPropagation();formBaixaId(${l.id})" style="font-size:11px;padding:3px 8px;border-radius:8px;border:none;cursor:pointer;
+          background:${rec?"rgba(47,129,122,.15)":"rgba(201,169,78,.15)"};color:${rec?"#1A6B63":"#8A6A1A"};font-weight:700;display:${l.status==="pago"?"none":"inline"}">
+          ${rec?"Confirmar":"Pagar"}
+        </button>
       </div>
     </div>`;
   };
@@ -762,7 +775,7 @@ async function viewDashboard(v) {
         ["receipt","Ler NF","nfe","#C9A94E"],
         ["trendUp","Relatórios","relatorios","#305C74"],
       ].map(([ic,lab,acao,cor]) => `
-        <button onclick="${acao==="despesa"?"formLancamento(null,'despesa')":acao==="receita"?"formLancamento(null,'receita')":acao==="nfe"?"abrirLeitorNFe()":"setView('"+acao+"')"}"
+        <button data-acao="${acao}" onclick="_atalhoClick(this)"
           style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 8px;border-radius:16px;
                  border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:all .15s">
           <div style="width:40px;height:40px;border-radius:12px;background:${cor}18;display:flex;align-items:center;justify-content:center">
@@ -821,25 +834,23 @@ async function viewDashboard(v) {
 
     <!-- ── PATRIMÔNIO + JUROS ── -->
     <div class="grid-2" style="margin-bottom:16px">
-      <div class="card card-pad">
+      <div class="card card-pad" style="cursor:pointer;transition:all .15s" onclick="setView('relatorios')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <span class="card-ico i-navy" style="width:34px;height:34px;border-radius:10px">${icon("shield")}</span>
-          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Patrimônio líquido</div></div>
+          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Patrimônio líquido ›</div></div>
         </div>
         <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--navy)">${money(pat.patrimonio_liquido)}</div>
         <div class="sub" style="margin-top:6px">Contas <b>${money(pat.total_contas)}</b> + Veículos <b>${money(pat.total_veiculos)}</b></div>
         ${pat.total_financiamentos > 0 ? `<div class="sub" style="color:var(--red)">Financiamentos: − ${money(pat.total_financiamentos)}</div>` : ""}
-        <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%" onclick="setView('relatorios')">${icon("chart")} Ver relatório</button>
       </div>
-      <div class="card card-pad">
+      <div class="card card-pad" style="cursor:pointer;transition:all .15s" onclick="setView('relatorios')" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <span class="card-ico i-red" style="width:34px;height:34px;border-radius:10px">${icon("alert")}</span>
-          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Juros pagos no ano</div></div>
+          <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Juros pagos no ano ›</div></div>
         </div>
         <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--red)">${money(jur.juros_pago_ano)}</div>
         <div class="sub" style="margin-top:6px">Este mês: <b>${money(jur.juros_mes)}</b></div>
         ${jur.juros_a_pagar > 0 ? `<div class="sub" style="color:var(--red)">A pagar: ${money(jur.juros_a_pagar)}</div>` : ""}
-        <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%" onclick="setView('relatorios')">${icon("download")} PDF completo</button>
       </div>
     </div>`;
 
@@ -3499,7 +3510,7 @@ function _cardMeta(m) {
   const dias = m.prazo ? Math.ceil((new Date(m.prazo) - new Date()) / 86400000) : null;
   const prazoStr = m.prazo ? (dias < 0 ? `Prazo vencido há ${Math.abs(dias)}d` : dias === 0 ? "Prazo hoje!" : `${dias} dias restantes`) : "Sem prazo";
   const prazoClass = dias !== null && dias <= 30 && !m.concluida ? "color:var(--red)" : "color:var(--ink-2)";
-  return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative">
+  return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative;cursor:pointer;transition:all .15s" onclick="_editarMeta(${m.id})" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
     ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída ✓</span></div>` : ""}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
       <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${m.icone}</div>
@@ -4013,7 +4024,7 @@ Object.assign(window, {
   verCompra, verComprasView, verParcelasPendentes, pagarParcela, estornarParcela,
   formMeta, salvarMeta, excluirMeta, formAporte, confirmarAporte, _editarMeta,
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
-  abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery,
+  abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery, _atalhoClick,
   _toggleItensCompra, verParcelasCompra,
   rodarDiagnosticoWA, salvarGatewayWA,
   iniciarTour, fecharTour, tourProximo, tourAnterior, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
