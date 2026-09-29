@@ -1557,3 +1557,20 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 
 .content::-webkit-scrollbar{display:none}
 .sb-nav::-webkit-scrollbar{display:none}
+
+/* ── Login form: campo, label, input ── */
+.login-form-wrap form { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.login-form-wrap .campo { display: flex; flex-direction: column; gap: 6px; }
+.login-form-wrap .campo label {
+  font-size: 12.5px; font-weight: 700; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.login-form-wrap .campo input {
+  padding: 13px 14px; border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--bg); font-size: 15px; color: var(--ink);
+  transition: border-color .15s, box-shadow .15s; width: 100%; box-sizing: border-box;
+}
+.login-form-wrap .campo input:focus {
+  outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(8,45,81,.1);
+}
+.login-form-wrap .campo[style*="position:relative"] input { padding-right: 44px; }
