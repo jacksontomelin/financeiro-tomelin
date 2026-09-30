@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.86.0 · 22fa01e</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.87.0 · 78d4b41</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -695,10 +695,11 @@ async function viewDashboard(v) {
         onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
       <div style="width:38px;height:38px;border-radius:12px;background:${atras?"rgba(180,80,62,.1)":rec?"rgba(47,129,122,.1)":"rgba(201,169,78,.1)"};
            display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="${atras?"#B4503E":rec?"#2F817A":"#C9A94E"}" stroke-width="2" width="18" height="18">
-          ${rec ? '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'
-                : '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>'}
-        </svg>
+        ${atras
+          ? `<svg viewBox='0 0 24 24' fill='none' stroke='#B4503E' stroke-width='2' width='18' height='18'><polyline points='23 18 13.5 8.5 8.5 13.5 1 6'/><polyline points='17 18 23 18 23 12'/></svg>`
+          : rec
+            ? `<svg viewBox='0 0 24 24' fill='none' stroke='#2F817A' stroke-width='2' width='18' height='18'><polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/><polyline points='17 6 23 6 23 12'/></svg>`
+            : `<svg viewBox='0 0 24 24' fill='none' stroke='#C9A94E' stroke-width='2' width='18' height='18'><polyline points='23 18 13.5 8.5 8.5 13.5 1 6'/><polyline points='17 18 23 18 23 12'/></svg>`}
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
@@ -917,7 +918,7 @@ async function viewLancamentos(v, tipoFixo) {
           <option value="">Todas categorias</option>
           ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
         </select>
-        <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg> CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><line x1='8' y1='6' x2='16' y2='6'/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg> CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
       </div>
     </div>
@@ -1018,11 +1019,11 @@ async function recarregarTabela() {
       <!-- botões de ação — linha separada -->
       <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
         ${podeBaixar
-          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg> Dar baixa</button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg> Estornar</button>`}
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg> Recibo</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> WA</button>
+          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='16' height='16'><polyline points='20 6 9 17 4 12'/></svg> Dar baixa</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><polyline points='9 14 4 9 9 4'/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg> Estornar</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z'/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg> Recibo</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg> WA</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">✕</button>
       </div>
     </div>`;
@@ -1454,7 +1455,7 @@ async function viewCategorias(v) {
             <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
             <div class="grow"><div class="nm">${c.nome}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
-            <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
           </div>`).join("") || `<div class="empty" style="padding:20px">${icon("tag")}<p>Nenhuma.</p></div>`}
     </div>`;
   v.innerHTML = `
@@ -1546,7 +1547,7 @@ function renderContatos() {
       <td>${c.documento || "—"}</td><td>${c.telefone || "—"}</td><td>${c.email || "—"}</td>
       <td><div style="display:flex;gap:4px;justify-content:flex-end">
         <button class="btn-icon" onclick="_editarContato(${c.id})">${icon("edit")}</button>
-        <button class="btn-icon" onclick="excluirContato(${c.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        <button class="btn-icon" onclick="excluirContato(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
       </div></td>
     </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${icon("users")}<p>Nenhum contato.</p></div></td></tr>`;
 }
@@ -1619,7 +1620,7 @@ async function viewWhatsapp(v) {
     `<div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
        font-size:12px;font-weight:800;transition:all .2s;
        background:${done?"#25D366":"var(--bg)"};color:${done?"#fff":"var(--ink-3)"};
-       border:2px solid ${done?"#25D366":"var(--line)"}">${done?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>':n}</div>`;
+       border:2px solid ${done?"#25D366":"var(--line)"}">${done?IC_CHECK_W:n}</div>`;
 
   const section = (titulo, sub, ico, corpo, accent="#25D366") =>
     `<div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);overflow:hidden;margin-bottom:14px">
@@ -1875,7 +1876,7 @@ async function viewWhatsapp(v) {
               ${st.meu_numero ? (State.nome || "Jackson Tomelin") : "Não configurado"}
             </div>
           </div>
-          <span id="wa-num-ico" style="font-size:22px">${st.meu_numero ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" ><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`}</span>
+          <span id="wa-num-ico" style="font-size:22px">${st.meu_numero ? `<svg viewBox='0 0 24 24' fill='none' stroke='#16A34A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='18' height='18' ><polyline points='20 6 9 17 4 12'/></svg>` : `<svg viewBox='0 0 24 24' fill='none' stroke='var(--ink-3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='20' height='20' ><line x1='12' y1='5' x2='12' y2='19'/><line x1="5" y1="12" x2="19" y2="12"/></svg>`}</span>
         </div>
 
         <!-- linha divisória -->
@@ -1893,7 +1894,7 @@ async function viewWhatsapp(v) {
               style="flex:1;border:none;background:transparent;font-size:17px;font-weight:700;
                      color:var(--ink);padding:0;font-family:monospace;outline:none;min-width:0"
               oninput="this.value=this.value.replace(/[^0-9]/g,'');_previewNumeroWA(this.value)">
-            <div id="wa-num-status" style="font-size:20px;flex-shrink:0">${st.meu_numero ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : ""}</div>
+            <div id="wa-num-status" style="font-size:20px;flex-shrink:0">${st.meu_numero ? `<svg viewBox='0 0 24 24' fill='none' stroke='#16A34A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='18' height='18' ><polyline points='20 6 9 17 4 12'/></svg>` : ""}</div>
           </div>
           <div id="wa-num-preview" style="margin-top:6px;font-size:12.5px;
             color:${st.meu_numero ? "#128C7E" : "var(--ink-3)"}">
@@ -2101,7 +2102,7 @@ async function rodarDiagnosticoWA() {
     <div style="margin-bottom:12px">
       ${checks.map(([ok,nome,det])=>`
         <div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)">
-          <span style="flex-shrink:0">${ok ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`}</span>
+          <span style="flex-shrink:0">${ok ? `<svg viewBox='0 0 24 24' fill='none' stroke='#16A34A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='18' height='18' ><polyline points='20 6 9 17 4 12'/></svg>` : `<svg viewBox='0 0 24 24' fill='none' stroke='#DC2626' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='18' height='18' ><line x1='18' y1='6' x2='6' y2='18'/><line x1="6" y1="6" x2="18" y2="18"/></svg>`}</span>
           <div style="min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--ink)">${nome}</div>
             ${det?`<div style="font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere">${det}</div>`:""}
@@ -2405,7 +2406,7 @@ function cardVeiculo(x) {
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${fipe ? `<button class="btn btn-ghost btn-sm" onclick="atualizarFipe(${x.id})">${icon("refresh")}Atualizar FIPE</button>` : ""}
         <button class="btn btn-ghost btn-sm" onclick="_editarVeiculo(${x.id})">${icon("edit")}Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="excluirVeiculo(${x.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        <button class="btn btn-ghost btn-sm" onclick="excluirVeiculo(${x.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
       </div>
     </div>`;
 }
@@ -2463,7 +2464,7 @@ function renderExtras() {
     <div style="display:flex;gap:8px;margin-bottom:6px">
       <input placeholder="Nome do campo" value="${ex.k}" oninput="EXTRAS[${i}].k=this.value" style="flex:1">
       <input placeholder="Valor" value="${ex.v}" oninput="EXTRAS[${i}].v=this.value" style="flex:1">
-      <button class="btn-icon" onclick="EXTRAS.splice(${i},1);renderExtras()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+      <button class="btn-icon" onclick="EXTRAS.splice(${i},1);renderExtras()"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>`).join("") || `<div class="meta">Nenhum campo. Você escolhe o que controlar (seguro, IPVA, Renavam...).</div>`;
 }
 function addExtra() { EXTRAS.push({ k: "", v: "" }); renderExtras(); }
@@ -2711,7 +2712,7 @@ async function viewRelatorios(v) {
           <span style="font-size:14px;font-weight:700;color:#fff">Patrimônio líquido</span>
           <div style="display:flex;align-items:center;gap:10px">
             <span class="mono-num" style="font-size:20px;font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" width="16" height="16">${P.download||""}</svg>
+            <svg viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.6)' stroke-width='2' width='16' height='16'>${P.download||""}</svg>
           </div>
         </div>
       </div>
@@ -3277,7 +3278,7 @@ function _renderItensCompra() {
           <td style="padding:4px 6px"><input value="${it.descricao}" oninput="_editarItem(${idx},'descricao',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;padding:4px"></td>
           <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.quantidade}" oninput="_editarItem(${idx},'quantidade',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px"></td>
           <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.valor_total}" oninput="_editarItem(${idx},'valor_total',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px;font-family:monospace"></td>
-          <td><button class="btn-icon" style="padding:4px" onclick="_removerItem(${idx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td>
+          <td><button class="btn-icon" style="padding:4px" onclick="_removerItem(${idx})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td>
         </tr>`).join("")}
       </tbody>
     </table>
@@ -3643,7 +3644,7 @@ function _cardMeta(m) {
     <div style="display:flex;gap:6px;margin-top:8px">
       ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id},'${m.nome.replace(/'/g,"\\'")}')">${icon("plus")}Aportar</button>` : ""}
       <button class="btn btn-ghost btn-sm" onclick="_editarMeta(${m.id})">${icon("edit")}</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
   </div>`;
 }
@@ -3783,7 +3784,7 @@ async function buscaGlobal(q) {
       if (r.tipo === "lanc") {
         const l = r.l;
         return `<div class="busca-item" onclick="setView('lancamentos');fecharBusca()">
-          <span style="font-size:16px">${l.tipo==="receita" ? `<svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`}</span>
+          <span style="font-size:16px">${l.tipo==="receita" ? `<svg viewBox='0 0 24 24' fill='none' stroke='#15803D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='5' x2='12' y2='19'/><polyline points="19 12 12 19 5 12"/></svg>` : `<svg viewBox='0 0 24 24' fill='none' stroke='#991B1B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='19' x2='12' y2='5'/><polyline points="5 12 12 5 19 12"/></svg>`}</span>
           <div style="flex:1;min-width:0"><div class="busca-nome">${l.descricao}</div>
             <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"—"}</div></div>
           <span class="mono-num" style="font-size:12px;font-weight:700">${money(l.valor)}</span>
@@ -4109,6 +4110,17 @@ async function tourAnterior() {
     await mostrarPassoTour();
   }
 }
+
+
+/* ── Ícones SVG como constantes ── */
+const IC_CHECK_W = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>`;
+const IC_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+const IC_EDIT_SM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const IC_WA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+const IC_RECEIPT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg>`;
+const IC_UNDO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>`;
+const IC_CSV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg>`;
+const IC_PLUS_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
 Object.assign(window, {
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
