@@ -1695,3 +1695,145 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 /* ── Badge de vencimentos mais visível ── */
 .nav-badge { background:linear-gradient(135deg,#DC2626,#B91C1C) !important;
   box-shadow:0 2px 6px rgba(220,38,38,.4); }
+
+/* ══════════════════════════════════════════════════════
+   MELHORIAS VISUAIS GLOBAIS
+   ══════════════════════════════════════════════════════ */
+
+/* Botões: efeito de press + ripple */
+.btn { position:relative; overflow:hidden; }
+.btn:active { transform:scale(.97); }
+.btn-primary:hover { filter:brightness(1.1); }
+.btn-green:hover { filter:brightness(1.1); }
+
+/* Cards: sombra ao hover */
+.card:hover { box-shadow:0 6px 20px rgba(8,45,81,.1); }
+
+/* KPIs com ícone emoji decorativo */
+.kpi .kpi-emoji {
+  position:absolute; right:16px; top:14px;
+  font-size:32px; opacity:.12; line-height:1;
+  pointer-events:none; user-select:none;
+}
+
+/* Vencimentos: linha com hover colorido */
+.venc-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:14px;
+  border:1.5px solid var(--line);
+  background:var(--card); margin-bottom:8px;
+  cursor:pointer; transition:all .15s;
+}
+.venc-item:hover { transform:translateX(4px); border-color:var(--navy); }
+
+/* Badge de status — mais moderno */
+.status-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; font-weight:800; padding:4px 10px;
+  border-radius:99px; text-transform:uppercase; letter-spacing:.04em;
+}
+.status-badge::before {
+  content:""; width:6px; height:6px; border-radius:50%; flex-shrink:0;
+}
+.status-badge.pago { background:#DCFCE7; color:#15803D; border:1px solid #86EFAC; }
+.status-badge.pago::before { background:#16A34A; }
+.status-badge.pendente { background:#FEF9C3; color:#854D0E; border:1px solid #FDE047; }
+.status-badge.pendente::before { background:#CA8A04; }
+.status-badge.atrasado { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; animation:pulse-badge 2s infinite; }
+.status-badge.atrasado::before { background:#DC2626; }
+@keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+/* Progresso de metas — mais colorida */
+.meta-bar-wrap { background:var(--line); border-radius:99px; height:8px; overflow:hidden; }
+.meta-bar {
+  height:100%; border-radius:99px;
+  background:linear-gradient(90deg,var(--teal),var(--green));
+  transition:width .6s cubic-bezier(.4,0,.2,1);
+  position:relative; overflow:hidden;
+}
+.meta-bar::after {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.3) 50%,transparent 100%);
+  animation:shimmer 2s infinite;
+}
+@keyframes shimmer { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+
+/* Float action button melhorado */
+.btab-fab {
+  box-shadow:0 6px 20px rgba(8,45,81,.35) !important;
+  transition:all .2s !important;
+}
+.btab-fab:active { transform:scale(.92) !important; }
+
+/* Sidebar avatar melhorado */
+.sb-avatar {
+  box-shadow:0 0 0 3px rgba(201,169,78,.4);
+  transition:box-shadow .2s;
+}
+.sb-avatar:hover { box-shadow:0 0 0 4px rgba(201,169,78,.6); }
+
+/* Input focus melhorado */
+input:focus, select:focus, textarea:focus {
+  outline:none;
+  border-color:var(--navy) !important;
+  box-shadow:0 0 0 3px rgba(8,45,81,.1) !important;
+}
+
+/* Tooltip nos nav items compactos */
+.nav-item::after {
+  box-shadow:0 4px 16px rgba(0,0,0,.25) !important;
+  border:1px solid rgba(255,255,255,.1) !important;
+}
+
+/* Hero card: círculos decorativos animados */
+.hero-circle-1 {
+  position:absolute; width:200px; height:200px; border-radius:50%;
+  background:rgba(201,169,78,.06); right:-60px; top:-60px;
+  animation:heroFloat 6s ease-in-out infinite;
+}
+.hero-circle-2 {
+  position:absolute; width:120px; height:120px; border-radius:50%;
+  background:rgba(47,129,122,.08); left:30%; bottom:-40px;
+  animation:heroFloat 8s ease-in-out infinite reverse;
+}
+@keyframes heroFloat {
+  0%,100% { transform:translateY(0) scale(1); }
+  50% { transform:translateY(-12px) scale(1.04); }
+}
+
+/* Card do lançamento: linha lateral colorida */
+.lanc-card-pago { border-left:4px solid #16A34A !important; }
+.lanc-card-pendente { border-left:4px solid #CA8A04 !important; }
+.lanc-card-atrasado { border-left:4px solid #DC2626 !important; }
+
+/* Select melhorado */
+select {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  -webkit-appearance:none; appearance:none;
+  padding-right:32px !important;
+}
+
+/* Modal: animação de entrada */
+.modal-overlay { animation:fadeIn .2s ease; }
+.modal-box { animation:modalPop .25s cubic-bezier(.4,0,.2,1); }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes modalPop {
+  from { transform:scale(.92) translateY(20px); opacity:0; }
+  to   { transform:scale(1) translateY(0); opacity:1; }
+}
+
+/* Toast melhorado */
+.toast {
+  border-radius:14px !important;
+  box-shadow:0 8px 32px rgba(0,0,0,.2) !important;
+  font-weight:700 !important;
+  backdrop-filter:blur(8px) !important;
+}
+
+/* Número de badge mais visível */
+.nav-badge {
+  min-width:18px; height:18px;
+  font-size:10px; font-weight:800;
+}

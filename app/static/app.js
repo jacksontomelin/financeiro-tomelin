@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.83.0 · 917875d</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.84.0 · d6fbf1f</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -723,7 +723,9 @@ async function viewDashboard(v) {
   v.innerHTML = `
     <!-- ── HERO ── -->
     <div style="background:linear-gradient(135deg,#06243F 0%,#082D51 45%,#0E3A63 100%);
-                border-radius:20px;padding:22px 24px 0;margin-bottom:16px;position:relative;overflow:hidden">
+                border-radius:22px;padding:22px 24px 0;margin-bottom:16px;position:relative;overflow:hidden">
+      <div class="hero-circle-1"></div>
+      <div class="hero-circle-2"></div>
       <!-- spark line decorativa -->
       <svg viewBox="0 0 60 30" preserveAspectRatio="none"
            style="position:absolute;right:0;bottom:0;width:55%;height:70%;opacity:.18">
@@ -765,29 +767,31 @@ async function viewDashboard(v) {
     <!-- ── ATALHOS RÁPIDOS ── -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
       ${[
-        ["plus","Nova despesa","despesa","#082D51"],
-        ["arrowDown","Recebimento","receita","#2F817A"],
-        ["receipt","Ler NF","nfe","#C9A94E"],
-        ["trendUp","Relatórios","relatorios","#305C74"],
-      ].map(([ic,lab,acao,cor]) => `
+        ["plus","Despesa","despesa","linear-gradient(135deg,#082D51,#1E4D8C)","💸"],
+        ["arrowDown","Receita","receita","linear-gradient(135deg,#16A34A,#1A7A6E)","💰"],
+        ["receipt","NF-e","nfe","linear-gradient(135deg,#D97706,#B45309)","🧾"],
+        ["trendUp","Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)","📊"],
+      ].map(([ic,lab,acao,grad,emoji]) => `
         <button data-acao="${acao}" onclick="_atalhoClick(this)"
-          style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 8px;border-radius:16px;
-                 border:1.5px solid var(--line);background:var(--card);cursor:pointer;transition:all .15s">
-          <div style="width:40px;height:40px;border-radius:12px;background:${cor}18;display:flex;align-items:center;justify-content:center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2" width="20" height="20">${P[ic]||""}</svg>
-          </div>
-          <span style="font-size:11px;font-weight:700;color:var(--ink-2);text-align:center;line-height:1.3">${lab}</span>
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px 12px;
+                 border-radius:18px;border:none;background:${grad};cursor:pointer;
+                 transition:all .18s;box-shadow:0 4px 14px rgba(0,0,0,.15);position:relative;overflow:hidden"
+          onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.22)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,0,0,.15)'">
+          <div style="font-size:26px;line-height:1;position:relative;z-index:1">${emoji}</div>
+          <span style="font-size:11px;font-weight:800;color:rgba(255,255,255,.95);text-align:center;
+                       line-height:1.2;position:relative;z-index:1;letter-spacing:.01em">${lab}</span>
+          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;
+               background:rgba(255,255,255,.08)"></div>
         </button>`).join("")}
     </div>
 
     <!-- ── ALERTAS (só aparece se houver) ── -->
     ${atrasadas.length ? `
-    <div style="background:rgba(180,80,62,.08);border:1.5px solid rgba(180,80,62,.25);border-radius:14px;
-                padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px"
-         onclick="setView('pagar')" style="cursor:pointer">
-      <div style="width:36px;height:36px;border-radius:10px;background:rgba(180,80,62,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#B4503E" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      </div>
+    <div style="background:linear-gradient(135deg,#FEF2F2,#FEE2E2);border:1.5px solid #FCA5A5;border-radius:16px;
+                padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer"
+         onclick="setView('pagar')">
+      <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#DC2626,#991B1B);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px;box-shadow:0 4px 12px rgba(220,38,38,.3)">⚠️</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13.5px;color:var(--red)">${atrasadas.length} conta${atrasadas.length>1?"s":""} vencida${atrasadas.length>1?"s":""}</div>
         <div style="font-size:12px;color:var(--red);opacity:.8">${money(atrasadas.reduce((s,l)=>s+l.valor,0))} em atraso — toque para ver</div>
@@ -973,8 +977,8 @@ async function recarregarTabela() {
       : "Sem vencimento";
 
     return `<div style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
-                cursor:pointer;transition:all .15s"
-              onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 14px rgba(8,45,81,.1)'"
+                cursor:pointer;transition:all .15s;border-left:4px solid ${st.borda.replace('.3)','1)').replace('.35)','1)')}"
+              onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(8,45,81,.12)'"
               onmouseout="this.style.transform='';this.style.boxShadow=''"
               onclick="formLancamentoId(${l.id})">
       <div style="display:flex;align-items:flex-start;gap:12px">
