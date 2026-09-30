@@ -147,7 +147,7 @@ function campoLogo(hint) {
         <input type="file" accept="image/*" onchange="escolherLogo(this)">
         <input id="logo-url" placeholder="URL da imagem" oninput="logoURLInput(this.value)">
       </div>
-      <button class="btn-icon" title="Remover logo" onclick="limparLogo()">${icon("trash")}</button>
+      <button class="btn-icon" title="Remover logo" onclick="limparLogo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
     <div class="meta">${hint || "PNG/JPG. A imagem é reduzida e guardada no próprio sistema."}</div>
   </div>`;
@@ -289,7 +289,7 @@ function renderLogin() {
           <div class="login-campo">
             <label class="login-label">Senha</label>
             <div class="login-input-wrap">
-              <span class="login-input-ic">${icon("lock") || "🔒"}</span>
+              <span class="login-input-ic">${icon("lock")}</span>
               <input id="l-senha" type="password" autocomplete="current-password"
                 placeholder="••••••••" required class="login-input" style="padding-right:44px">
               <button type="button" class="btn-ver-senha" onclick="toggleSenha()">${icon("eye")}</button>
@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.85.0 · 2382a27</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.86.0 · 22fa01e</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -734,7 +734,7 @@ async function viewDashboard(v) {
       <!-- saudação -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
         <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);
-             display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${State.emoji||"👤"}</div>
+             display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div>
           <div style="font-size:17px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
           <div style="font-size:12.5px;color:rgba(255,255,255,.55)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
@@ -745,7 +745,7 @@ async function viewDashboard(v) {
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
         <div style="font-size:clamp(28px,8vw,40px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
-          ${saldoPos?"▲":"▼"} ${money(Math.abs(resultado))} ${resPos?"de resultado positivo este mês":"de resultado negativo este mês"}
+          ${saldoPos ? '▸' : '▾'} ${money(Math.abs(resultado))} ${resPos?"de resultado positivo este mês":"de resultado negativo este mês"}
         </div>
       </div>
       <!-- mini KPIs dentro do hero -->
@@ -767,10 +767,10 @@ async function viewDashboard(v) {
     <!-- ── ATALHOS RÁPIDOS ── -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
       ${[
-        ["plus","Despesa","despesa","linear-gradient(135deg,#082D51,#1E4D8C)","💸"],
-        ["arrowDown","Receita","receita","linear-gradient(135deg,#16A34A,#1A7A6E)","💰"],
-        ["receipt","NF-e","nfe","linear-gradient(135deg,#D97706,#B45309)","🧾"],
-        ["trendUp","Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)","📊"],
+        ["plus","Despesa","despesa","linear-gradient(135deg,#082D51,#1E4D8C)"],
+        ["arrowDown","Receita","receita","linear-gradient(135deg,#16A34A,#1A7A6E)"],
+        ["receipt","NF-e","nfe","linear-gradient(135deg,#D97706,#B45309)"],
+        ["trendUp","Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
       ].map(([ic,lab,acao,grad,emoji]) => `
         <button data-acao="${acao}" onclick="_atalhoClick(this)"
           style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px 12px;
@@ -791,7 +791,7 @@ async function viewDashboard(v) {
     <div style="background:linear-gradient(135deg,#FEF2F2,#FEE2E2);border:1.5px solid #FCA5A5;border-radius:16px;
                 padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer"
          onclick="setView('pagar')">
-      <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#DC2626,#991B1B);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px;box-shadow:0 4px 12px rgba(220,38,38,.3)">⚠️</div>
+      <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#DC2626,#991B1B);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(220,38,38,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13.5px;color:var(--red)">${atrasadas.length} conta${atrasadas.length>1?"s":""} vencida${atrasadas.length>1?"s":""}</div>
         <div style="font-size:12px;color:var(--red);opacity:.8">${money(atrasadas.reduce((s,l)=>s+l.valor,0))} em atraso — toque para ver</div>
@@ -917,7 +917,7 @@ async function viewLancamentos(v, tipoFixo) {
           <option value="">Todas categorias</option>
           ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
         </select>
-        <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')">↓ CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg> CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
       </div>
     </div>
@@ -958,9 +958,9 @@ async function recarregarTabela() {
 
   // cores e estilos por status
   const STATUS_COR = {
-    pago:     { bg: "#F0FDF4", borda: "#86EFAC", txt: "#15803D", label: "Pago ✓"      },
+    pago:     { bg: "#F0FDF4", borda: "#86EFAC", txt: "#15803D", label: "Pago"      },
     pendente: { bg: "#FEFCE8", borda: "#FDE047", txt: "#854D0E", label: "Pendente"    },
-    atrasado: { bg: "#FEF2F2", borda: "#FCA5A5", txt: "#991B1B", label: "Atrasado ⚠" },
+    atrasado: { bg: "#FEF2F2", borda: "#FCA5A5", txt: "#991B1B", label: "Atrasado" },
   };
 
   lista.innerHTML = itens.map(l => {
@@ -986,7 +986,9 @@ async function recarregarTabela() {
         <div style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
              background:${rec ? "linear-gradient(135deg,#DCFCE7,#BBF7D0)" : "linear-gradient(135deg,#FEE2E2,#FECACA)"};
              margin-top:1px;font-size:22px;font-weight:800;color:${rec?"#15803D":"#991B1B"}">
-          ${rec ? "↓" : "↑"}
+          ${rec
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`}
         </div>
         <!-- info principal -->
         <div style="flex:1;min-width:0">
@@ -1016,11 +1018,11 @@ async function recarregarTabela() {
       <!-- botões de ação — linha separada -->
       <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
         ${podeBaixar
-          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})">✓ Dar baixa</button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})">↩ Estornar</button>`}
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})">✎ Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')">⎙ Recibo</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})">📲 WA</button>
+          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg> Dar baixa</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg> Estornar</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg> Recibo</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" ><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> WA</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">✕</button>
       </div>
     </div>`;
@@ -1100,7 +1102,7 @@ function formLancamento(l, tipo, pre) {
         <div class="campo full"><label>Situação</label>
           <select id="f-pago">
             <option value="">Pendente (a ${rec ? "receber" : "pagar"})</option>
-            <option value="1" ${ed && l.data_pagamento ? "selected" : ""}>Já ${rec ? "recebido ✓" : "pago ✓"}</option>
+            <option value="1" ${ed && l.data_pagamento ? "selected" : ""}>Já ${rec ? "recebido" : "pago"}</option>
           </select></div>
 
         <div class="campo"><label>Juros (R$)</label>
@@ -1295,7 +1297,7 @@ async function confirmarBaixa(id) {
       data_pagamento: $("#b-data").value, conta_id: +$("#b-conta").value || null,
       juros: parseFloat($("#b-juros").value || "0"), multa: parseFloat($("#b-multa").value || "0"),
     }) });
-    fecharModal(); toast("Baixa registrada ✅", "ok"); await recarregarTabela(); atualizarBadge();
+    fecharModal(); toast("Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
 }
 
@@ -1452,7 +1454,7 @@ async function viewCategorias(v) {
             <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
             <div class="grow"><div class="nm">${c.nome}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
-            <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})">${icon("trash")}</button>
+            <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
           </div>`).join("") || `<div class="empty" style="padding:20px">${icon("tag")}<p>Nenhuma.</p></div>`}
     </div>`;
   v.innerHTML = `
@@ -1544,7 +1546,7 @@ function renderContatos() {
       <td>${c.documento || "—"}</td><td>${c.telefone || "—"}</td><td>${c.email || "—"}</td>
       <td><div style="display:flex;gap:4px;justify-content:flex-end">
         <button class="btn-icon" onclick="_editarContato(${c.id})">${icon("edit")}</button>
-        <button class="btn-icon" onclick="excluirContato(${c.id})">${icon("trash")}</button>
+        <button class="btn-icon" onclick="excluirContato(${c.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
       </div></td>
     </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${icon("users")}<p>Nenhum contato.</p></div></td></tr>`;
 }
@@ -1617,7 +1619,7 @@ async function viewWhatsapp(v) {
     `<div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
        font-size:12px;font-weight:800;transition:all .2s;
        background:${done?"#25D366":"var(--bg)"};color:${done?"#fff":"var(--ink-3)"};
-       border:2px solid ${done?"#25D366":"var(--line)"}">${done?"✓":n}</div>`;
+       border:2px solid ${done?"#25D366":"var(--line)"}">${done?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>':n}</div>`;
 
   const section = (titulo, sub, ico, corpo, accent="#25D366") =>
     `<div style="background:var(--card);border-radius:18px;border:1.5px solid var(--line);overflow:hidden;margin-bottom:14px">
@@ -1669,9 +1671,9 @@ async function viewWhatsapp(v) {
     <!-- mini-stats -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden">
       ${[
-        ["🤖","Escuta","a cada 4s"],
-        ["📎","PDFs","no grupo"],
-        ["⚡","Respostas","instantâneas"],
+        ["Escuta","a cada 4s"],
+        ["PDFs","no grupo"],
+        ["Respostas","instantâneas"],
       ].map(([e,t,s])=>`
         <div style="background:rgba(0,0,0,.2);padding:12px 10px;text-align:center">
           <div style="font-size:20px;margin-bottom:4px">${e}</div>
@@ -1783,7 +1785,7 @@ async function viewWhatsapp(v) {
           <div style="font-size:11px;color:var(--ink-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace">${st.grupo}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <span style="font-size:18px">✅</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg></span>
           <button onclick="carregarGruposWA()"
             style="font-size:11px;font-weight:700;color:#128C7E;background:rgba(18,140,126,.1);
                    border:none;border-radius:8px;padding:4px 8px;cursor:pointer">Trocar</button>
@@ -1805,7 +1807,7 @@ async function viewWhatsapp(v) {
           <div style="font-size:13.5px;font-weight:700;color:var(--ink-3)">Nenhum grupo selecionado</div>
           <div style="font-size:12px;color:var(--ink-3);margin-top:2px">Toque em Listar grupos abaixo</div>
         </div>
-        <span style="font-size:22px;opacity:.3">👥</span>
+        <span style="style="opacity:.3"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" ><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
       </div>`}
 
       <!-- botão listar grupos -->
@@ -1873,7 +1875,7 @@ async function viewWhatsapp(v) {
               ${st.meu_numero ? (State.nome || "Jackson Tomelin") : "Não configurado"}
             </div>
           </div>
-          <span id="wa-num-ico" style="font-size:22px">${st.meu_numero ? "✅" : "➕"}</span>
+          <span id="wa-num-ico" style="font-size:22px">${st.meu_numero ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" ><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`}</span>
         </div>
 
         <!-- linha divisória -->
@@ -1882,16 +1884,16 @@ async function viewWhatsapp(v) {
         <!-- campo de número estilo app de contato -->
         <div style="padding:12px 16px 16px">
           <div style="font-size:10.5px;font-weight:700;color:#128C7E;text-transform:uppercase;
-                      letter-spacing:.08em;margin-bottom:6px">📱 WhatsApp (DDI+DDD+número)</div>
+                      letter-spacing:.08em;margin-bottom:6px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> WhatsApp (DDI+DDD+número)</div>
           <div style="display:flex;align-items:center;gap:10px">
             <!-- bandeira BR decorativa -->
             <div style="width:32px;height:32px;border-radius:8px;background:#009c3b;
-                 display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">🇧🇷</div>
+                 display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden"><svg viewBox="0 0 30 20" width="30" height="20" style="border-radius:3px"><rect width="30" height="20" fill="#009c3b"/><polygon points="15,2 28,10 15,18 2,10" fill="#ffdf00"/><circle cx="15" cy="10" r="4.5" fill="#002776"/><text x="15" y="13.5" text-anchor="middle" font-size="4" fill="#fff" font-weight="bold">BR</text></svg></div>
             <input id="wa-meunumero" value="${st.meu_numero || ""}" placeholder="5547 9 9999-0000"
               style="flex:1;border:none;background:transparent;font-size:17px;font-weight:700;
                      color:var(--ink);padding:0;font-family:monospace;outline:none;min-width:0"
               oninput="this.value=this.value.replace(/[^0-9]/g,'');_previewNumeroWA(this.value)">
-            <div id="wa-num-status" style="font-size:20px;flex-shrink:0">${st.meu_numero ? "✅" : ""}</div>
+            <div id="wa-num-status" style="font-size:20px;flex-shrink:0">${st.meu_numero ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : ""}</div>
           </div>
           <div id="wa-num-preview" style="margin-top:6px;font-size:12.5px;
             color:${st.meu_numero ? "#128C7E" : "var(--ink-3)"}">
@@ -1983,7 +1985,7 @@ async function viewWhatsapp(v) {
     ], "#128C7E")}`, "#25D366")}
 
   <!-- COMANDOS: AÇÕES -->
-  ${section("Lançamentos e ações", "O sistema reage com ✅ ao registrar", icon("edit"), `
+  ${section("Lançamentos e ações", "O sistema reage ao registrar", icon("edit"), `
     ${cmdGrid([
       ["despesa 150 mercado","Registra uma despesa"],
       ["receita 3000 salario","Registra uma receita"],
@@ -2052,10 +2054,10 @@ async function viewWhatsapp(v) {
   <div style="background:linear-gradient(135deg,#075E54,#128C7E);border-radius:18px;padding:18px 20px">
     <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Automações ativas</div>
     ${[
-      ["⏰","Alerta diário",`Vencimentos às ${String(st.alerta_hora??8).padStart(2,"0")}:00 (só quando há algo pendente)`],
-      ["📊","Resumo semanal",st.resumo_semanal?"Todo dia segunda-feira":"Desativado"],
-      ["🌙","Fechamento do dia",st.fechamento_diario?`Contas pagas do dia às ${String(st.fechamento_hora??20).padStart(2,"0")}:00`:"Desativado"],
-      ["🤖","Escuta do grupo","Lê e responde mensagens novas a cada 4 segundos"],
+      ["Alerta diário",`Vencimentos às ${String(st.alerta_hora??8).padStart(2,"0")}:00 (só quando há algo pendente)`],
+      ["Resumo semanal","Resumo semanal",st.resumo_semanal?"Todo dia segunda-feira":"Desativado"],
+      ["Fechamento do dia",st.fechamento_diario?`Contas pagas do dia às ${String(st.fechamento_hora??20).padStart(2,"0")}:00`:"Desativado"],
+      ["Escuta do grupo","Escuta do grupo","Lê e responde mensagens novas a cada 4 segundos"],
     ].map(([e,t,d])=>`
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)">
         <span style="font-size:20px;flex-shrink:0">${e}</span>
@@ -2099,7 +2101,7 @@ async function rodarDiagnosticoWA() {
     <div style="margin-bottom:12px">
       ${checks.map(([ok,nome,det])=>`
         <div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)">
-          <span style="flex-shrink:0">${ok?"✅":"❌"}</span>
+          <span style="flex-shrink:0">${ok ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><polyline points="20 6 9 17 4 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" ><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`}</span>
           <div style="min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--ink)">${nome}</div>
             ${det?`<div style="font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere">${det}</div>`:""}
@@ -2196,7 +2198,7 @@ async function salvarGatewayWA() {
     await api("/api/configuracoes", { method: "POST", body: JSON.stringify(dados) });
     const st = await api("/api/whatsapp/status");
     if (st.erro_gateway) toast(st.erro_gateway, "err");
-    else toast(st.conectado ? "Gateway conectado! ✅" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
+    else toast(st.conectado ? "Gateway conectado!" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
     setView("whatsapp");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -2278,7 +2280,7 @@ function filtrarGruposWA(q) {
 async function escolherGrupoWA(jid) {
   try {
     await api("/api/whatsapp/grupo", { method: "POST", body: JSON.stringify({ jid }) });
-    toast("Grupo definido! ✅", "ok");
+    toast("Grupo definido!", "ok");
     setView("whatsapp");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -2309,8 +2311,8 @@ function _previewNumeroWA(v) {
       : fmt + "…";
     el.style.color = completo ? "#128C7E" : "var(--ink-3)";
   }
-  if (st2) st2.textContent = completo ? "✅" : "";
-  if (ico) ico.textContent = completo ? "✅" : "➕";
+  if (st2) st2.innerHTML = completo ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>` : "";
+  if (ico) ico.innerHTML = completo ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
   if (nome) nome.textContent = completo ? (State.nome || "Jackson Tomelin") : "Não configurado";
   if (avatar && avatar.style !== undefined) {
     avatar.style.background = completo
@@ -2335,7 +2337,7 @@ async function salvarNumeroWA() {
   const n = (document.getElementById("wa-meunumero")?.value || "").replace(/\D/g, "").trim();
   try {
     await api("/api/configuracoes", { method: "POST", body: JSON.stringify({ WHATSAPP_MEU_NUMERO: n }) });
-    toast(n ? `Número ${n} salvo! ✅` : "Filtro removido.", "ok");
+    toast(n ? `Número ${n} salvo` : "Filtro removido.", "ok");
     rodarDiagnosticoWA();
   } catch (e) { toast(e.message, "err"); }
 }
@@ -2403,7 +2405,7 @@ function cardVeiculo(x) {
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         ${fipe ? `<button class="btn btn-ghost btn-sm" onclick="atualizarFipe(${x.id})">${icon("refresh")}Atualizar FIPE</button>` : ""}
         <button class="btn btn-ghost btn-sm" onclick="_editarVeiculo(${x.id})">${icon("edit")}Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="excluirVeiculo(${x.id})">${icon("trash")}</button>
+        <button class="btn btn-ghost btn-sm" onclick="excluirVeiculo(${x.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
       </div>
     </div>`;
 }
@@ -2461,7 +2463,7 @@ function renderExtras() {
     <div style="display:flex;gap:8px;margin-bottom:6px">
       <input placeholder="Nome do campo" value="${ex.k}" oninput="EXTRAS[${i}].k=this.value" style="flex:1">
       <input placeholder="Valor" value="${ex.v}" oninput="EXTRAS[${i}].v=this.value" style="flex:1">
-      <button class="btn-icon" onclick="EXTRAS.splice(${i},1);renderExtras()">${icon("trash")}</button>
+      <button class="btn-icon" onclick="EXTRAS.splice(${i},1);renderExtras()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>`).join("") || `<div class="meta">Nenhum campo. Você escolhe o que controlar (seguro, IPVA, Renavam...).</div>`;
 }
 function addExtra() { EXTRAS.push({ k: "", v: "" }); renderExtras(); }
@@ -2738,7 +2740,7 @@ function _ultimoAcesso() {
     const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const data = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const ip = State.ultimo_acesso_ip ? ` · ${State.ultimo_acesso_ip}` : "";
-    return `<div class="login-last">🕐 Último acesso: ${data} às ${hora} (${quando})${ip}</div>`;
+    return `<div class="login-last"> Último acesso: ${data} às ${hora} (${quando})${ip}</div>`;
   } catch { return ""; }
 }
 
@@ -2817,7 +2819,7 @@ async function viewConfiguracoes(v) {
         </div>`).join("")}
     </div>
     <div class="card card-pad" style="margin-top:4px">
-      <div class="meta">💡 As configurações são salvas no banco de dados e valem imediatamente — sem reiniciar o sistema. Variáveis de ambiente no Coolify servem de fallback caso uma chave não esteja salva aqui.</div>
+      <div class="meta"> As configurações são salvas no banco de dados e valem imediatamente — sem reiniciar o sistema. Variáveis de ambiente no Coolify servem de fallback caso uma chave não esteja salva aqui.</div>
     </div>`;
 
   // toggle label ao clicar
@@ -2928,8 +2930,8 @@ function formUsuario(u) {
         <div class="campo">
           <label>Papel</label>
           <select id="fu-papel">
-            <option value="membro" ${e.papel!=="admin"?"selected":""}>👤 Membro</option>
-            <option value="admin"  ${e.papel==="admin" ?"selected":""}>👑 Admin</option>
+            <option value="membro" ${e.papel!=="admin"?"selected":""}>Membro</option>
+            <option value="admin"  ${e.papel==="admin" ?"selected":""}>Admin</option>
           </select>
         </div>
         <div class="campo full">
@@ -3275,7 +3277,7 @@ function _renderItensCompra() {
           <td style="padding:4px 6px"><input value="${it.descricao}" oninput="_editarItem(${idx},'descricao',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;padding:4px"></td>
           <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.quantidade}" oninput="_editarItem(${idx},'quantidade',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px"></td>
           <td style="padding:4px 6px"><input type="number" step="0.01" value="${it.valor_total}" oninput="_editarItem(${idx},'valor_total',this.value)" style="width:100%;border:none;background:transparent;font-size:12.5px;text-align:right;padding:4px;font-family:monospace"></td>
-          <td><button class="btn-icon" style="padding:4px" onclick="_removerItem(${idx})">${icon("trash")}</button></td>
+          <td><button class="btn-icon" style="padding:4px" onclick="_removerItem(${idx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td>
         </tr>`).join("")}
       </tbody>
     </table>
@@ -3578,7 +3580,7 @@ document.addEventListener("keydown", (e) => {
 const METAS_ICONES = ["🎯","🏠","🚗","✈️","📱","💻","🎓","💰","🏖️","👶","🏋️","🎸","📚","🩺","💍"];
 const METAS_CORES  = ["#082D51","#2F817A","#C9A94E","#B4503E","#6B3FA0","#D9772E","#1E5FA8","#3B6D11","#C74B4B","#305C74"];
 let _metaFormCor = "#082D51";
-let _metaFormIcone = "🎯";
+let _metaFormIcone = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
 const _CACHE_METAS = {};
 
 async function viewMetas(v) {
@@ -3641,14 +3643,14 @@ function _cardMeta(m) {
     <div style="display:flex;gap:6px;margin-top:8px">
       ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id},'${m.nome.replace(/'/g,"\\'")}')">${icon("plus")}Aportar</button>` : ""}
       <button class="btn btn-ghost btn-sm" onclick="_editarMeta(${m.id})">${icon("edit")}</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})">${icon("trash")}</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
   </div>`;
 }
 
 function formMeta(m) {
   _metaFormCor = m?.cor || "#082D51";
-  _metaFormIcone = m?.icone || "🎯";
+  _metaFormIcone = m?.icone || `<svg viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
   if (m) _CACHE_METAS[m.id] = m;
   abrirModal(`
     <div class="modal" style="max-width:500px">
@@ -3781,7 +3783,7 @@ async function buscaGlobal(q) {
       if (r.tipo === "lanc") {
         const l = r.l;
         return `<div class="busca-item" onclick="setView('lancamentos');fecharBusca()">
-          <span style="font-size:16px">${l.tipo==="receita"?"💵":"💸"}</span>
+          <span style="font-size:16px">${l.tipo==="receita" ? `<svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`}</span>
           <div style="flex:1;min-width:0"><div class="busca-nome">${l.descricao}</div>
             <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"—"}</div></div>
           <span class="mono-num" style="font-size:12px;font-weight:700">${money(l.valor)}</span>
@@ -3789,7 +3791,7 @@ async function buscaGlobal(q) {
       }
       const c = r.c;
       return `<div class="busca-item" onclick="setView('contatos');fecharBusca()">
-        <span style="font-size:16px">👤</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <div style="flex:1"><div class="busca-nome">${c.nome}</div>
           <div class="busca-sub">${c.tipo||""}</div></div>
       </div>`;
@@ -3853,7 +3855,7 @@ async function buscaMobileQuery(q) {
       html += `<div style="padding:8px 16px 4px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em">Lançamentos</div>`;
       for (const l of lancs) {
         const cor = l.tipo === "receita" ? "var(--teal)" : "var(--red)";
-        const ico = l.tipo === "receita" ? "💵" : "💸";
+        const ico = l.tipo === "receita" ? '<svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" width="18" height="18"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.5" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
         const data = l.data_vencimento ? dataBR(l.data_vencimento) : "";
         const cat  = l.categoria_nome ? " · " + l.categoria_nome : "";
         html += `<div onclick="fecharBuscaMobile();setView('lancamentos')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer">
@@ -3888,139 +3890,139 @@ async function buscaMobileQuery(q) {
    ============================================================ */
 const TOUR_PASSOS = [
   {
-    titulo: "👋 Bem-vindo ao Tomelin Gestão Financeira!",
+    titulo: "Bem-vindo ao Tomelin Gestão Financeira!",
     texto: "Este tour vai te mostrar todas as telas e funcionalidades. Toque em <b>Próximo</b> para navegar ou <b>Pular</b> para sair a qualquer momento.",
     acao: null,
     destaque: null,
   },
   {
-    titulo: "🏠 Dashboard — Visão geral",
+    titulo: "Dashboard — Visão geral",
     texto: "A tela principal mostra seu <b>saldo consolidado</b>, receitas e despesas do mês, alertas de vencimento e atalhos rápidos.",
     acao: () => setView("dashboard"),
     destaque: null,
   },
   {
-    titulo: "💰 Hero card — Saldo",
+    titulo: "Hero card — Saldo",
     texto: "O card escuro no topo mostra seu <b>saldo total</b> somando todas as contas, o resultado do mês (verde = positivo, vermelho = negativo) e os 3 KPIs principais.",
     acao: () => setView("dashboard"),
     destaque: ".dash-hero, [style*='#06243F'], [style*='#082D51'][style*='border-radius:22px']",
   },
   {
-    titulo: "⚡ Atalhos rápidos",
+    titulo: "Atalhos rápidos",
     texto: "4 botões logo abaixo do hero: <b>Nova despesa</b>, <b>Recebimento</b>, <b>Ler NF</b> e <b>Relatórios</b>. Os mais usados estão sempre à mão.",
     acao: () => setView("dashboard"),
     destaque: null,
   },
   {
-    titulo: "🔔 Vencimentos",
+    titulo: "Vencimentos",
     texto: "Contas <b>atrasadas e próximas</b> dos próximos 7 dias aparecem aqui. O número vermelho no menu mostra quantas precisam de atenção.",
     acao: () => setView("vencimentos"),
     destaque: "#badge-venc",
   },
   {
-    titulo: "💸 Contas a pagar",
+    titulo: "Contas a pagar",
     texto: "Lista de todas as <b>despesas pendentes e pagas</b>. Filtre por status (pendente, atrasado, pago), categoria ou busque por descrição. Toque em uma linha para dar baixa, editar ou gerar recibo.",
     acao: () => setView("pagar"),
     destaque: null,
   },
   {
-    titulo: "✅ Dar baixa",
+    titulo: "Dar baixa",
     texto: "Toque no botão <b>✓</b> de qualquer lançamento para registrar o pagamento. Você define a data, conta e eventuais juros/multa.",
     acao: () => setView("pagar"),
     destaque: ".btn-green",
   },
   {
-    titulo: "💵 Contas a receber",
+    titulo: "Contas a receber",
     texto: "Suas <b>receitas pendentes e recebidas</b>. Mesmo sistema das despesas — filtre, busque, confirme recebimento.",
     acao: () => setView("receber"),
     destaque: null,
   },
   {
-    titulo: "📋 Todos os lançamentos",
+    titulo: "Todos os lançamentos",
     texto: "<b>Extrato completo</b>: receitas e despesas juntas, ordenadas por data. Exporte para CSV com o botão Exportar.",
     acao: () => setView("lancamentos"),
     destaque: null,
   },
   {
-    titulo: "🛒 Compras e cartões",
+    titulo: "Compras e cartões",
     texto: "Registre <b>compras parceladas no cartão</b>. O sistema controla cada parcela, data de vencimento e progresso de pagamento.",
     acao: () => setView("compras"),
     destaque: null,
   },
   {
-    titulo: "🎯 Metas financeiras",
+    titulo: "Metas financeiras",
     texto: "Crie <b>objetivos de poupança</b>: reserva de emergência, viagem, carro. Cada meta tem barra de progresso, prazo e aporte avulso.",
     acao: () => setView("metas"),
     destaque: null,
   },
   {
-    titulo: "📊 Relatórios",
+    titulo: "Relatórios",
     texto: "Balancete do período, projeção dos próximos 6 meses, patrimônio líquido e juros pagos. Todos disponíveis em <b>PDF</b> (padrão ou estilo cupom).",
     acao: () => setView("relatorios"),
     destaque: null,
   },
   {
-    titulo: "🚗 Veículos",
+    titulo: "Veículos",
     texto: "Cadastre seus veículos com valor FIPE atualizado, financiamento e custo mensal. O patrimônio líquido inclui os veículos automaticamente.",
     acao: () => setView("veiculos"),
     destaque: null,
   },
   {
-    titulo: "🏦 Contas e carteiras",
+    titulo: "Contas e carteiras",
     texto: "Gerencie suas <b>contas bancárias, carteiras e cartões</b>. O saldo de cada uma aparece no dashboard e nos relatórios.",
     acao: () => setView("contas"),
     destaque: null,
   },
   {
-    titulo: "🏷️ Categorias",
+    titulo: "Categorias",
     texto: "Organize seus lançamentos por categoria (Moradia, Alimentação, Saúde...). As categorias aparecem nos <b>gráficos de despesas</b> do dashboard.",
     acao: () => setView("categorias"),
     destaque: null,
   },
   {
-    titulo: "👥 Contatos",
+    titulo: "Contatos",
     texto: "Clientes, fornecedores, pessoas. Vincule um contato a qualquer lançamento para saber <b>quem pagou ou recebeu</b>.",
     acao: () => setView("contatos"),
     destaque: null,
   },
   {
-    titulo: "💬 WhatsApp",
+    titulo: "WhatsApp",
     texto: "Control tudo pelo grupo da família. Mande <b>saldo</b>, <b>vencer</b>, <b>resumo</b>, <b>menu</b> e muito mais. Configure o webhook aqui para respostas instantâneas.",
     acao: () => setView("whatsapp"),
     destaque: null,
   },
   {
-    titulo: "👨‍👩‍👧 Família",
+    titulo: "Família",
     texto: "Adicione membros da família com e-mail e senha próprios. Cada um acessa o sistema com seu login. O papel <b>Admin</b> dá acesso total.",
     acao: () => setView("usuarios"),
     destaque: null,
   },
   {
-    titulo: "⚙️ Configurações",
+    titulo: "Configurações",
     texto: "Personalize alertas de vencimento, horários de envio no WhatsApp, logo da empresa, dados do cabeçalho dos PDFs e muito mais.",
     acao: () => setView("configuracoes"),
     destaque: null,
   },
   {
-    titulo: "📱 Menu mobile",
+    titulo: "Menu mobile",
     texto: "No celular, o menu fica na <b>barra inferior</b>: Início, Vencer, botão + (novo lançamento), Extrato e Mais. O botão + abre atalhos para registrar receita, despesa, NF ou compra.",
     acao: () => setView("dashboard"),
     destaque: ".btab",
   },
   {
-    titulo: "🧾 Ler Nota Fiscal",
+    titulo: "Ler Nota Fiscal",
     texto: "Aponte a câmera para o QR code de qualquer NF-e ou cole o link. O sistema lê os itens da nota e pré-preenche o lançamento automaticamente.",
     acao: () => setView("dashboard"),
     destaque: null,
   },
   {
-    titulo: "🔍 Busca rápida",
+    titulo: "Busca rápida",
     texto: "No desktop, use a <b>barra de busca</b> no topo. No celular, toque na <b>lupa</b> — abre uma busca fullscreen de lançamentos e contatos.",
     acao: () => setView("dashboard"),
     destaque: ".busca-global-wrap, .show-mob[title='Buscar']",
   },
   {
-    titulo: "✅ Tour concluído!",
+    titulo: "Tour concluído!",
     texto: "Você conheceu todas as telas do sistema. Para voltar ao início, toque em <b>Dashboard</b>. Qualquer dúvida, mande <b>ajuda</b> no grupo do WhatsApp!",
     acao: () => setView("dashboard"),
     destaque: null,
@@ -4082,7 +4084,7 @@ async function mostrarPassoTour() {
         <div style="display:flex;gap:8px">
           ${_TOUR_PASSO > 0 ? `<button onclick="tourAnterior()" class="tour-btn-nav">← Anterior</button>` : ""}
           <button onclick="tourProximo()" class="tour-btn-prox">
-            ${_TOUR_PASSO === total - 1 ? "Concluir ✓" : "Próximo →"}
+            ${_TOUR_PASSO === total - 1 ? "Concluir" : "Próximo"}
           </button>
         </div>
       </div>
@@ -4097,7 +4099,7 @@ async function tourProximo() {
   } else {
     fecharTour();
     setView("dashboard");
-    toast("Tour concluído! 🎉", "ok");
+    toast("Tour concluído!", "ok");
   }
 }
 
