@@ -59,6 +59,13 @@ class ContatoIn(BaseModel):
     email: Optional[str] = None
     obs: Optional[str] = None
     logo: Optional[str] = None
+    cep: Optional[str] = None
+    logradouro: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
 
 
 class ContatoOut(ContatoIn):

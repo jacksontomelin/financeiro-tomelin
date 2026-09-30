@@ -66,7 +66,15 @@ class Contato(Base):
     telefone = Column(String(30), nullable=True)
     email = Column(String(160), nullable=True)
     obs = Column(Text, nullable=True)
-    logo = Column(Text, nullable=True)  # data URI ou URL do logo da empresa
+    logo = Column(Text, nullable=True)  # data URI ou URL do logo
+    # Endereço completo
+    cep = Column(String(10), nullable=True)
+    logradouro = Column(String(200), nullable=True)
+    numero = Column(String(20), nullable=True)
+    complemento = Column(String(100), nullable=True)
+    bairro = Column(String(100), nullable=True)
+    cidade = Column(String(100), nullable=True)
+    estado = Column(String(2), nullable=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
 
     lancamentos = relationship("Lancamento", back_populates="contato")

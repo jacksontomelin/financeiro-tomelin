@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.98.0 · e77ba9b · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.99.0 · d8a6a02 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1589,38 +1589,165 @@ function renderContatos() {
 function formContato(c) {
   const e = c || {};
   abrirModal(`
-    <div class="modal">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("users")}</span><h3>${c ? "Editar contato" : "Novo contato"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+    <div class="modal" style="max-width:600px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("users")}</span>
+        <h3>${c ? "Editar contato" : "Novo contato"}</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="o-nome" value="${e.nome || ""}" placeholder="Nome do contato"></div>
-        <div class="campo"><label>Tipo</label><select id="o-tipo">
-          <option value="cliente"${e.tipo === "cliente" ? " selected" : ""}>Recebo de (fonte de renda)</option>
-          <option value="fornecedor"${e.tipo === "fornecedor" ? " selected" : ""}>Pago para (estabelecimento)</option>
-        </select></div>
-        <div class="campo"><label>Documento (CPF/CNPJ)</label><input id="o-doc" value="${e.documento || ""}"></div>
-        <div class="campo"><label>Telefone</label><input id="o-tel" value="${e.telefone || ""}"></div>
-        <div class="campo"><label>E-mail</label><input id="o-email" value="${e.email || ""}"></div>
-        ${campoLogo("Logo da empresa. PNG ou JPG — reduzido e salvo no sistema.")}
-        <div class="campo full"><label>Observações</label><textarea id="o-obs" rows="2">${e.obs || ""}</textarea></div>
+
+        <!-- Busca por CNPJ -->
+        <div class="campo full" style="background:var(--bg);border-radius:12px;padding:12px 14px;border:1.5px solid var(--line)">
+          <label>Buscar por CNPJ (preenche automaticamente)</label>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input id="o-cnpj-busca" placeholder="00.000.000/0001-00" maxlength="18"
+              style="flex:1"
+              oninput="this.value=this.value.replace(/\\D/g,'').replace(/(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})/,'$1.$2.$3/$4-$5').slice(0,18)">
+            <button class="btn btn-primary btn-sm" onclick="_buscarCNPJ()">${icon("search")} Buscar</button>
+          </div>
+          <div id="o-cnpj-status" style="font-size:11.5px;color:var(--ink-3);margin-top:4px"></div>
+        </div>
+
+        <!-- Dados principais -->
+        <div class="campo full"><label>Nome / Razão social</label>
+          <input id="o-nome" value="${e.nome||""}" placeholder="Nome do contato ou empresa"></div>
+
+        <div class="campo"><label>Tipo</label>
+          <select id="o-tipo">
+            <option value="cliente"    ${e.tipo==="cliente"    ?"selected":""}>Recebo de (cliente / renda)</option>
+            <option value="fornecedor" ${e.tipo==="fornecedor" ?"selected":""}>Pago para (fornecedor)</option>
+            <option value="ambos"      ${e.tipo==="ambos"      ?"selected":""}>Ambos</option>
+          </select></div>
+
+        <div class="campo"><label>CPF / CNPJ</label>
+          <input id="o-doc" value="${e.documento||""}" placeholder="000.000.000-00 ou 00.000.000/0001-00"></div>
+
+        <div class="campo"><label>Telefone / WhatsApp</label>
+          <input id="o-tel" value="${e.telefone||""}" placeholder="(47) 9 9999-0000"></div>
+
+        <div class="campo"><label>E-mail</label>
+          <input id="o-email" type="email" value="${e.email||""}" placeholder="contato@empresa.com.br"></div>
+
+        <!-- Endereço com busca de CEP -->
+        <div class="campo full" style="border-top:1px solid var(--line);padding-top:14px;margin-top:2px">
+          <label style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)">
+            Endereço
+          </label>
+        </div>
+
+        <div class="campo"><label>CEP</label>
+          <div style="display:flex;gap:6px">
+            <input id="o-cep" value="${e.cep||""}" placeholder="00000-000" maxlength="9"
+              style="flex:1"
+              oninput="this.value=this.value.replace(/\\D/g,'').replace(/(\\d{5})(\\d{3})/,'$1-$2').slice(0,9)"
+              onblur="_buscarCEP(this.value)">
+            <button class="btn btn-ghost btn-sm" onclick="_buscarCEP(document.getElementById('o-cep').value)" title="Buscar CEP">
+              ${icon("search")}
+            </button>
+          </div>
+        </div>
+
+        <div class="campo full"><label>Logradouro</label>
+          <input id="o-logradouro" value="${e.logradouro||""}" placeholder="Rua, Avenida..."></div>
+
+        <div class="campo" style="max-width:120px"><label>Número</label>
+          <input id="o-numero" value="${e.numero||""}" placeholder="Nº"></div>
+
+        <div class="campo"><label>Complemento</label>
+          <input id="o-complemento" value="${e.complemento||""}" placeholder="Sala, Apto..."></div>
+
+        <div class="campo"><label>Bairro</label>
+          <input id="o-bairro" value="${e.bairro||""}" placeholder="Bairro"></div>
+
+        <div class="campo"><label>Cidade</label>
+          <input id="o-cidade" value="${e.cidade||""}" placeholder="Cidade"></div>
+
+        <div class="campo" style="max-width:100px"><label>Estado</label>
+          <input id="o-estado" value="${e.estado||""}" placeholder="SC" maxlength="2"
+            oninput="this.value=this.value.toUpperCase()"></div>
+
+        <!-- Logo e obs -->
+        ${campoLogo("Logo da empresa (PNG/JPG — salvo no sistema)")}
+        <div class="campo full"><label>Observações</label>
+          <textarea id="o-obs" rows="2">${e.obs||""}</textarea></div>
+
       </div></div>
       <div class="modal-f">
-        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="salvarContato(${c ? e.id : "null"})">${icon("check")}Salvar</button>
+        <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarContato(${c?e.id:"null"})">${icon("check")} Salvar contato</button>
       </div>
     </div>`, "lg");
   initLogo(e.logo);
 }
+
+async function _buscarCNPJ() {
+  const raw = (document.getElementById("o-cnpj-busca")?.value||"").replace(/\D/g,"");
+  if (raw.length !== 14) { toast("Digite o CNPJ completo (14 dígitos)", "err"); return; }
+  const st = document.getElementById("o-cnpj-status");
+  if (st) st.textContent = "Consultando...";
+  try {
+    const d = await api(`/api/contatos/buscar-cnpj/${raw}`);
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set("o-nome", d.nome);
+    set("o-doc", d.documento ? d.documento.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,"$1.$2.$3/$4-$5") : "");
+    set("o-tel", d.telefone);
+    set("o-email", d.email);
+    set("o-logradouro", d.logradouro);
+    set("o-numero", d.numero);
+    set("o-complemento", d.complemento);
+    set("o-bairro", d.bairro);
+    set("o-cidade", d.cidade);
+    set("o-estado", d.estado);
+    if (d.cep) {
+      const cepFmt = d.cep.replace(/(\d{5})(\d{3})/,"$1-$2");
+      set("o-cep", cepFmt);
+    }
+    if (st) st.textContent = `✓ ${d.razao_social || d.nome} encontrado`;
+    if (st) st.style.color = "#16A34A";
+    toast("CNPJ encontrado — dados preenchidos", "ok");
+  } catch(err) {
+    if (st) { st.textContent = "CNPJ não encontrado na base."; st.style.color = "var(--red)"; }
+    toast("CNPJ não encontrado", "err");
+  }
+}
+
+async function _buscarCEP(cep) {
+  const raw = (cep||"").replace(/\D/g,"");
+  if (raw.length !== 8) return;
+  try {
+    const d = await api(`/api/contatos/buscar-cep/${raw}`);
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set("o-logradouro", d.logradouro);
+    set("o-bairro", d.bairro);
+    set("o-cidade", d.cidade);
+    set("o-estado", d.estado);
+    document.getElementById("o-numero")?.focus();
+    toast("CEP encontrado", "ok");
+  } catch { /* CEP não encontrado, deixa o usuário preencher */ }
+}
+
 async function salvarContato(id) {
   const body = {
-    nome: $("#o-nome").value.trim(), tipo: $("#o-tipo").value,
-    documento: $("#o-doc").value.trim() || null, telefone: $("#o-tel").value.trim() || null,
-    email: $("#o-email").value.trim() || null, obs: $("#o-obs").value.trim() || null,
-    logo: LOGO_BUF || null,
+    nome:        ($("#o-nome")?.value||"").trim(),
+    tipo:        $("#o-tipo")?.value || "fornecedor",
+    documento:   ($("#o-doc")?.value||"").trim() || null,
+    telefone:    ($("#o-tel")?.value||"").trim() || null,
+    email:       ($("#o-email")?.value||"").trim() || null,
+    obs:         ($("#o-obs")?.value||"").trim() || null,
+    logo:        LOGO_BUF || null,
+    cep:         ($("#o-cep")?.value||"").replace(/\D/g,"") || null,
+    logradouro:  ($("#o-logradouro")?.value||"").trim() || null,
+    numero:      ($("#o-numero")?.value||"").trim() || null,
+    complemento: ($("#o-complemento")?.value||"").trim() || null,
+    bairro:      ($("#o-bairro")?.value||"").trim() || null,
+    cidade:      ($("#o-cidade")?.value||"").trim() || null,
+    estado:      ($("#o-estado")?.value||"").trim().toUpperCase() || null,
   };
   if (!body.nome) return toast("Informe o nome", "err");
   try {
     if (id) await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) });
-    else await api("/api/contatos", { method: "POST", body: JSON.stringify(body) });
+    else     await api("/api/contatos",       { method: "POST", body: JSON.stringify(body) });
     fecharModal(); toast("Contato salvo", "ok"); setView("contatos");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -4184,6 +4311,7 @@ Object.assign(window, {
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery, _atalhoClick,
   _toggleItensCompra, verParcelasCompra,
   rodarDiagnosticoWA, salvarGatewayWA, _autoDesc, _escolherDesc,
+  _buscarCNPJ, _buscarCEP,
   iniciarTour, fecharTour, tourProximo, tourAnterior, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
