@@ -322,7 +322,7 @@ function renderLogin() {
    ============================================================ */
 const NAV = [
   { sec: "Painel" },
-  { id: "dashboard", nome: "Visão geral", ic: "dashboard", sub: "Resumo do mês e indicadores" },
+  { id: "dashboard", nome: "Visão geral", ic: "dashboard", sub: "" },
   { id: "vencimentos", nome: "Vencimentos", ic: "alert", sub: "Contas atrasadas e a vencer", badge: true },
   { id: "relatorios", nome: "Relatórios", ic: "pie", sub: "Balancete, patrimônio e projeções" },
   { sec: "Movimentação" },
@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.91.0 · e99fa6c · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.92.0 · 534f9f0 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -724,7 +724,7 @@ async function viewDashboard(v) {
   v.innerHTML = `
     <!-- ── HERO ── -->
     <div style="background:linear-gradient(135deg,#06243F 0%,#082D51 45%,#0E3A63 100%);
-                border-radius:22px;padding:22px 24px 0;margin-bottom:16px;position:relative;overflow:hidden">
+                border-radius:20px;padding:18px 20px 0;margin-bottom:14px;position:relative;overflow:hidden">
       <div class="hero-circle-1"></div>
       <div class="hero-circle-2"></div>
       <!-- spark line decorativa -->
@@ -734,29 +734,29 @@ async function viewDashboard(v) {
       </svg>
       <!-- saudação -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);
+        <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);
              display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div>
-          <div style="font-size:17px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
-          <div style="font-size:12.5px;color:rgba(255,255,255,.55)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
+          <div style="font-size:15px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
+          <div style="font-size:11.5px;color:rgba(255,255,255,.5)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
         </div>
       </div>
       <!-- saldo grande -->
       <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
-        <div style="font-size:clamp(28px,8vw,40px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div style="font-size:clamp(24px,5vw,34px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
           ${saldoPos ? '▸' : '▾'} ${money(Math.abs(resultado))} ${resPos?"de resultado positivo este mês":"de resultado negativo este mês"}
         </div>
       </div>
       <!-- mini KPIs dentro do hero -->
-      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -24px;margin-top:16px">
+      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -20px;margin-top:14px">
         ${[
           ["Receitas","#6FD4AF",money(k.receitas_mes)],
           ["Despesas","#E0A060",money(k.despesas_mes)],
           ["A pagar","#AFC2D6",money(k.a_pagar)],
         ].map(([lab,cor,val],i) => `
-          <div style="flex:1;padding:12px 14px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
+          <div style="flex:1;padding:10px 14px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
                onclick="${['setView(\'contas\')', 'setView(\'receber\')', 'setView(\'pagar\')'][i]}"
                onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">
             <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">${lab} ›</div>
