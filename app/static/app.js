@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.92.0 · 534f9f0 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.93.0 · c27ab71 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -733,7 +733,7 @@ async function viewDashboard(v) {
         <polyline points="${sparkPts}" fill="none" stroke="#C9A94E" stroke-width="1.8" stroke-linejoin="round"/>
       </svg>
       <!-- saudação -->
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);
              display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div>
@@ -744,23 +744,24 @@ async function viewDashboard(v) {
       <!-- saldo grande -->
       <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
-        <div style="font-size:clamp(24px,5vw,34px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div style="font-size:clamp(22px,4vw,30px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
-          ${saldoPos ? '▸' : '▾'} ${money(Math.abs(resultado))} ${resPos?"de resultado positivo este mês":"de resultado negativo este mês"}
+          <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='12' height='12' style='display:inline;vertical-align:middle'>${saldoPos?'<polyline points="5 12 12 5 19 12"/>':'<polyline points="5 12 12 19 19 12"/>'}</svg>
+          ${money(Math.abs(resultado))} ${resPos?"resultado positivo":"resultado negativo"} este mês
         </div>
       </div>
       <!-- mini KPIs dentro do hero -->
-      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -20px;margin-top:14px">
+      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -20px;margin-top:12px">
         ${[
-          ["Receitas","#6FD4AF",money(k.receitas_mes)],
-          ["Despesas","#E0A060",money(k.despesas_mes)],
-          ["A pagar","#AFC2D6",money(k.a_pagar)],
-        ].map(([lab,cor,val],i) => `
-          <div style="flex:1;padding:10px 14px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
-               onclick="${['setView(\'contas\')', 'setView(\'receber\')', 'setView(\'pagar\')'][i]}"
+          ["Receitas","#6FD4AF",money(k.receitas_mes),"setView('receber')"],
+          ["Despesas","#E0A060",money(k.despesas_mes),"setView('pagar')"],
+          ["A pagar","#AFC2D6",money(k.a_pagar),"setView('pagar')"],
+        ].map(([lab,cor,val,nav],i) => `
+          <div style="flex:1;padding:10px 12px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
+               onclick="${nav}"
                onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">
-            <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">${lab} ›</div>
-            <div style="font-size:13.5px;font-weight:800;color:${cor};font-family:monospace">${val}</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">${lab}</div>
+            <div style="font-size:13px;font-weight:800;color:${cor};font-family:monospace">${val}</div>
           </div>`).join("")}
       </div>
     </div>

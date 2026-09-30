@@ -279,11 +279,11 @@ html.dark .login-app-titulo { color: var(--ink); }
 /* --- conteúdo --- */
 .main{flex:1;margin-left:var(--sidebar);min-width:0;display:flex;flex-direction:column;overflow-x:hidden}
 .topbar{
-  position:sticky;top:var(--safe-top);z-index:30;background:rgba(246,248,251,.86);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line);padding:16px 30px;display:flex;align-items:center;gap:16px;
+  position:sticky;top:var(--safe-top);z-index:30;background:rgba(246,248,251,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:10px 24px;display:flex;align-items:center;gap:12px;height:52px;box-sizing:border-box;
 }
 .topbar .menu-btn{display:none;color:var(--navy);padding:6px}
-.topbar h2{font-size:15px;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+.topbar h2{font-size:14px;font-weight:700;color:var(--navy);letter-spacing:-.01em;line-height:1.2}
 .topbar .sub{font-size:11.5px;color:var(--ink-3);margin-top:0}
 .topbar .grow{flex:1}
 .content{padding:26px 30px calc(60px + var(--safe-bottom));max-width:1360px;width:100%;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}
