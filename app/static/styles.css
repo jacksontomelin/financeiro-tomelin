@@ -257,7 +257,8 @@ html.dark .login-app-titulo { color: var(--ink); }
 .sb-logo img{width:34px;height:34px;object-fit:contain;display:block}
 .sb-brand .t{font-weight:800;font-size:16px;color:#fff;letter-spacing:-.01em;line-height:1.1}
 .sb-brand .s{font-size:11px;color:var(--gold-2);font-weight:600}
-.sb-nav{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:3px}
+.sb-nav{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:3px;scrollbar-width:none;-ms-overflow-style:none}
+.sb-nav::-webkit-scrollbar{display:none;width:0}
 .sb-sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:#6d87a3;padding:14px 12px 6px;font-weight:700}
 .nav-item{
   display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;
