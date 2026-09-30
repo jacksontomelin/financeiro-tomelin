@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.94.0 · b806cf0 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.95.0 · 0ed06b6 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1081,10 +1081,17 @@ function formLancamento(l, tipo, pre) {
           </div></div>
 
         <div class="campo"><label>Categoria</label>
-          <select id="f-cat">
-            <option value="">— Sem categoria —</option>
-            ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""}>${c.icone ? c.icone + " " : ""}${c.nome}</option>`).join("")}
-          </select></div>
+          <div style="position:relative">
+            <select id="f-cat" onchange="_previewCat(this)" style="width:100%;padding-left:28px">
+              <option value="">— Sem categoria —</option>
+              ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""} data-cor="${c.cor||"#94A3B8"}">${c.nome}</option>`).join("")}
+            </select>
+            <span id="f-cat-dot" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+              width:10px;height:10px;border-radius:50%;pointer-events:none;
+              background:${ed && l.categoria_id ? (State.cats.find(c=>c.id===l.categoria_id)||{}).cor||"#94A3B8" : "transparent"}">
+            </span>
+          </div>
+        </div>
 
         <div class="campo"><label>Vencimento</label>
           <input id="f-venc" type="date" value="${ed && l.vencimento ? l.vencimento.split("T")[0] : hojeISO()}"></div>
@@ -1099,10 +1106,17 @@ function formLancamento(l, tipo, pre) {
           </select></div>
 
         <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
-          <select id="f-contato">
-            <option value="">—</option>
-            ${State.contatos.map(c => `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${c.nome}</option>`).join("")}
-          </select></div>
+          <div style="position:relative">
+            <select id="f-contato" style="width:100%">
+              <option value="">— Selecione —</option>
+              ${State.contatos.map(c => {
+                const tipo = c.tipo ? ` (${c.tipo})` : "";
+                return `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${c.nome}${tipo}</option>`;
+              }).join("")}
+            </select>
+          </div>
+          ${State.contatos.length === 0 ? `<div style="font-size:11px;color:var(--ink-3);margin-top:4px">Cadastre contatos em <b>Contatos</b> para vincular aqui</div>` : ""}
+        </div>
 
         <div class="campo full"><label>Situação</label>
           <select id="f-pago">
@@ -1184,6 +1198,21 @@ function _autoDesc(q) {
     background:var(--card);border:1.5px solid var(--navy);border-radius:14px;
     box-shadow:0 8px 32px rgba(8,45,81,.18);overflow:hidden;margin-top:4px;`;
 }
+
+function _previewCat(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const dot = document.getElementById("f-cat-dot");
+  if (!dot) return;
+  const cor = opt ? opt.dataset.cor : "";
+  dot.style.background = cor || "transparent";
+  sel.style.paddingLeft = cor ? "28px" : "14px";
+}
+
+// Inicializa o dot ao abrir o form
+setTimeout(() => {
+  const sel = document.getElementById("f-cat");
+  if (sel) _previewCat(sel);
+}, 150);
 
 function _highlight(text, q) {
   if (!q) return text;
