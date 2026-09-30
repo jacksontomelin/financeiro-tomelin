@@ -369,7 +369,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.101.0 · 9165ecb · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.102.0 · 99cea5b · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1585,42 +1585,218 @@ async function viewContatos(v) {
   const contatos = await api("/api/contatos");
   window._contatos = contatos;
   v.innerHTML = `
-    <div class="toolbar">
-      <div class="seg" id="seg-cont">
-        <button data-t="" class="on" onclick="filtroContato('')">Todos</button>
-        <button data-t="cliente" onclick="filtroContato('cliente')">Recebo de</button>
-        <button data-t="fornecedor" onclick="filtroContato('fornecedor')">Pago para</button>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="seg" id="seg-cont" style="flex:1;min-width:0">
+          <button data-t="" class="on" onclick="filtroContato('')">Todos</button>
+          <button data-t="cliente" onclick="filtroContato('cliente')">Recebo de</button>
+          <button data-t="fornecedor" onclick="filtroContato('fornecedor')">Pago para</button>
+        </div>
+        <button class="btn btn-primary" onclick="formContato(null)">${icon("plus")} Novo contato</button>
       </div>
-      <div class="search"><span>${icon("search")}</span><input class="search-i" id="bc" placeholder="Buscar nome..." oninput="renderContatos()"></div>
-      <div class="grow"></div>
-      <button class="btn btn-primary" onclick="formContato(null)">${icon("plus")}Novo contato</button>
+      <div class="search"><span>${icon("search")}</span>
+        <input class="search-i" id="bc" placeholder="Buscar por nome, documento ou cidade..." oninput="renderContatos()">
+      </div>
     </div>
-    <div class="card"><div class="tbl-wrap"><table>
-      <thead><tr><th>Nome</th><th>Tipo</th><th>Documento</th><th>Telefone</th><th>E-mail</th><th style="width:96px"></th></tr></thead>
-      <tbody id="tbc"></tbody>
-    </table></div></div>`;
+    <div id="lista-contatos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>`;
   FCONTATO = ""; renderContatos();
 }
-function filtroContato(t) {
-  FCONTATO = t;
-  document.querySelectorAll("#seg-cont button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  renderContatos();
-}
+
 function renderContatos() {
-  const busca = ($("#bc")?.value || "").toLowerCase();
-  const arr = (window._contatos || []).filter(c =>
-    (!FCONTATO || c.tipo === FCONTATO) && (!busca || c.nome.toLowerCase().includes(busca)));
-  $("#tbc").innerHTML = arr.map(c => `
-    <tr>
-      <td><div style="display:flex;align-items:center;gap:10px">${avatarLogo(c.logo, c.nome)}<div><div class="cell-desc">${esc(c.nome)}</div>${c.obs ? `<div class="cell-sub">${c.obs}</div>` : ""}</div></div></td>
-      <td><span class="tag ${c.tipo === "cliente" ? "pago" : "pendente"}">${c.tipo === "cliente" ? "Recebo de" : "Pago para"}</span></td>
-      <td>${c.documento || "—"}</td><td>${c.telefone || "—"}</td><td>${c.email || "—"}</td>
-      <td><div style="display:flex;gap:4px;justify-content:flex-end">
-        <button class="btn-icon" onclick="_editarContato(${c.id})">${icon("edit")}</button>
-        <button class="btn-icon" onclick="excluirContato(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-      </div></td>
-    </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${icon("users")}<p>Nenhum contato.</p></div></td></tr>`;
+  const busca = ($("#bc")?.value || "").toLowerCase().replace(/\D/g, "") || ($("#bc")?.value || "").toLowerCase();
+  const txt   = ($("#bc")?.value || "").toLowerCase();
+  const arr = (window._contatos || []).filter(c => {
+    if (FCONTATO && c.tipo !== FCONTATO) return false;
+    if (!txt) return true;
+    return (c.nome || "").toLowerCase().includes(txt)
+        || (c.documento || "").includes(txt.replace(/\D/g, ""))
+        || (c.cidade || "").toLowerCase().includes(txt);
+  });
+
+  const box = document.getElementById("lista-contatos");
+  if (!box) return;
+
+  if (!arr.length) {
+    box.innerHTML = `<div class="empty" style="grid-column:1/-1">${icon("users")}<p>Nenhum contato encontrado.</p></div>`;
+    return;
+  }
+
+  box.innerHTML = arr.map(c => {
+    const cli = c.tipo === "cliente";
+    const doc = c.documento ? fmtDoc(c.documento) : "";
+    const end = [c.logradouro && (c.logradouro + (c.numero ? ", " + c.numero : "")),
+                 c.bairro, c.cidade && (c.cidade + (c.estado ? "/" + c.estado : ""))]
+                .filter(Boolean).join(" · ");
+    return `<div class="card card-pad" style="cursor:pointer;transition:all .15s;border-left:3px solid ${cli ? "#16A34A" : "#D97706"}"
+        onclick="verContato(${c.id})"
+        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'"
+        onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:10px">
+        ${avatarLogo(c.logo, c.nome, 40)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.nome)}</div>
+          <span class="tag ${cli ? "pago" : "pendente"}" style="margin-top:3px;display:inline-block">${cli ? "Recebo de" : "Pago para"}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--ink-3)">
+        ${doc ? `<div style="font-family:monospace">${esc(doc)}</div>` : ""}
+        ${c.telefone ? `<div>${esc(c.telefone)}</div>` : ""}
+        ${c.email ? `<div style="overflow:hidden;text-overflow:ellipsis">${esc(c.email)}</div>` : ""}
+        ${end ? `<div style="overflow:hidden;text-overflow:ellipsis">${esc(end)}</div>` : ""}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarContato(${c.id})">${icon("edit")} Editar</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();FILTRO.contato=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')">${icon("terminal")} Extrato</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirContato(${c.id})">${icon("trash")}</button>
+      </div>
+    </div>`;
+  }).join("");
 }
+
+/* Máscara dinâmica: detecta CPF ou CNPJ conforme digita */
+function _maskDoc(el) {
+  const c = el.value.replace(/\D/g, "").slice(0, 14);
+  el.value = c.length <= 11
+    ? c.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3").replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4")
+    : c.replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+  const msg = document.getElementById("o-doc-msg");
+  if (msg && c.length < 11) { msg.textContent = ""; }
+}
+
+/* Valida dígito verificador de CPF/CNPJ */
+function _validaCPF(c) {
+  if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+  for (const i of [9, 10]) {
+    let soma = 0;
+    for (let n = 0; n < i; n++) soma += +c[n] * ((i + 1) - n);
+    let dv = (soma * 10) % 11;
+    if (dv === 10) dv = 0;
+    if (dv !== +c[i]) return false;
+  }
+  return true;
+}
+
+function _validaCNPJ(c) {
+  if (c.length !== 14 || /^(\d)\1{13}$/.test(c)) return false;
+  const p1 = [5,4,3,2,9,8,7,6,5,4,3,2], p2 = [6, ...p1];
+  for (const [pesos, pos] of [[p1, 12], [p2, 13]]) {
+    let soma = 0;
+    for (let i = 0; i < pos; i++) soma += +c[i] * pesos[i];
+    const resto = soma % 11;
+    const dv = resto < 2 ? 0 : 11 - resto;
+    if (dv !== +c[pos]) return false;
+  }
+  return true;
+}
+
+function _validaDoc(el) {
+  const msg = document.getElementById("o-doc-msg");
+  if (!msg) return true;
+  const c = el.value.replace(/\D/g, "");
+  if (!c) { msg.textContent = ""; el.style.borderColor = ""; return true; }
+
+  let ok = false, tipo = "";
+  if (c.length === 11)      { ok = _validaCPF(c);  tipo = "CPF";  }
+  else if (c.length === 14) { ok = _validaCNPJ(c); tipo = "CNPJ"; }
+  else { msg.textContent = "Documento incompleto"; msg.style.color = "var(--ink-3)"; el.style.borderColor = ""; return false; }
+
+  msg.textContent = ok ? `${tipo} válido` : `${tipo} inválido — confira os dígitos`;
+  msg.style.color = ok ? "#16A34A" : "var(--red)";
+  el.style.borderColor = ok ? "#86EFAC" : "#FCA5A5";
+
+  // se for CNPJ válido, oferece buscar os dados
+  if (ok && tipo === "CNPJ") {
+    const b = document.getElementById("o-cnpj-busca");
+    if (b && !b.value) b.value = el.value;
+  }
+  return ok;
+}
+
+/* Formata CPF/CNPJ para exibição */
+function fmtDoc(d) {
+  const c = String(d || "").replace(/\D/g, "");
+  if (c.length === 11) return `${c.slice(0,3)}.${c.slice(3,6)}.${c.slice(6,9)}-${c.slice(9)}`;
+  if (c.length === 14) return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`;
+  return d || "";
+}
+
+/* Modal com o resumo financeiro do contato */
+async function verContato(id) {
+  let r;
+  try { r = await api(`/api/contatos/${id}/resumo`); }
+  catch { return toast("Não foi possível carregar o resumo.", "err"); }
+
+  const c = (window._contatos || []).find(x => x.id === id) || r.contato;
+  const cli = c.tipo === "cliente";
+  const end = [c.logradouro && (c.logradouro + (c.numero ? ", " + c.numero : "")),
+               c.complemento, c.bairro,
+               c.cidade && (c.cidade + (c.estado ? "/" + c.estado : "")),
+               c.cep && fmtCep(c.cep)].filter(Boolean).join(" · ");
+
+  const kpi = (lab, val, cor) => `
+    <div style="flex:1;min-width:120px;background:var(--bg);border-radius:12px;padding:12px 14px;border:1px solid var(--line)">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:3px">${lab}</div>
+      <div style="font-size:16px;font-weight:800;font-family:monospace;color:${cor}">${money(val)}</div>
+    </div>`;
+
+  abrirModal(`
+    <div class="modal" style="max-width:560px">
+      <div class="modal-h">
+        ${avatarLogo(c.logo, c.nome, 36)}
+        <h3 style="flex:1">${esc(c.nome)}</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <span class="tag ${cli ? "pago" : "pendente"}">${cli ? "Recebo de" : "Pago para"}</span>
+          ${c.documento ? `<span class="tag info" style="font-family:monospace">${esc(fmtDoc(c.documento))}</span>` : ""}
+          <span class="tag info">${r.qtd} lançamento${r.qtd !== 1 ? "s" : ""}</span>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          ${cli ? kpi("Já recebido", r.recebido, "#15803D") : kpi("Já pago", r.pago, "#991B1B")}
+          ${cli ? kpi("A receber", r.a_receber, "#CA8A04") : kpi("A pagar", r.a_pagar, "#CA8A04")}
+        </div>
+
+        ${(c.telefone || c.email || end) ? `
+        <div style="background:var(--bg);border-radius:12px;padding:12px 14px;margin-bottom:14px;
+                    display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-2)">
+          ${c.telefone ? `<div style="display:flex;gap:8px"><span style="color:var(--ink-3);min-width:70px">Telefone</span>${esc(c.telefone)}</div>` : ""}
+          ${c.email    ? `<div style="display:flex;gap:8px"><span style="color:var(--ink-3);min-width:70px">E-mail</span>${esc(c.email)}</div>` : ""}
+          ${end        ? `<div style="display:flex;gap:8px"><span style="color:var(--ink-3);min-width:70px">Endereço</span><span style="flex:1">${esc(end)}</span></div>` : ""}
+        </div>` : ""}
+
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">
+          Últimos lançamentos
+        </div>
+        ${r.ultimos.length ? r.ultimos.map(l => {
+          const rec = l.tipo === "receita";
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer"
+              onclick="fecharModal();formLancamentoId(${l.id})">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.descricao)}</div>
+              <div style="font-size:11px;color:var(--ink-3)">${l.vencimento ? dataBR(l.vencimento) : "sem vencimento"} · ${l.status}</div>
+            </div>
+            <div style="font-family:monospace;font-size:13.5px;font-weight:700;color:${rec ? "#15803D" : "#DC2626"}">
+              ${rec ? "+" : "−"} ${money(l.valor)}
+            </div>
+          </div>`;
+        }).join("") : `<div style="font-size:12.5px;color:var(--ink-3);padding:8px 0">Nenhum lançamento com este contato ainda.</div>`}
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal();_editarContato(${id})">${icon("edit")} Editar</button>
+        <button class="btn btn-primary" onclick="fecharModal();FILTRO.contato=${id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')">
+          ${icon("terminal")} Ver extrato completo
+        </button>
+      </div>
+    </div>`);
+}
+
+function fmtCep(v) {
+  const c = String(v || "").replace(/\D/g, "");
+  return c.length === 8 ? `${c.slice(0,5)}-${c.slice(5)}` : (v || "");
+}
+
 function formContato(c) {
   const e = c || {};
   abrirModal(`
@@ -1656,7 +1832,11 @@ function formContato(c) {
           </select></div>
 
         <div class="campo"><label>CPF / CNPJ</label>
-          <input id="o-doc" value="${e.documento||""}" placeholder="000.000.000-00 ou 00.000.000/0001-00"></div>
+          <input id="o-doc" value="${e.documento ? fmtDoc(e.documento) : ""}"
+            placeholder="CPF ou CNPJ" maxlength="18" inputmode="numeric"
+            oninput="_maskDoc(this)" onblur="_validaDoc(this)">
+          <div id="o-doc-msg" style="font-size:11px;margin-top:3px;min-height:14px"></div>
+        </div>
 
         <div class="campo"><label>Telefone / WhatsApp</label>
           <input id="o-tel" value="${e.telefone||""}" placeholder="(47) 9 9999-0000"></div>
@@ -1780,6 +1960,10 @@ async function salvarContato(id) {
     estado:      ($("#o-estado")?.value||"").trim().toUpperCase() || null,
   };
   if (!body.nome) return toast("Informe o nome", "err");
+  const docEl = $("#o-doc");
+  if (docEl && docEl.value.trim() && !_validaDoc(docEl)) {
+    return toast("CPF/CNPJ inválido — confira os dígitos", "err");
+  }
   try {
     if (id) await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else     await api("/api/contatos",       { method: "POST", body: JSON.stringify(body) });
@@ -4347,7 +4531,7 @@ Object.assign(window, {
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery, _atalhoClick,
   _toggleItensCompra, verParcelasCompra,
   rodarDiagnosticoWA, salvarGatewayWA, _autoDesc, _escolherDesc,
-  _buscarCNPJ, _buscarCEP,
+  _buscarCNPJ, _buscarCEP, _maskDoc, _validaDoc, fmtDoc, fmtCep, verContato,
   iniciarTour, fecharTour, tourProximo, tourAnterior, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });

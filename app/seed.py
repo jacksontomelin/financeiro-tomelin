@@ -118,12 +118,17 @@ def _demo(db):
     cc, poup, cart = contas[0], contas[1], contas[2]
     hoje = date.today()
 
-    def add(desc, tipo, valor, cat, comp, venc=None, pago=None, conta=None, juros=0, multa=0):
+    # mapa nome -> contato, para vincular os lançamentos
+    conts = {c.nome: c for c in db.query(models.Contato).all()}
+
+    def add(desc, tipo, valor, cat, comp, venc=None, pago=None, conta=None,
+            juros=0, multa=0, contato=None):
         db.add(models.Lancamento(
             descricao=desc, tipo=tipo, valor=Decimal(str(valor)),
             categoria_id=cats[cat].id if cat in cats else None,
             data_competencia=comp, data_vencimento=venc, data_pagamento=pago,
             conta_id=(conta.id if conta else None),
+            contato_id=(conts[contato].id if contato and contato in conts else None),
             juros=Decimal(str(juros)), multa=Decimal(str(multa)),
         ))
 
@@ -131,19 +136,19 @@ def _demo(db):
     for i in range(5, 0, -1):
         m = hoje - relativedelta(months=i)
         r = m.strftime('%m/%Y')
-        add(f"Salário — {r}", TipoMov.receita, 5800, "Salário", m, m, m, cc)
+        add(f"Salário — {r}", TipoMov.receita, 5800, "Salário", m, m, m, cc, contato="Empresa (Salário)")
         add(f"Salário cônjuge — {r}", TipoMov.receita, 3200, "Salário", m, m, m, cc)
         add(f"Rendimento poupança — {r}", TipoMov.receita, 120 + i * 8, "Rendimentos", m, m, m, poup)
-        add(f"Mercado do mês — {r}", TipoMov.despesa, 1450, "Mercado", m, m, m, cc)
+        add(f"Mercado do mês — {r}", TipoMov.despesa, 1450, "Mercado", m, m, m, cc, contato="Supermercado Angeloni")
         add(f"Prestação da casa — {r}", TipoMov.despesa, 1850, "Moradia", m, m, m, cc, juros=430)
         add(f"Luz, água e internet — {r}", TipoMov.despesa, 540, "Contas de Casa", m, m, m, cc)
-        add(f"Mensalidade escolar — {r}", TipoMov.despesa, 980, "Escola", m, m, m, cc)
-        add(f"Plano de saúde — {r}", TipoMov.despesa, 720, "Saúde", m, m, m, cc)
+        add(f"Mensalidade escolar — {r}", TipoMov.despesa, 980, "Escola", m, m, m, cc, contato="Escola das crianças")
+        add(f"Plano de saúde — {r}", TipoMov.despesa, 720, "Saúde", m, m, m, cc, contato="Plano de saúde")
         add(f"Combustível / transporte — {r}", TipoMov.despesa, 600, "Transporte", m, m, m, cc)
 
     # mês corrente — já recebido/pago
     add("Salário — mês corrente", TipoMov.receita, 5800, "Salário", hoje, None, hoje, cc)
-    add("Mercado (1ª quinzena)", TipoMov.despesa, 780, "Mercado", hoje, None, hoje, cc)
+    add("Mercado (1ª quinzena)", TipoMov.despesa, 780, "Mercado", hoje, None, hoje, cc, contato="Supermercado Angeloni")
     add("Combustível", TipoMov.despesa, 320, "Transporte", hoje, None, hoje, cart)
     add("Cinema em família", TipoMov.despesa, 180, "Lazer", hoje, None, hoje, cart)
 
@@ -157,15 +162,15 @@ def _demo(db):
 
     # A PAGAR (pendentes)
     add("Conta de luz (Celesc)", TipoMov.despesa, 280,
-        "Contas de Casa", hoje, hoje)                            # vence hoje
+        "Contas de Casa", hoje, hoje, contato="Celesc / Águas")                            # vence hoje
     add("Mensalidade escolar", TipoMov.despesa, 980,
-        "Escola", hoje, hoje - timedelta(days=1), juros=12, multa=39)   # atrasado
+        "Escola", hoje, hoje - timedelta(days=1), juros=12, multa=39, contato="Escola das crianças")   # atrasado
     add("Prestação da casa (financiamento)", TipoMov.despesa, 1850,
         "Moradia", hoje, hoje + timedelta(days=2))
     add("Fatura do cartão", TipoMov.despesa, 2300,
         "Cartão de Crédito", hoje, hoje + timedelta(days=4), juros=180)
     add("Plano de saúde", TipoMov.despesa, 720,
-        "Saúde", hoje, hoje + timedelta(days=6))
+        "Saúde", hoje, hoje + timedelta(days=6), contato="Plano de saúde")
     add("Internet e telefone", TipoMov.despesa, 160,
         "Contas de Casa", hoje, hoje + timedelta(days=7))
 

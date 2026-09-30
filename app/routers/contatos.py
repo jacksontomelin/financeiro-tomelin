@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
+from ..doc_utils import valida_documento, limpar as _limpar_doc, formatar as _fmt_doc
 
 router = APIRouter(prefix="/api/contatos", tags=["contatos"],
                    dependencies=[Depends(usuario_atual)])
@@ -19,9 +20,22 @@ def listar(tipo: str | None = None, busca: str | None = None, db: Session = Depe
     return q.order_by(models.Contato.nome).all()
 
 
+def _checa_doc(doc: str | None):
+    """Valida CPF/CNPJ e devolve normalizado (só dígitos)."""
+    if not doc:
+        return None
+    ok, tipo = valida_documento(doc)
+    if not ok:
+        rotulo = {"cpf": "CPF", "cnpj": "CNPJ"}.get(tipo, "Documento")
+        raise HTTPException(422, f"{rotulo} inválido — confira os dígitos.")
+    return _limpar_doc(doc)
+
+
 @router.post("", response_model=schemas.ContatoOut)
 def criar(dados: schemas.ContatoIn, db: Session = Depends(get_db)):
-    c = models.Contato(**dados.model_dump())
+    payload = dados.model_dump()
+    payload["documento"] = _checa_doc(payload.get("documento"))
+    c = models.Contato(**payload)
     db.add(c); db.commit(); db.refresh(c)
     return c
 
@@ -38,7 +52,9 @@ def editar(cid: int, dados: schemas.ContatoIn, db: Session = Depends(get_db)):
     c = db.get(models.Contato, cid)
     if not c:
         raise HTTPException(404, "Contato não encontrado.")
-    for k, v in dados.model_dump().items():
+    payload = dados.model_dump()
+    payload["documento"] = _checa_doc(payload.get("documento"))
+    for k, v in payload.items():
         setattr(c, k, v)
     db.commit(); db.refresh(c)
     return c
@@ -119,3 +135,39 @@ def buscar_cnpj(cnpj: str):
         raise
     except Exception as e:
         raise HTTPException(502, f"Erro ao consultar CNPJ: {e}")
+
+
+@router.get("/{cid}/resumo")
+def resumo_contato(cid: int, db: Session = Depends(get_db)):
+    """Totais movimentados com este contato + últimos lançamentos."""
+    from sqlalchemy import func
+    from ..models import Lancamento, TipoMov
+
+    c = db.get(models.Contato, cid)
+    if not c:
+        raise HTTPException(404, "Contato não encontrado.")
+
+    def _total(tipo, pagos: bool):
+        q = db.query(func.coalesce(func.sum(Lancamento.valor), 0)) \
+              .filter(Lancamento.contato_id == cid, Lancamento.tipo == tipo)
+        q = q.filter(Lancamento.data_pagamento.isnot(None)) if pagos \
+            else q.filter(Lancamento.data_pagamento.is_(None))
+        return float(q.scalar() or 0)
+
+    ultimos = db.query(Lancamento) \
+                .filter(Lancamento.contato_id == cid) \
+                .order_by(Lancamento.id.desc()).limit(10).all()
+
+    return {
+        "contato": {"id": c.id, "nome": c.nome, "tipo": c.tipo},
+        "recebido":   _total(TipoMov.receita, True),
+        "a_receber":  _total(TipoMov.receita, False),
+        "pago":       _total(TipoMov.despesa, True),
+        "a_pagar":    _total(TipoMov.despesa, False),
+        "qtd":        db.query(func.count(Lancamento.id)).filter(Lancamento.contato_id == cid).scalar() or 0,
+        "ultimos": [{
+            "id": l.id, "descricao": l.descricao, "valor": float(l.valor),
+            "tipo": l.tipo.value, "status": l.status,
+            "vencimento": l.data_vencimento.isoformat() if l.data_vencimento else None,
+        } for l in ultimos],
+    }
