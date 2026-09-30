@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
+import logging
+log = logging.getLogger("tomelin.contatos")
 from ..doc_utils import valida_documento, limpar as _limpar_doc, formatar as _fmt_doc
 
 router = APIRouter(prefix="/api/contatos", tags=["contatos"],
@@ -71,70 +73,139 @@ def excluir(cid: int, db: Session = Depends(get_db)):
 
 @router.get("/buscar-cep/{cep}")
 def buscar_cep(cep: str):
-    """Consulta CEP na API ViaCEP (gratuita, sem autenticação)."""
+    """
+    Consulta CEP com fallback entre provedores gratuitos.
+    Tenta BrasilAPI → ViaCEP → OpenCEP; o primeiro que responder vence.
+    """
     import re, httpx
-    cep_limpo = re.sub(r"\D", "", cep)
-    if len(cep_limpo) != 8:
-        raise HTTPException(400, "CEP inválido")
-    try:
-        r = httpx.get(f"https://viacep.com.br/ws/{cep_limpo}/json/", timeout=5)
+    c = re.sub(r"\D", "", cep or "")
+    if len(c) != 8:
+        raise HTTPException(400, "CEP deve ter 8 dígitos.")
+
+    def _brasilapi():
+        r = httpx.get(f"https://brasilapi.com.br/api/cep/v2/{c}", timeout=6)
+        if r.status_code == 404:
+            return "NAO_ENCONTRADO"
+        r.raise_for_status()
+        d = r.json()
+        return {"cep": c, "logradouro": d.get("street") or "", "bairro": d.get("neighborhood") or "",
+                "cidade": d.get("city") or "", "estado": d.get("state") or ""}
+
+    def _viacep():
+        r = httpx.get(f"https://viacep.com.br/ws/{c}/json/", timeout=6)
+        r.raise_for_status()
         d = r.json()
         if d.get("erro"):
-            raise HTTPException(404, "CEP não encontrado")
-        return {
-            "cep": d.get("cep", ""),
-            "logradouro": d.get("logradouro", ""),
-            "bairro": d.get("bairro", ""),
-            "cidade": d.get("localidade", ""),
-            "estado": d.get("uf", ""),
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(502, f"Erro ao consultar CEP: {e}")
+            return "NAO_ENCONTRADO"
+        return {"cep": c, "logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("localidade") or "", "estado": d.get("uf") or ""}
+
+    def _opencep():
+        r = httpx.get(f"https://opencep.com/v1/{c}", timeout=6)
+        if r.status_code == 404:
+            return "NAO_ENCONTRADO"
+        r.raise_for_status()
+        d = r.json()
+        return {"cep": c, "logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("localidade") or "", "estado": d.get("uf") or ""}
+
+    erros = []
+    for nome, fn in (("BrasilAPI", _brasilapi), ("ViaCEP", _viacep), ("OpenCEP", _opencep)):
+        try:
+            res = fn()
+            if res == "NAO_ENCONTRADO":
+                raise HTTPException(404, "CEP não encontrado.")
+            if res and res.get("cidade"):
+                return res
+            erros.append(f"{nome}: resposta vazia")
+        except HTTPException:
+            raise
+        except Exception as e:
+            erros.append(f"{nome}: {type(e).__name__}")
+            continue
+
+    log.warning("Busca de CEP %s falhou em todos os provedores: %s", c, "; ".join(erros))
+    raise HTTPException(503, "Serviços de CEP indisponíveis no momento. Preencha o endereço manualmente.")
 
 
 @router.get("/buscar-cnpj/{cnpj}")
 def buscar_cnpj(cnpj: str):
-    """Consulta CNPJ na API BrasilAPI (gratuita, sem autenticação)."""
+    """
+    Consulta CNPJ com fallback entre provedores gratuitos.
+    Tenta BrasilAPI → ReceitaWS; o primeiro que responder vence.
+    """
     import re, httpx
-    cnpj_limpo = re.sub(r"\D", "", cnpj)
-    if len(cnpj_limpo) != 14:
-        raise HTTPException(400, "CNPJ inválido")
-    try:
-        r = httpx.get(f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_limpo}", timeout=8)
+    c = re.sub(r"\D", "", cnpj or "")
+    if len(c) != 14:
+        raise HTTPException(400, "CNPJ deve ter 14 dígitos.")
+
+    ok, _ = valida_documento(c)
+    if not ok:
+        raise HTTPException(422, "CNPJ inválido — confira os dígitos.")
+
+    def _brasilapi():
+        r = httpx.get(f"https://brasilapi.com.br/api/cnpj/v1/{c}", timeout=8)
         if r.status_code == 404:
-            raise HTTPException(404, "CNPJ não encontrado")
+            return "NAO_ENCONTRADO"
+        r.raise_for_status()
         d = r.json()
-        nome = d.get("razao_social") or d.get("nome_fantasia") or ""
-        fantasia = d.get("nome_fantasia") or ""
-        end = d.get("logradouro", "")
-        num = d.get("numero", "")
-        comp = d.get("complemento", "")
-        bairro = d.get("bairro", "")
-        cidade = d.get("municipio", "")
-        estado = d.get("uf", "")
-        cep_r = re.sub(r"\D", "", d.get("cep", ""))
-        tel = d.get("ddd_telefone_1", "")
-        email = d.get("email", "")
         return {
-            "nome": fantasia or nome,
-            "razao_social": nome,
-            "documento": cnpj_limpo,
-            "telefone": tel,
-            "email": email,
-            "logradouro": end,
-            "numero": num,
-            "complemento": comp,
-            "bairro": bairro,
-            "cidade": cidade,
-            "estado": estado,
-            "cep": cep_r,
+            "nome": d.get("nome_fantasia") or d.get("razao_social") or "",
+            "razao_social": d.get("razao_social") or "",
+            "documento": c,
+            "telefone": d.get("ddd_telefone_1") or "",
+            "email": d.get("email") or "",
+            "logradouro": d.get("logradouro") or "",
+            "numero": d.get("numero") or "",
+            "complemento": d.get("complemento") or "",
+            "bairro": d.get("bairro") or "",
+            "cidade": d.get("municipio") or "",
+            "estado": d.get("uf") or "",
+            "cep": re.sub(r"\D", "", d.get("cep") or ""),
+            "situacao": d.get("descricao_situacao_cadastral") or "",
+            "fonte": "BrasilAPI",
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(502, f"Erro ao consultar CNPJ: {e}")
+
+    def _receitaws():
+        r = httpx.get(f"https://receitaws.com.br/v1/cnpj/{c}", timeout=10)
+        r.raise_for_status()
+        d = r.json()
+        if d.get("status") == "ERROR":
+            return "NAO_ENCONTRADO"
+        return {
+            "nome": d.get("fantasia") or d.get("nome") or "",
+            "razao_social": d.get("nome") or "",
+            "documento": c,
+            "telefone": d.get("telefone") or "",
+            "email": d.get("email") or "",
+            "logradouro": d.get("logradouro") or "",
+            "numero": d.get("numero") or "",
+            "complemento": d.get("complemento") or "",
+            "bairro": d.get("bairro") or "",
+            "cidade": d.get("municipio") or "",
+            "estado": d.get("uf") or "",
+            "cep": re.sub(r"\D", "", d.get("cep") or ""),
+            "situacao": d.get("situacao") or "",
+            "fonte": "ReceitaWS",
+        }
+
+    erros = []
+    for nome, fn in (("BrasilAPI", _brasilapi), ("ReceitaWS", _receitaws)):
+        try:
+            res = fn()
+            if res == "NAO_ENCONTRADO":
+                raise HTTPException(404, "CNPJ não encontrado na Receita Federal.")
+            if res and (res.get("nome") or res.get("razao_social")):
+                return res
+            erros.append(f"{nome}: resposta vazia")
+        except HTTPException:
+            raise
+        except Exception as e:
+            erros.append(f"{nome}: {type(e).__name__}")
+            continue
+
+    log.warning("Busca de CNPJ %s falhou em todos os provedores: %s", c, "; ".join(erros))
+    raise HTTPException(503, "Serviços de consulta de CNPJ indisponíveis. Preencha os dados manualmente.")
 
 
 @router.get("/{cid}/resumo")

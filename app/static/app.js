@@ -369,7 +369,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.102.0 · 99cea5b · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.103.0 · 6c114aa · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1897,34 +1897,51 @@ function formContato(c) {
 }
 
 async function _buscarCNPJ() {
-  const raw = (document.getElementById("o-cnpj-busca")?.value||"").replace(/\D/g,"");
-  if (raw.length !== 14) { toast("Digite o CNPJ completo (14 dígitos)", "err"); return; }
-  const st = document.getElementById("o-cnpj-status");
-  if (st) st.textContent = "Consultando...";
+  const el  = document.getElementById("o-cnpj-busca");
+  const st  = document.getElementById("o-cnpj-status");
+  const raw = (el?.value || "").replace(/\D/g, "");
+
+  const aviso = (txt, cor) => { if (st) { st.textContent = txt; st.style.color = cor; } };
+
+  if (raw.length !== 14) return aviso("Digite os 14 dígitos do CNPJ.", "var(--red)");
+  if (!_validaCNPJ(raw)) return aviso("CNPJ inválido — confira os dígitos.", "var(--red)");
+
+  aviso("Consultando a Receita Federal...", "var(--ink-3)");
+
+  let d;
   try {
-    const d = await api(`/api/contatos/buscar-cnpj/${raw}`);
-    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-    set("o-nome", d.nome);
-    set("o-doc", d.documento ? d.documento.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,"$1.$2.$3/$4-$5") : "");
-    set("o-tel", d.telefone);
-    set("o-email", d.email);
-    set("o-logradouro", d.logradouro);
-    set("o-numero", d.numero);
-    set("o-complemento", d.complemento);
-    set("o-bairro", d.bairro);
-    set("o-cidade", d.cidade);
-    set("o-estado", d.estado);
-    if (d.cep) {
-      const cepFmt = d.cep.replace(/(\d{5})(\d{3})/,"$1-$2");
-      set("o-cep", cepFmt);
-    }
-    if (st) st.textContent = `✓ ${d.razao_social || d.nome} encontrado`;
-    if (st) st.style.color = "#16A34A";
-    toast("CNPJ encontrado — dados preenchidos", "ok");
-  } catch(err) {
-    if (st) { st.textContent = "CNPJ não encontrado na base."; st.style.color = "var(--red)"; }
-    toast("CNPJ não encontrado", "err");
+    d = await api(`/api/contatos/buscar-cnpj/${raw}`);
+  } catch (err) {
+    // a API devolve mensagens prontas para o usuário
+    const msg = (err && err.message) ? err.message : "Não foi possível consultar agora.";
+    aviso(msg, "var(--red)");
+    toast(msg, "err");
+    return;
   }
+
+  const set = (id, val) => { const e = document.getElementById(id); if (e && val) e.value = val; };
+  set("o-nome", d.nome || d.razao_social);
+  set("o-doc",  fmtDoc(d.documento));
+  set("o-tel",  d.telefone);
+  set("o-email", d.email);
+  set("o-logradouro", d.logradouro);
+  set("o-numero", d.numero);
+  set("o-complemento", d.complemento);
+  set("o-bairro", d.bairro);
+  set("o-cidade", d.cidade);
+  set("o-estado", d.estado);
+  if (d.cep) set("o-cep", fmtCep(d.cep));
+
+  // revalida o campo de documento (pinta a borda de verde)
+  const docEl = document.getElementById("o-doc");
+  if (docEl) _validaDoc(docEl);
+
+  const inativa = d.situacao && !/ATIVA/i.test(d.situacao);
+  aviso(
+    `${d.razao_social || d.nome}${d.situacao ? " · " + d.situacao : ""}${d.fonte ? " (" + d.fonte + ")" : ""}`,
+    inativa ? "#CA8A04" : "#16A34A"
+  );
+  toast(inativa ? `Empresa encontrada — situação: ${d.situacao}` : "Dados preenchidos", inativa ? "err" : "ok");
 }
 
 async function _buscarCEP(cep) {
