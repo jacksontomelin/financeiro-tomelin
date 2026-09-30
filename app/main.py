@@ -16,6 +16,14 @@ def _migrar(engine):
         # logo em contas e contatos
         "ALTER TABLE contas ADD COLUMN IF NOT EXISTS logo TEXT",
         "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS logo TEXT",
+        # endereço completo em contatos
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS cep VARCHAR(10)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS logradouro VARCHAR(200)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS numero VARCHAR(20)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS complemento VARCHAR(100)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS bairro VARCHAR(100)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS cidade VARCHAR(100)",
+        "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS estado VARCHAR(2)",
         # veiculos (tabela criada pelo create_all, mas garante colunas extras)
         "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
         """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT '👤', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
@@ -94,7 +102,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# CORS: a API é consumida pelo próprio front (mesma origem).
+# allow_credentials fica False de propósito — a auth é via Bearer, não cookie.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
@@ -106,6 +122,10 @@ for r in (auth.router, categorias.router, contas.router, contatos.router,
 def verificar_autenticidade(code: str):
     """Página pública de verificação de autenticidade de documentos."""
     from fastapi.responses import HTMLResponse
+    import re as _re
+    # o código é sempre 20 hex maiúsculos — qualquer outra coisa é rejeitada
+    if not _re.fullmatch(r"[A-F0-9]{20}", code or ""):
+        return HTMLResponse("<h1>Código inválido</h1>", status_code=400)
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">

@@ -34,6 +34,13 @@ def criar(dados: schemas.VeiculoIn, db: Session = Depends(get_db)):
     return _out(v)
 
 
+@router.get("/{vid}", response_model=schemas.VeiculoOut)
+def obter(vid: int, db: Session = Depends(get_db)):
+    o = db.get(models.Veiculo, vid)
+    if not o:
+        raise HTTPException(404, "Veículo não encontrado.")
+    return o
+
 @router.put("/{vid}", response_model=schemas.VeiculoOut)
 def editar(vid: int, dados: schemas.VeiculoIn, db: Session = Depends(get_db)):
     v = db.get(models.Veiculo, vid)

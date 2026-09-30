@@ -104,6 +104,18 @@ const P = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
 };
+
+/* ── Escape XSS: todo dado vindo do usuário passa por aqui ── */
+function esc(v) {
+  if (v === null || v === undefined) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function icon(name, cls = "") {
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</svg>`;
 }
@@ -357,7 +369,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.100.0 · 93d8252 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.101.0 · 9165ecb · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -701,7 +713,7 @@ async function viewDashboard(v) {
             : `<svg viewBox='0 0 24 24' fill='none' stroke='#C9A94E' stroke-width='2' width='18' height='18'><polyline points='23 18 13.5 8.5 8.5 13.5 1 6'/><polyline points='17 18 23 18 23 12'/></svg>`}
       </div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.descricao)}</div>
         <div style="font-size:11.5px;color:${atras?"var(--red)":"var(--ink-3)"};margin-top:1px">${quando}${l.categoria?" · "+l.categoria:""}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
@@ -877,7 +889,7 @@ function popupVencimentos(venc) {
     const quando = atras ? `há ${Math.abs(d)}d` : d === 0 ? "hoje" : d === 1 ? "amanhã" : `em ${d}d`;
     return `<div class="venc-item">
       <span class="venc-ico ${atras ? 'i-red' : rec ? 'i-green' : 'i-amber'}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
-      <div class="d"><div class="n">${l.descricao}</div><div class="w">${rec ? "A receber" : "A pagar"} · ${dataBRcurto(l.vencimento)} (${quando})</div></div>
+      <div class="d"><div class="n">${esc(l.descricao)}</div><div class="w">${rec ? "A receber" : "A pagar"} · ${dataBRcurto(l.vencimento)} (${quando})</div></div>
       <div class="vv ${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</div>
     </div>`;
   }).join("");
@@ -922,7 +934,7 @@ async function viewLancamentos(v, tipoFixo) {
         </div>
         <select id="fcat" onchange="filtroCat(this.value)" style="flex:1;max-width:180px">
           <option value="">Todas categorias</option>
-          ${cats.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")}
+          ${cats.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}
         </select>
         <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><line x1='8' y1='6' x2='16' y2='6'/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg> CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
@@ -1000,7 +1012,7 @@ async function recarregarTabela() {
         <!-- info principal -->
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${l.descricao}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${esc(l.descricao)}</div>
             <div style="font-family:monospace;font-size:17px;font-weight:900;
                  color:${rec?"#15803D":"#DC2626"};flex-shrink:0;
                  background:${rec?"#F0FDF4":"#FEF2F2"};padding:4px 10px;border-radius:10px">
@@ -1015,10 +1027,10 @@ async function recarregarTabela() {
             <span style="font-size:12px;color:${l.status === "atrasado" ? "var(--red)" : "var(--ink-3)"}">${quando}</span>
             <!-- categoria -->
             ${l.categoria_nome ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-3)">
-              <span style="width:8px;height:8px;border-radius:50%;background:${catCor};flex-shrink:0"></span>${l.categoria_nome}
+              <span style="width:8px;height:8px;border-radius:50%;background:${catCor};flex-shrink:0"></span>${esc(l.categoria_nome)}
             </span>` : ""}
             <!-- conta -->
-            ${l.conta_nome ? `<span style="font-size:12px;color:var(--ink-3)">· ${l.conta_nome}</span>` : ""}
+            ${l.conta_nome ? `<span style="font-size:12px;color:var(--ink-3)">· ${esc(l.conta_nome)}</span>` : ""}
           </div>
         </div>
       </div>
@@ -1086,7 +1098,7 @@ function formLancamento(l, tipo, pre) {
           <div style="position:relative">
             <select id="f-cat" onchange="_previewCat(this)" style="width:100%;padding-left:28px">
               <option value="">— Sem categoria —</option>
-              ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""} data-cor="${c.cor||"#94A3B8"}">${c.nome}</option>`).join("")}
+              ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""} data-cor="${c.cor||"#94A3B8"}">${esc(c.nome)}</option>`).join("")}
             </select>
             <span id="f-cat-dot" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
               width:10px;height:10px;border-radius:50%;pointer-events:none;
@@ -1104,7 +1116,7 @@ function formLancamento(l, tipo, pre) {
         <div class="campo"><label>Conta / carteira</label>
           <select id="f-conta">
             <option value="">— Qualquer —</option>
-            ${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? "selected" : ""}>${c.nome}</option>`).join("")}
+            ${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}
           </select></div>
 
         <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
@@ -1113,7 +1125,7 @@ function formLancamento(l, tipo, pre) {
               <option value="">— Selecione —</option>
               ${State.contatos.map(c => {
                 const tipo = c.tipo ? ` (${c.tipo})` : "";
-                return `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${c.nome}${tipo}</option>`;
+                return `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${esc(c.nome)}${tipo}</option>`;
               }).join("")}
             </select>
           </div>
@@ -1338,10 +1350,10 @@ function formBaixa(l) {
       <div class="modal-h"><span class="card-ico i-green">${icon("checkCircle")}</span>
         <h3>Dar baixa</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
-        <p style="margin-bottom:16px;color:var(--ink-2)">Confirmar ${rec ? 'recebimento' : 'pagamento'} de <b>${l.descricao}</b> no valor de <b class="${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</b>?</p>
+        <p style="margin-bottom:16px;color:var(--ink-2)">Confirmar ${rec ? 'recebimento' : 'pagamento'} de <b>${esc(l.descricao)}</b> no valor de <b class="${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</b>?</p>
         <div class="frm">
           <div class="campo"><label>Data</label><input id="b-data" type="date" value="${hojeISO()}"></div>
-          <div class="campo"><label>Conta</label><select id="b-conta"><option value="">Manter</option>${State.contas.map(c => `<option value="${c.id}" ${l.conta_id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
+          <div class="campo"><label>Conta</label><select id="b-conta"><option value="">Manter</option>${State.contas.map(c => `<option value="${c.id}" ${l.conta_id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
           <div class="campo"><label>Juros (R$)</label><input id="b-juros" type="number" step="0.01" value="${l.juros && +l.juros ? l.juros : ''}" placeholder="0,00"></div>
           <div class="campo"><label>Multa (R$)</label><input id="b-multa" type="number" step="0.01" value="${l.multa && +l.multa ? l.multa : ''}" placeholder="0,00"></div>
         </div>
@@ -1395,7 +1407,7 @@ async function viewVencimentos(v) {
       return `<div class="venc-item" onclick="formLancamentoId(${l.id})" style="cursor:pointer"
           onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
         <span class="venc-ico ${atras ? 'i-red' : rec ? 'i-green' : 'i-amber'}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
-        <div class="d"><div class="n">${l.descricao}</div><div class="w">${quando} · ${dataBR(l.vencimento)}${l.categoria ? " · " + l.categoria : ""}</div></div>
+        <div class="d"><div class="n">${esc(l.descricao)}</div><div class="w">${quando} · ${dataBR(l.vencimento)}${l.categoria ? " · " + l.categoria : ""}</div></div>
         <div class="vv ${rec ? 'val-rec' : 'val-desp'}">${money(l.valor)}</div>
         ${mostrarBotao ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})">${icon("check")}Baixar</button>` : ""}
       </div>`;
@@ -1435,10 +1447,10 @@ async function viewContas(v) {
              onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'"
              onmouseout="this.style.transform='';this.style.boxShadow=''"
              onclick="FILTRO.conta=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')"
-             title="Ver lançamentos de ${c.nome}">
+             title="Ver lançamentos de ${esc(c.nome)}">
           <div class="card-h">
             ${c.logo ? avatarLogo(c.logo, c.nome, 40) : `<span class="card-ico" style="background:${c.cor}22;color:${c.cor}">${icon(c.tipo === "carteira" ? "cash" : "bank")}</span>`}
-            <div class="grow"><h3>${c.nome}</h3><div class="sub">${c.tipo === "carteira" ? "Carteira / dinheiro" : (c.banco || "Conta bancária")}</div></div>
+            <div class="grow"><h3>${esc(c.nome)}</h3><div class="sub">${c.tipo === "carteira" ? "Carteira / dinheiro" : (c.banco || "Conta bancária")}</div></div>
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="val mono-num" style="font-size:26px;color:${Number(c.saldo_atual) < 0 ? 'var(--red)' : 'var(--navy)'};margin:6px 0 2px">${money(c.saldo_atual)}</div>
@@ -1509,9 +1521,9 @@ async function viewCategorias(v) {
         ${arr.map(c => `
           <div style="display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px;transition:background .15s"
                onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"
-               onclick="FILTRO.cat=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')" title="Ver lançamentos de ${c.nome}">
+               onclick="FILTRO.cat=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')" title="Ver lançamentos de ${esc(c.nome)}">
             <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
-            <div class="grow"><div class="nm">${c.nome}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
+            <div class="grow"><div class="nm">${esc(c.nome)}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
             <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
           </div>`).join("") || `<div class="empty" style="padding:20px">${icon("tag")}<p>Nenhuma.</p></div>`}
@@ -1600,7 +1612,7 @@ function renderContatos() {
     (!FCONTATO || c.tipo === FCONTATO) && (!busca || c.nome.toLowerCase().includes(busca)));
   $("#tbc").innerHTML = arr.map(c => `
     <tr>
-      <td><div style="display:flex;align-items:center;gap:10px">${avatarLogo(c.logo, c.nome)}<div><div class="cell-desc">${c.nome}</div>${c.obs ? `<div class="cell-sub">${c.obs}</div>` : ""}</div></div></td>
+      <td><div style="display:flex;align-items:center;gap:10px">${avatarLogo(c.logo, c.nome)}<div><div class="cell-desc">${esc(c.nome)}</div>${c.obs ? `<div class="cell-sub">${c.obs}</div>` : ""}</div></div></td>
       <td><span class="tag ${c.tipo === "cliente" ? "pago" : "pendente"}">${c.tipo === "cliente" ? "Recebo de" : "Pago para"}</span></td>
       <td>${c.documento || "—"}</td><td>${c.telefone || "—"}</td><td>${c.email || "—"}</td>
       <td><div style="display:flex;gap:4px;justify-content:flex-end">
@@ -2444,7 +2456,7 @@ async function carregarGruposWA() {
             </div>
             <div style="flex:1;min-width:0">
               <div style="font-weight:700;font-size:14px;color:var(--ink);
-                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.nome || "(sem nome)"}</div>
+                          overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.nome || "(sem nome)")}</div>
               <div style="font-size:11px;color:var(--ink-3);font-family:monospace;margin-top:2px;
                           overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.jid}</div>
             </div>
@@ -3065,8 +3077,8 @@ async function viewUsuarios(v) {
           <div class="familia-avatar" style="background:${u.cor}">
             <span style="font-size:28px">${u.emoji}</span>
           </div>
-          <div class="familia-nome">${u.nome}</div>
-          <div class="familia-email">${u.email}</div>
+          <div class="familia-nome">${esc(u.nome)}</div>
+          <div class="familia-email">${esc(u.email)}</div>
           <span class="familia-papel ${u.papel}">${u.papel === "admin" ? "Admin" : "Membro"}</span>
           <div class="familia-acesso">${u.ultimo_acesso
             ? "Último acesso: " + new Date(u.ultimo_acesso).toLocaleDateString("pt-BR")
@@ -3384,7 +3396,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
           <input id="fc-valor" type="number" step="0.01" value="${valorTotal}" oninput="_recalcularParcelas()"></div>
         <div class="campo"><label>Categoria</label>
           <select id="fc-cat"><option value="">—</option>${State.cats.filter(c => c.tipo === 'despesa').map(c =>
-            `<option value="${c.id}" ${d.categoria_sugerida?.id === c.id ? 'selected' : ''}>${c.nome}</option>`).join("")}</select></div>
+            `<option value="${c.id}" ${d.categoria_sugerida?.id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
         <div class="campo"><label>Data da compra</label>
           <input id="fc-data" type="date" value="${dataRef}"></div>
         <div class="campo"><label>Estabelecimento</label>
@@ -3399,7 +3411,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
           <div class="frm" style="grid-template-columns:1fr 1fr">
             <div class="campo"><label>Cartão usado</label>
               <select id="fc-cartao">
-                ${cartoes.length ? cartoes.map(c => `<option value="${c.id}">${c.nome}</option>`).join("")
+                ${cartoes.length ? cartoes.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")
                   : `<option value="">Nenhum cartão cadastrado</option>`}
               </select></div>
             <div class="campo"><label>Nº de parcelas</label>
@@ -3810,7 +3822,7 @@ function _cardMeta(m) {
     ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída ✓</span></div>` : ""}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
       <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${m.icone}</div>
-      <div><div style="font-weight:700;color:var(--ink)">${m.nome}</div>
+      <div><div style="font-weight:700;color:var(--ink)">${esc(m.nome)}</div>
         ${m.descricao ? `<div class="sub">${m.descricao}</div>` : ""}</div>
     </div>
     <div style="margin-bottom:10px">
@@ -3970,7 +3982,7 @@ async function buscaGlobal(q) {
         const l = r.l;
         return `<div class="busca-item" onclick="setView('lancamentos');fecharBusca()">
           <span style="font-size:16px">${l.tipo==="receita" ? `<svg viewBox='0 0 24 24' fill='none' stroke='#15803D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='5' x2='12' y2='19'/><polyline points="19 12 12 19 5 12"/></svg>` : `<svg viewBox='0 0 24 24' fill='none' stroke='#991B1B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='19' x2='12' y2='5'/><polyline points="5 12 12 5 19 12"/></svg>`}</span>
-          <div style="flex:1;min-width:0"><div class="busca-nome">${l.descricao}</div>
+          <div style="flex:1;min-width:0"><div class="busca-nome">${esc(l.descricao)}</div>
             <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"—"}</div></div>
           <span class="mono-num" style="font-size:12px;font-weight:700">${money(l.valor)}</span>
         </div>`;
@@ -3978,7 +3990,7 @@ async function buscaGlobal(q) {
       const c = r.c;
       return `<div class="busca-item" onclick="setView('contatos');fecharBusca()">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <div style="flex:1"><div class="busca-nome">${c.nome}</div>
+        <div style="flex:1"><div class="busca-nome">${esc(c.nome)}</div>
           <div class="busca-sub">${c.tipo||""}</div></div>
       </div>`;
     }).join("");
@@ -4047,7 +4059,7 @@ async function buscaMobileQuery(q) {
         html += `<div onclick="fecharBuscaMobile();setView('lancamentos')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer">
           <span style="font-size:22px">${ico}</span>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</div>
+            <div style="font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.descricao)}</div>
             <div style="font-size:12px;color:var(--ink-2)">${data}${cat}</div>
           </div>
           <span style="font-family:monospace;font-weight:700;font-size:13px;color:${cor};flex-shrink:0">${money(l.valor)}</span>
@@ -4060,7 +4072,7 @@ async function buscaMobileQuery(q) {
         html += `<div onclick="fecharBuscaMobile();setView('contatos')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer">
           <span style="width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">${c.nome.charAt(0).toUpperCase()}</span>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:600;color:var(--ink)">${c.nome}</div>
+            <div style="font-weight:600;color:var(--ink)">${esc(c.nome)}</div>
             <div style="font-size:12px;color:var(--ink-2)">${c.tipo || ""}${c.documento ? " · " + c.documento : ""}</div>
           </div>
         </div>`;
@@ -4308,6 +4320,7 @@ const IC_CSV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const IC_PLUS_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
 Object.assign(window, {
+  esc,
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
   formBaixaId, formLancamentoId, abrirFabMenu, abrirMenuMais,

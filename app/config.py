@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # Aplicação
     APP_NOME: str = "Tomelin Gestão Financeira"
     APP_URL: str = ""
-    SECRET_KEY: str = "troque-esta-chave-em-producao-tomelin"
+    SECRET_KEY: str = ""   # vazio = gerada aleatoriamente no boot (ver validação abaixo)
     TOKEN_HORAS: int = 24 * 7  # sessão dura 7 dias
 
     # Banco de dados
@@ -53,3 +53,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# ── Segurança: SECRET_KEY nunca pode ficar no default ──
+import secrets as _secrets, logging as _logging
+if not settings.SECRET_KEY or settings.SECRET_KEY.startswith("troque"):
+    settings.SECRET_KEY = _secrets.token_urlsafe(48)
+    _logging.getLogger("tomelin").warning(
+        "SECRET_KEY não definida — gerada aleatoriamente. "
+        "Defina SECRET_KEY no ambiente para manter as sessões entre reinícios."
+    )

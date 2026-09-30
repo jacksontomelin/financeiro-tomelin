@@ -28,6 +28,13 @@ def criar(dados: schemas.ContaIn, db: Session = Depends(get_db)):
     return out
 
 
+@router.get("/{cid}", response_model=schemas.ContaOut)
+def obter(cid: int, db: Session = Depends(get_db)):
+    o = db.get(models.Conta, cid)
+    if not o:
+        raise HTTPException(404, "Conta não encontrada.")
+    return o
+
 @router.put("/{cid}", response_model=schemas.ContaOut)
 def editar(cid: int, dados: schemas.ContaIn, db: Session = Depends(get_db)):
     c = db.get(models.Conta, cid)

@@ -2,7 +2,7 @@
 Webhook WhatsApp — cópia fiel da lógica do Sentinela.
 Sem dedup, sem cache, sem complexidade. Só recebe, checa e responde.
 """
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..security import usuario_atual
@@ -29,6 +29,8 @@ def _log(texto, resultado, autor=""):
 async def webhook(req: Request, db: Session = Depends(get_db)):
     try:
         raw = await req.body()
+        if len(raw) > 256 * 1024:          # 256 KB — payload legítimo é ~1 KB
+            return {"ok": False, "erro": "payload grande demais"}
         body = __import__("json").loads(raw)
     except Exception as e:
         _DEBUG_PAYLOADS.appendleft({"hora": datetime.now().strftime("%d/%m %H:%M:%S"),
@@ -38,7 +40,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     # loga TUDO que chega — antes de qualquer filtro
     import logging as _lg
     client_ip = req.headers.get("x-forwarded-for","") or (req.client.host if req.client else "?")
-    _lg.getLogger("tomelin.webhook").warning("PAYLOAD de %s: %s", client_ip, body)
+    _lg.getLogger("tomelin.webhook").info("webhook de %s: evento=%s jid=%s", client_ip, body.get("evento"), str(body.get("jid"))[:30])
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
         "ip": client_ip,
@@ -333,8 +335,10 @@ from collections import deque as _deque
 _DEBUG_PAYLOADS: _deque = _deque(maxlen=20)
 
 @router.post("/webhook/debug")
-async def webhook_debug(req: Request):
-    """Endpoint de debug — registra tudo que chega do gateway sem filtro."""
+async def webhook_debug(req: Request, db: Session = Depends(get_db)):
+    """Endpoint de debug — só funciona com WHATSAPP_DEBUG ativo nas configurações."""
+    if not cfg.get_bool(db, "WHATSAPP_DEBUG", False):
+        raise HTTPException(404, "Não encontrado.")
     try:
         body = await req.json()
     except Exception as e:
@@ -365,7 +369,7 @@ def debug_log(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/testar-url")
+@router.get("/testar-url", dependencies=[Depends(usuario_atual)])
 async def testar_url(req: Request):
     """Retorna a URL pública deste servidor — confirma que o webhook está acessível."""
     host = req.headers.get("x-forwarded-host") or req.headers.get("host") or ""
@@ -407,8 +411,11 @@ async def webhook_ping(req: Request):
 _TUNNEL_URL: list = []  # [url] — lista de 1 elemento para ser mutável
 
 @router.post("/tunnel-url")
-async def salvar_tunnel_url(body: dict, db: Session = Depends(get_db)):
-    """Chamado pelo start.sh quando o túnel Cloudflare sobe."""
+async def salvar_tunnel_url(body: dict, req: Request, db: Session = Depends(get_db)):
+    """Chamado pelo start.sh de dentro do container. Só aceita localhost."""
+    origem = req.client.host if req.client else ""
+    if origem not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(403, "Endpoint interno.")
     url = (body.get("url") or "").strip()
     if url:
         if _TUNNEL_URL:

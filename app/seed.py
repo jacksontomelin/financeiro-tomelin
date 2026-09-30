@@ -168,3 +168,11 @@ def _demo(db):
         "Saúde", hoje, hoje + timedelta(days=6))
     add("Internet e telefone", TipoMov.despesa, 160,
         "Contas de Casa", hoje, hoje + timedelta(days=7))
+
+    # ── Aviso de segurança ──
+    if settings.ADMIN_SENHA == "tomelin123":
+        import logging
+        logging.getLogger("tomelin").warning(
+            "SENHA PADRÃO em uso (tomelin123). "
+            "Troque em Família > editar usuário, ou defina ADMIN_SENHA no ambiente."
+        )
