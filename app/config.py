@@ -7,6 +7,7 @@ class Settings(BaseSettings):
 
     # Aplicação
     APP_NOME: str = "Tomelin Gestão Financeira"
+    APP_URL: str = ""
     SECRET_KEY: str = "troque-esta-chave-em-producao-tomelin"
     TOKEN_HORAS: int = 24 * 7  # sessão dura 7 dias
 

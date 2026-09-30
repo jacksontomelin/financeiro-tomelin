@@ -44,7 +44,8 @@ def pct(parte, total) -> str:
 
 
 def _hash(*args) -> str:
-    seed = "|".join(str(a) for a in args) + "|" + uuid.uuid4().hex[:8]
+    """Hash determinístico — mesmo args sempre gera mesmo código."""
+    seed = "|".join(str(a) for a in args)
     return hashlib.sha256(seed.encode()).hexdigest()[:20].upper()
 
 
@@ -91,34 +92,30 @@ def _cabecalho(ss, titulo, subtitulo=""):
     return els
 
 
-# ── QR Code de autenticidade (pequeno e discreto) ──
-def _qr_drawing(text: str, size=13*mm):
-    d = Drawing(size, size)
-    n = 21
-    cell = size / n
-    h = hashlib.sha256(text.encode()).digest()
-    d.add(Rect(0, 0, size, size, fillColor=colors.white, strokeColor=LINE, strokeWidth=.3))
-    for ox, oy in [(0, n-7), (n-7, n-7), (0, 0)]:
-        for i in range(7):
-            for j in range(7):
-                if i in (0,6) or j in (0,6) or (2<=i<=4 and 2<=j<=4):
-                    d.add(Rect((ox+i)*cell, (oy+j)*cell, cell, cell, fillColor=NAVY, strokeColor=None))
-    bits = []
-    for b in h:
-        for bit in range(8):
-            bits.append((b >> bit) & 1)
-    idx = 0
-    for i in range(n):
-        for j in range(n):
-            if (i<8 and j>n-9) or (i>n-9 and j>n-9) or (i<8 and j<8):
-                continue
-            if idx < len(bits) and bits[idx]:
-                d.add(Rect(i*cell, j*cell, cell, cell, fillColor=NAVY, strokeColor=None))
-            idx = (idx + 1) % len(bits)
-    return d
+# ── QR Code real de autenticidade ──
+def _qr_drawing(url: str, size=14*mm):
+    """Gera QR code real que pode ser escaneado pelo celular."""
+    try:
+        import qrcode, io
+        from reportlab.lib.utils import ImageReader
+        qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=4, border=1)
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color=(8, 45, 81), back_color=(255, 255, 255))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        from reportlab.platypus import Image as RLImage
+        return RLImage(buf, width=size, height=size)
+    except Exception:
+        # fallback: quadrado simples
+        d = Drawing(size, size)
+        d.add(Rect(0, 0, size, size, fillColor=colors.white, strokeColor=LINE, strokeWidth=.5))
+        d.add(Rect(2, 2, size-4, size-4, fillColor=NAVY, strokeColor=None))
+        return d
 
 
-def _rodape(ss, auth=None):
+def _rodape(ss, auth=None, verify_url=None):
     partes = [settings.EMPRESA_NOME]
     if settings.EMPRESA_DOC:
         partes.append(settings.EMPRESA_DOC)
@@ -131,7 +128,7 @@ def _rodape(ss, auth=None):
                 HRFlowable(width="100%", thickness=0.6, color=LINE, spaceAfter=4),
                 linha_final]
 
-    qr = _qr_drawing(auth, size=13*mm)
+    qr = _qr_drawing(verify_url or auth, size=14*mm)
     auth_p = Paragraph(
         f'<font size="7"><b>Autenticidade:</b> {auth}</font>', ss["Foot"])
     ft = Table([[qr, [auth_p, Spacer(1, 3), linha_final]]], colWidths=[15*mm, None])
@@ -151,6 +148,9 @@ def recibo(l, categoria="", conta="", contato="") -> bytes:
     ss = _styles()
     buf, doc = _doc(f"Recibo #{l.id:04d}")
     auth = _hash("recibo", l.id, l.valor_total)
+    from .config import settings as _cfg
+    base = getattr(_cfg, "APP_URL", "").rstrip("/") or "http://localhost:8000"
+    verify_url = f"{base}/verificar/{auth}"
     tipo_lbl = "RECEBIMENTO" if l.tipo.value == "receita" else "PAGAMENTO"
     els = _cabecalho(ss, f"Recibo de {tipo_lbl.title()}", f"Nº {l.id:04d}")
 

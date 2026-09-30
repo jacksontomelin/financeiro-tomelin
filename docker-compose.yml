@@ -11,6 +11,7 @@ services:
       ADMIN_SENHA: ${ADMIN_SENHA:-tomelin123}
       WHATSAPP_ATIVO: ${WHATSAPP_ATIVO:-false}
       WHATSAPP_API_URL: ${WHATSAPP_API_URL:-}
+      APP_URL: ${APP_URL:-http://mgsjhilwy87jkuzoegyb2zly.189.126.105.8.sslip.io}
       WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
       WHATSAPP_GRUPO: ${WHATSAPP_GRUPO:-}
       RECIBO_WHATSAPP_AUTO: ${RECIBO_WHATSAPP_AUTO:-true}
