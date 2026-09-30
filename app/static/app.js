@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.96.0 · 25ddaf5 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.97.0 · 13cd310 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -389,9 +389,8 @@ function renderApp() {
           <div class="busca-box" id="busca-box"></div>
         </div>
         <button class="btn-icon show-mob" title="Buscar" onclick="abrirBuscaMobile()">${icon("search")}</button>
-        <div class="hide-mob">
-          <h2 id="tb-title">Visão geral</h2>
-          <div class="sub" id="tb-sub"></div>
+        <div class="hide-mob" style="min-width:0">
+          <div id="tb-title" style="font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px"></div>
         </div>
         <div class="grow"></div>
         <button class="btn-icon hide-mob" title="Tour do sistema" onclick="iniciarTour()" style="background:linear-gradient(135deg,#C9A94E,#B8963B);border:none;color:#fff">${icon("alert")}</button>
@@ -724,7 +723,7 @@ async function viewDashboard(v) {
   v.innerHTML = `
     <!-- ── HERO ── -->
     <div style="background:linear-gradient(135deg,#06243F 0%,#082D51 45%,#0E3A63 100%);
-                border-radius:16px;padding:16px 20px 0;margin-bottom:12px;position:relative;overflow:hidden">
+                border-radius:16px;padding:14px 18px 0;margin-bottom:12px;position:relative;overflow:hidden">
       <div class="hero-circle-1"></div>
       <div class="hero-circle-2"></div>
       <!-- spark line decorativa -->
@@ -804,6 +803,9 @@ async function viewDashboard(v) {
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
     </div>` : ""}
 
+    <!-- ── CONTEÚDO INFERIOR (2 colunas no desktop) ── -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start" class="dash-grid">
+    <div>
     <!-- ── PRÓXIMOS VENCIMENTOS ── -->
     ${todasVenc.length ? `
     <div class="card card-pad" style="margin-bottom:16px">
@@ -1028,7 +1030,7 @@ async function recarregarTabela() {
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z'/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg> Recibo</button>
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg> WA</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})">✕</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='14' height='14'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg></button>
       </div>
     </div>`;
   }).join("");
