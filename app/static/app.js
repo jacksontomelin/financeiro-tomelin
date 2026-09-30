@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.82.0 · 5a0db34</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.83.0 · 917875d</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1140,14 +1140,26 @@ async function salvarLanc(id) {
 
 // Wrappers seguros para onclick — buscam o objeto do cache global em vez de
 // embutir JSON.stringify() (que quebra quando há apóstrofos nos dados)
-function formBaixaId(id) {
-  const l = _LANC_CACHE.get(id);
-  if (!l) { toast("Recarregue a página e tente novamente.", "err"); return; }
+async function formBaixaId(id) {
+  let l = _LANC_CACHE.get(id);
+  if (!l) {
+    try {
+      l = await api(`/api/lancamentos/${id}`);
+      if (l && l.id) _LANC_CACHE.set(l.id, l);
+    } catch {}
+  }
+  if (!l || !l.id) { toast("Lançamento não encontrado.", "err"); return; }
   formBaixa(l);
 }
-function formLancamentoId(id) {
-  const l = _LANC_CACHE.get(id);
-  if (!l) { toast("Recarregue a página e tente novamente.", "err"); return; }
+async function formLancamentoId(id) {
+  let l = _LANC_CACHE.get(id);
+  if (!l) {
+    try {
+      l = await api(`/api/lancamentos/${id}`);
+      if (l && l.id) _LANC_CACHE.set(l.id, l);
+    } catch {}
+  }
+  if (!l || !l.id) { toast("Lançamento não encontrado.", "err"); return; }
   formLancamento(l, l.tipo);
 }
 

@@ -63,6 +63,16 @@ def listar(
     return [_out(i) for i in itens]
 
 
+@router.get("/{lid}", response_model=schemas.LancamentoOut)
+def obter(lid: int, db: Session = Depends(get_db)):
+    from ..models import Lancamento
+    from fastapi import HTTPException
+    l = db.get(Lancamento, lid)
+    if not l:
+        raise HTTPException(404, "Lançamento não encontrado")
+    return l
+
+
 @router.post("", response_model=schemas.LancamentoOut)
 def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
     payload = dados.model_dump()
