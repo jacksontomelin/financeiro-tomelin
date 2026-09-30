@@ -322,25 +322,25 @@ function renderLogin() {
    ============================================================ */
 const NAV = [
   { sec: "Painel" },
-  { id: "dashboard", nome: "Visão geral", ic: "dashboard", sub: "" },
-  { id: "vencimentos", nome: "Vencimentos", ic: "alert", sub: "Contas atrasadas e a vencer", badge: true },
-  { id: "relatorios", nome: "Relatórios", ic: "pie", sub: "Balancete, patrimônio e projeções" },
+  { id: "dashboard",    nome: "Visão geral",          ic: "grid",      sub: "Resumo do mês",                        badge: false },
+  { id: "vencimentos",  nome: "Vencimentos",           ic: "clock",     sub: "Contas atrasadas e a vencer",          badge: true  },
+  { id: "relatorios",   nome: "Relatórios",            ic: "pie",       sub: "Balancete, patrimônio e projeções",    badge: false },
   { sec: "Movimentação" },
-  { id: "receber", nome: "Contas a receber", ic: "arrowDown", sub: "Recebimentos previstos e realizados" },
-  { id: "pagar", nome: "Contas a pagar", ic: "arrowUp", sub: "Pagamentos previstos e realizados" },
-  { id: "lancamentos", nome: "Todos os lançamentos", ic: "wallet", sub: "Histórico completo de movimentações" },
-  { id: "compras", nome: "Compras e cartões", ic: "receipt", sub: "Itens comprados e parcelas do cartão" },
-  { id: "metas", nome: "Metas financeiras", ic: "star", sub: "Objetivos e reservas de dinheiro" },
+  { id: "receber",      nome: "Contas a receber",      ic: "arrowDown", sub: "Receitas previstas e realizadas",      badge: false },
+  { id: "pagar",        nome: "Contas a pagar",        ic: "arrowUp",   sub: "Despesas previstas e realizadas",      badge: false },
+  { id: "lancamentos",  nome: "Extrato completo",      ic: "terminal",  sub: "Histórico completo de movimentações",  badge: false },
+  { id: "compras",      nome: "Compras e cartões",     ic: "receipt",   sub: "Parcelamentos e cartões",              badge: false },
+  { id: "metas",        nome: "Metas financeiras",     ic: "star",      sub: "Objetivos e reservas",                 badge: false },
   { sec: "Patrimônio" },
-  { id: "veiculos", nome: "Veículos", ic: "car", sub: "Carros e financiamentos (FIPE ou valor fixo)" },
+  { id: "veiculos",     nome: "Veículos",              ic: "car",       sub: "Carros e financiamentos",              badge: false },
+  { id: "contas",       nome: "Contas e carteiras",    ic: "bank",      sub: "Saldos por conta bancária",            badge: false },
   { sec: "Cadastros" },
-  { id: "contas", nome: "Contas e carteiras", ic: "bank", sub: "Saldos por conta bancária" },
-  { id: "categorias", nome: "Categorias", ic: "tag", sub: "Classificação de receitas e despesas" },
-  { id: "contatos", nome: "Contatos", ic: "users", sub: "Recebo de · Pago para" },
-  { sec: "Integrações" },
-  { id: "whatsapp", nome: "WhatsApp", ic: "whatsapp", sub: "Alertas e comandos no grupo de controle" },
-  { id: "usuarios", nome: "Família", ic: "users", sub: "Maisa, Jackson e membros da família" },
-  { id: "configuracoes", nome: "Configurações", ic: "cog", sub: "WhatsApp, FIPE, alertas, PDFs" },
+  { id: "categorias",   nome: "Categorias",            ic: "tag",       sub: "Classificação de movimentações",       badge: false },
+  { id: "contatos",     nome: "Contatos",              ic: "users",     sub: "Clientes e fornecedores",              badge: false },
+  { sec: "Sistema" },
+  { id: "usuarios",     nome: "Família",               ic: "user",      sub: "Membros e permissões",                 badge: false },
+  { id: "configuracoes",nome: "Configurações",         ic: "cog",       sub: "Alertas, FIPE, PDFs",                  badge: false },
+  { id: "whatsapp",     nome: "WhatsApp",              ic: "whatsapp",  sub: "Alertas e comandos no grupo",          badge: false },
 ];
 const META = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n]));
 
@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.97.0 · 13cd310 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.98.0 · e77ba9b · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -743,7 +743,7 @@ async function viewDashboard(v) {
       <!-- saldo grande -->
       <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
-        <div style="font-size:clamp(20px,3vw,26px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div style="font-size:clamp(22px,3.5vw,32px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
           <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='12' height='12' style='display:inline;vertical-align:middle'>${saldoPos?'<polyline points="5 12 12 5 19 12"/>':'<polyline points="5 12 12 19 19 12"/>'}</svg>
           ${money(Math.abs(resultado))} ${resPos?"resultado positivo":"resultado negativo"} este mês
@@ -759,7 +759,7 @@ async function viewDashboard(v) {
           <div style="flex:1;padding:10px 12px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
                onclick="${nav}"
                onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">
-            <div style="font-size:9.5px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">${lab}</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">${lab} ›</div>
             <div style="font-size:13px;font-weight:800;color:${cor};font-family:monospace">${val}</div>
           </div>`).join("")}
       </div>
@@ -774,16 +774,16 @@ async function viewDashboard(v) {
         ["trendUp",  "Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
       ].map(([ic,lab,acao,grad]) => `
         <button data-acao="${acao}" onclick="_atalhoClick(this)"
-          style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px 10px;
-                 border-radius:14px;border:none;background:${grad};cursor:pointer;
-                 transition:all .18s;box-shadow:0 3px 10px rgba(0,0,0,.12);position:relative;overflow:hidden"
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px 12px;
+                 border-radius:16px;border:none;background:${grad};cursor:pointer;
+                 transition:all .18s;box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;overflow:hidden"
           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.22)'"
           onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,0,0,.15)'">
-          <div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.18);
+          <div style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.2);
                display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
-            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='18' height='18'>${P[ic]||""}</svg>
+            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='20' height='20'>${P[ic]||""}</svg>
           </div>
-          <span style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,.95);text-align:center;
+          <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.95);text-align:center;
                        line-height:1.2;position:relative;z-index:1">${lab}</span>
           <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;
                background:rgba(255,255,255,.08)"></div>
