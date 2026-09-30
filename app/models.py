@@ -350,3 +350,38 @@ class Meta(Base):
     @property
     def falta(self):
         return max(0, float(self.valor_alvo) - float(self.valor_atual))
+
+
+class CnpjCache(Base):
+    """
+    Cache local de consultas de CNPJ.
+    Evita bater na API externa toda vez — dado cadastral muda pouco.
+    """
+    __tablename__ = "cnpj_cache"
+    cnpj = Column(String(14), primary_key=True)          # só dígitos
+    razao_social = Column(String(250), nullable=True)
+    nome_fantasia = Column(String(250), nullable=True)
+    situacao = Column(String(60), nullable=True)
+    telefone = Column(String(40), nullable=True)
+    email = Column(String(160), nullable=True)
+    logradouro = Column(String(200), nullable=True)
+    numero = Column(String(20), nullable=True)
+    complemento = Column(String(100), nullable=True)
+    bairro = Column(String(100), nullable=True)
+    cidade = Column(String(100), nullable=True)
+    estado = Column(String(2), nullable=True)
+    cep = Column(String(8), nullable=True)
+    fonte = Column(String(40), nullable=True)            # de qual provedor veio
+    consultado_em = Column(DateTime, default=datetime.utcnow)
+
+
+class CepCache(Base):
+    """Cache local de consultas de CEP."""
+    __tablename__ = "cep_cache"
+    cep = Column(String(8), primary_key=True)
+    logradouro = Column(String(200), nullable=True)
+    bairro = Column(String(100), nullable=True)
+    cidade = Column(String(100), nullable=True)
+    estado = Column(String(2), nullable=True)
+    fonte = Column(String(40), nullable=True)
+    consultado_em = Column(DateTime, default=datetime.utcnow)

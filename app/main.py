@@ -29,6 +29,17 @@ def _migrar(engine):
         """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT '👤', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
         """CREATE TABLE IF NOT EXISTS login_historico (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, data_hora TIMESTAMP DEFAULT NOW(), ip VARCHAR(60), dispositivo VARCHAR(200), sucesso BOOLEAN DEFAULT TRUE)""",
         "CREATE INDEX IF NOT EXISTS ix_login_hist_uid ON login_historico(usuario_id)",
+        # cache de consultas externas (CNPJ / CEP)
+        """CREATE TABLE IF NOT EXISTS cnpj_cache (
+            cnpj VARCHAR(14) PRIMARY KEY, razao_social VARCHAR(250), nome_fantasia VARCHAR(250),
+            situacao VARCHAR(60), telefone VARCHAR(40), email VARCHAR(160),
+            logradouro VARCHAR(200), numero VARCHAR(20), complemento VARCHAR(100),
+            bairro VARCHAR(100), cidade VARCHAR(100), estado VARCHAR(2), cep VARCHAR(8),
+            fonte VARCHAR(40), consultado_em TIMESTAMP DEFAULT NOW())""",
+        """CREATE TABLE IF NOT EXISTS cep_cache (
+            cep VARCHAR(8) PRIMARY KEY, logradouro VARCHAR(200), bairro VARCHAR(100),
+            cidade VARCHAR(100), estado VARCHAR(2), fonte VARCHAR(40),
+            consultado_em TIMESTAMP DEFAULT NOW())""",
 
     ]
     with engine.connect() as conn:

@@ -369,7 +369,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.103.0 · 6c114aa · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.104.0 · c754b49 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1598,8 +1598,17 @@ async function viewContatos(v) {
         <input class="search-i" id="bc" placeholder="Buscar por nome, documento ou cidade..." oninput="renderContatos()">
       </div>
     </div>
-    <div id="lista-contatos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>`;
+    <div id="lista-contatos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
+    <div id="cache-info" style="margin-top:16px;font-size:11.5px;color:var(--ink-3);text-align:center"></div>`;
   FCONTATO = ""; renderContatos();
+
+  // contador do cache local de CNPJ/CEP
+  api("/api/contatos/cache/estatisticas").then(e => {
+    const box = document.getElementById("cache-info");
+    if (box && (e.cnpjs || e.ceps)) {
+      box.innerHTML = `${e.cnpjs} CNPJ e ${e.ceps} CEP guardados localmente — consultas repetidas não usam internet.`;
+    }
+  }).catch(() => {});
 }
 
 function renderContatos() {
@@ -1896,7 +1905,7 @@ function formContato(c) {
   initLogo(e.logo);
 }
 
-async function _buscarCNPJ() {
+async function _buscarCNPJ(forcar) {
   const el  = document.getElementById("o-cnpj-busca");
   const st  = document.getElementById("o-cnpj-status");
   const raw = (el?.value || "").replace(/\D/g, "");
@@ -1906,11 +1915,11 @@ async function _buscarCNPJ() {
   if (raw.length !== 14) return aviso("Digite os 14 dígitos do CNPJ.", "var(--red)");
   if (!_validaCNPJ(raw)) return aviso("CNPJ inválido — confira os dígitos.", "var(--red)");
 
-  aviso("Consultando a Receita Federal...", "var(--ink-3)");
+  aviso(forcar ? "Atualizando na Receita Federal..." : "Consultando...", "var(--ink-3)");
 
   let d;
   try {
-    d = await api(`/api/contatos/buscar-cnpj/${raw}`);
+    d = await api(`/api/contatos/buscar-cnpj/${raw}${forcar ? "?forcar=true" : ""}`);
   } catch (err) {
     // a API devolve mensagens prontas para o usuário
     const msg = (err && err.message) ? err.message : "Não foi possível consultar agora.";
@@ -1937,14 +1946,26 @@ async function _buscarCNPJ() {
   if (docEl) _validaDoc(docEl);
 
   const inativa = d.situacao && !/ATIVA/i.test(d.situacao);
-  aviso(
-    `${d.razao_social || d.nome}${d.situacao ? " · " + d.situacao : ""}${d.fonte ? " (" + d.fonte + ")" : ""}`,
-    inativa ? "#CA8A04" : "#16A34A"
+  if (st) {
+    st.innerHTML = `
+      <span style="color:${inativa ? "#CA8A04" : "#16A34A"}">
+        ${esc(d.razao_social || d.nome)}${d.situacao ? " · " + esc(d.situacao) : ""}
+      </span>
+      ${d.do_cache ? `
+        <span style="color:var(--ink-3)"> · guardado localmente</span>
+        <button onclick="_buscarCNPJ(true)" style="background:none;border:none;color:var(--navy);
+          font-size:11px;font-weight:700;cursor:pointer;padding:0 0 0 6px;text-decoration:underline">
+          atualizar
+        </button>` : ""}`;
+  }
+  toast(
+    inativa ? `Empresa encontrada — situação: ${d.situacao}`
+            : (d.do_cache ? "Dados do cache local" : "Dados preenchidos"),
+    inativa ? "err" : "ok"
   );
-  toast(inativa ? `Empresa encontrada — situação: ${d.situacao}` : "Dados preenchidos", inativa ? "err" : "ok");
 }
 
-async function _buscarCEP(cep) {
+async function _buscarCEP(cep, forcar) {
   const raw = (cep||"").replace(/\D/g,"");
   if (raw.length !== 8) return;
   try {

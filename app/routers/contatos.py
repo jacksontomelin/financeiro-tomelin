@@ -71,43 +71,58 @@ def excluir(cid: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
+# ── Cache local: quanto tempo um dado consultado continua válido ──
+CACHE_DIAS_CNPJ = 90    # dado cadastral muda pouco
+CACHE_DIAS_CEP  = 365   # endereço de CEP praticamente não muda
+
+
+def _cache_valido(reg, dias: int) -> bool:
+    from datetime import datetime, timedelta
+    if not reg or not reg.consultado_em:
+        return False
+    return (datetime.utcnow() - reg.consultado_em) < timedelta(days=dias)
+
+
 @router.get("/buscar-cep/{cep}")
-def buscar_cep(cep: str):
+def buscar_cep(cep: str, forcar: bool = False, db: Session = Depends(get_db)):
     """
-    Consulta CEP com fallback entre provedores gratuitos.
-    Tenta BrasilAPI → ViaCEP → OpenCEP; o primeiro que responder vence.
+    Consulta CEP. Usa o cache local primeiro; só vai à rede se não tiver
+    ou se forcar=true. Provedores: BrasilAPI → ViaCEP → OpenCEP.
     """
     import re, httpx
+    from datetime import datetime
     c = re.sub(r"\D", "", cep or "")
     if len(c) != 8:
         raise HTTPException(400, "CEP deve ter 8 dígitos.")
 
+    # 1) cache local
+    reg = db.get(models.CepCache, c)
+    if reg and not forcar and _cache_valido(reg, CACHE_DIAS_CEP):
+        return {"cep": c, "logradouro": reg.logradouro or "", "bairro": reg.bairro or "",
+                "cidade": reg.cidade or "", "estado": reg.estado or "",
+                "fonte": (reg.fonte or "") + " (cache)", "do_cache": True}
+
+    # 2) provedores externos
     def _brasilapi():
         r = httpx.get(f"https://brasilapi.com.br/api/cep/v2/{c}", timeout=6)
-        if r.status_code == 404:
-            return "NAO_ENCONTRADO"
-        r.raise_for_status()
-        d = r.json()
-        return {"cep": c, "logradouro": d.get("street") or "", "bairro": d.get("neighborhood") or "",
-                "cidade": d.get("city") or "", "estado": d.get("state") or ""}
+        if r.status_code == 404: return "NAO_ENCONTRADO"
+        r.raise_for_status(); d = r.json()
+        return {"logradouro": d.get("street") or "", "bairro": d.get("neighborhood") or "",
+                "cidade": d.get("city") or "", "estado": d.get("state") or "", "fonte": "BrasilAPI"}
 
     def _viacep():
         r = httpx.get(f"https://viacep.com.br/ws/{c}/json/", timeout=6)
-        r.raise_for_status()
-        d = r.json()
-        if d.get("erro"):
-            return "NAO_ENCONTRADO"
-        return {"cep": c, "logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
-                "cidade": d.get("localidade") or "", "estado": d.get("uf") or ""}
+        r.raise_for_status(); d = r.json()
+        if d.get("erro"): return "NAO_ENCONTRADO"
+        return {"logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("localidade") or "", "estado": d.get("uf") or "", "fonte": "ViaCEP"}
 
     def _opencep():
         r = httpx.get(f"https://opencep.com/v1/{c}", timeout=6)
-        if r.status_code == 404:
-            return "NAO_ENCONTRADO"
-        r.raise_for_status()
-        d = r.json()
-        return {"cep": c, "logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
-                "cidade": d.get("localidade") or "", "estado": d.get("uf") or ""}
+        if r.status_code == 404: return "NAO_ENCONTRADO"
+        r.raise_for_status(); d = r.json()
+        return {"logradouro": d.get("logradouro") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("localidade") or "", "estado": d.get("uf") or "", "fonte": "OpenCEP"}
 
     erros = []
     for nome, fn in (("BrasilAPI", _brasilapi), ("ViaCEP", _viacep), ("OpenCEP", _opencep)):
@@ -116,25 +131,40 @@ def buscar_cep(cep: str):
             if res == "NAO_ENCONTRADO":
                 raise HTTPException(404, "CEP não encontrado.")
             if res and res.get("cidade"):
-                return res
-            erros.append(f"{nome}: resposta vazia")
+                # 3) grava no cache
+                if reg:
+                    for k, v in res.items():
+                        setattr(reg, k, v)
+                    reg.consultado_em = datetime.utcnow()
+                else:
+                    db.add(models.CepCache(cep=c, consultado_em=datetime.utcnow(), **res))
+                db.commit()
+                return {"cep": c, **res, "do_cache": False}
+            erros.append(f"{nome}: vazio")
         except HTTPException:
             raise
         except Exception as e:
             erros.append(f"{nome}: {type(e).__name__}")
-            continue
 
-    log.warning("Busca de CEP %s falhou em todos os provedores: %s", c, "; ".join(erros))
-    raise HTTPException(503, "Serviços de CEP indisponíveis no momento. Preencha o endereço manualmente.")
+    # 4) rede falhou — se tem cache vencido, usa mesmo assim
+    if reg:
+        log.warning("CEP %s: rede falhou (%s), usando cache vencido", c, "; ".join(erros))
+        return {"cep": c, "logradouro": reg.logradouro or "", "bairro": reg.bairro or "",
+                "cidade": reg.cidade or "", "estado": reg.estado or "",
+                "fonte": (reg.fonte or "") + " (cache antigo)", "do_cache": True}
+
+    log.warning("CEP %s falhou em todos os provedores: %s", c, "; ".join(erros))
+    raise HTTPException(503, "Serviços de CEP indisponíveis. Preencha o endereço manualmente.")
 
 
 @router.get("/buscar-cnpj/{cnpj}")
-def buscar_cnpj(cnpj: str):
+def buscar_cnpj(cnpj: str, forcar: bool = False, db: Session = Depends(get_db)):
     """
-    Consulta CNPJ com fallback entre provedores gratuitos.
-    Tenta BrasilAPI → ReceitaWS; o primeiro que responder vence.
+    Consulta CNPJ. Usa o cache local primeiro; só vai à rede se não tiver
+    ou se forcar=true. Provedores: BrasilAPI → ReceitaWS.
     """
     import re, httpx
+    from datetime import datetime
     c = re.sub(r"\D", "", cnpj or "")
     if len(c) != 14:
         raise HTTPException(400, "CNPJ deve ter 14 dígitos.")
@@ -143,51 +173,47 @@ def buscar_cnpj(cnpj: str):
     if not ok:
         raise HTTPException(422, "CNPJ inválido — confira os dígitos.")
 
+    def _do_cache(reg, sufixo="(cache)"):
+        return {
+            "nome": reg.nome_fantasia or reg.razao_social or "",
+            "razao_social": reg.razao_social or "", "documento": c,
+            "telefone": reg.telefone or "", "email": reg.email or "",
+            "logradouro": reg.logradouro or "", "numero": reg.numero or "",
+            "complemento": reg.complemento or "", "bairro": reg.bairro or "",
+            "cidade": reg.cidade or "", "estado": reg.estado or "", "cep": reg.cep or "",
+            "situacao": reg.situacao or "", "fonte": f"{reg.fonte or ''} {sufixo}".strip(),
+            "do_cache": True,
+        }
+
+    # 1) cache local
+    reg = db.get(models.CnpjCache, c)
+    if reg and not forcar and _cache_valido(reg, CACHE_DIAS_CNPJ):
+        return _do_cache(reg)
+
+    # 2) provedores externos
     def _brasilapi():
         r = httpx.get(f"https://brasilapi.com.br/api/cnpj/v1/{c}", timeout=8)
-        if r.status_code == 404:
-            return "NAO_ENCONTRADO"
-        r.raise_for_status()
-        d = r.json()
-        return {
-            "nome": d.get("nome_fantasia") or d.get("razao_social") or "",
-            "razao_social": d.get("razao_social") or "",
-            "documento": c,
-            "telefone": d.get("ddd_telefone_1") or "",
-            "email": d.get("email") or "",
-            "logradouro": d.get("logradouro") or "",
-            "numero": d.get("numero") or "",
-            "complemento": d.get("complemento") or "",
-            "bairro": d.get("bairro") or "",
-            "cidade": d.get("municipio") or "",
-            "estado": d.get("uf") or "",
-            "cep": re.sub(r"\D", "", d.get("cep") or ""),
-            "situacao": d.get("descricao_situacao_cadastral") or "",
-            "fonte": "BrasilAPI",
-        }
+        if r.status_code == 404: return "NAO_ENCONTRADO"
+        r.raise_for_status(); d = r.json()
+        return {"razao_social": d.get("razao_social") or "", "nome_fantasia": d.get("nome_fantasia") or "",
+                "situacao": d.get("descricao_situacao_cadastral") or "",
+                "telefone": d.get("ddd_telefone_1") or "", "email": d.get("email") or "",
+                "logradouro": d.get("logradouro") or "", "numero": d.get("numero") or "",
+                "complemento": d.get("complemento") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("municipio") or "", "estado": d.get("uf") or "",
+                "cep": re.sub(r"\D", "", d.get("cep") or ""), "fonte": "BrasilAPI"}
 
     def _receitaws():
         r = httpx.get(f"https://receitaws.com.br/v1/cnpj/{c}", timeout=10)
-        r.raise_for_status()
-        d = r.json()
-        if d.get("status") == "ERROR":
-            return "NAO_ENCONTRADO"
-        return {
-            "nome": d.get("fantasia") or d.get("nome") or "",
-            "razao_social": d.get("nome") or "",
-            "documento": c,
-            "telefone": d.get("telefone") or "",
-            "email": d.get("email") or "",
-            "logradouro": d.get("logradouro") or "",
-            "numero": d.get("numero") or "",
-            "complemento": d.get("complemento") or "",
-            "bairro": d.get("bairro") or "",
-            "cidade": d.get("municipio") or "",
-            "estado": d.get("uf") or "",
-            "cep": re.sub(r"\D", "", d.get("cep") or ""),
-            "situacao": d.get("situacao") or "",
-            "fonte": "ReceitaWS",
-        }
+        r.raise_for_status(); d = r.json()
+        if d.get("status") == "ERROR": return "NAO_ENCONTRADO"
+        return {"razao_social": d.get("nome") or "", "nome_fantasia": d.get("fantasia") or "",
+                "situacao": d.get("situacao") or "",
+                "telefone": d.get("telefone") or "", "email": d.get("email") or "",
+                "logradouro": d.get("logradouro") or "", "numero": d.get("numero") or "",
+                "complemento": d.get("complemento") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("municipio") or "", "estado": d.get("uf") or "",
+                "cep": re.sub(r"\D", "", d.get("cep") or ""), "fonte": "ReceitaWS"}
 
     erros = []
     for nome, fn in (("BrasilAPI", _brasilapi), ("ReceitaWS", _receitaws)):
@@ -195,17 +221,48 @@ def buscar_cnpj(cnpj: str):
             res = fn()
             if res == "NAO_ENCONTRADO":
                 raise HTTPException(404, "CNPJ não encontrado na Receita Federal.")
-            if res and (res.get("nome") or res.get("razao_social")):
-                return res
-            erros.append(f"{nome}: resposta vazia")
+            if res and (res.get("razao_social") or res.get("nome_fantasia")):
+                # 3) grava no cache
+                if reg:
+                    for k, v in res.items():
+                        setattr(reg, k, v)
+                    reg.consultado_em = datetime.utcnow()
+                else:
+                    db.add(models.CnpjCache(cnpj=c, consultado_em=datetime.utcnow(), **res))
+                db.commit()
+                return {
+                    "nome": res.get("nome_fantasia") or res.get("razao_social") or "",
+                    "razao_social": res.get("razao_social") or "", "documento": c,
+                    "telefone": res.get("telefone") or "", "email": res.get("email") or "",
+                    "logradouro": res.get("logradouro") or "", "numero": res.get("numero") or "",
+                    "complemento": res.get("complemento") or "", "bairro": res.get("bairro") or "",
+                    "cidade": res.get("cidade") or "", "estado": res.get("estado") or "",
+                    "cep": res.get("cep") or "", "situacao": res.get("situacao") or "",
+                    "fonte": res.get("fonte") or "", "do_cache": False,
+                }
+            erros.append(f"{nome}: vazio")
         except HTTPException:
             raise
         except Exception as e:
             erros.append(f"{nome}: {type(e).__name__}")
-            continue
 
-    log.warning("Busca de CNPJ %s falhou em todos os provedores: %s", c, "; ".join(erros))
+    # 4) rede falhou — usa cache vencido se existir
+    if reg:
+        log.warning("CNPJ %s: rede falhou (%s), usando cache vencido", c, "; ".join(erros))
+        return _do_cache(reg, "(cache antigo)")
+
+    log.warning("CNPJ %s falhou em todos os provedores: %s", c, "; ".join(erros))
     raise HTTPException(503, "Serviços de consulta de CNPJ indisponíveis. Preencha os dados manualmente.")
+
+
+@router.get("/cache/estatisticas")
+def cache_estatisticas(db: Session = Depends(get_db)):
+    """Quantos CNPJs e CEPs estão guardados localmente."""
+    from sqlalchemy import func
+    return {
+        "cnpjs": db.query(func.count(models.CnpjCache.cnpj)).scalar() or 0,
+        "ceps":  db.query(func.count(models.CepCache.cep)).scalar() or 0,
+    }
 
 
 @router.get("/{cid}/resumo")
