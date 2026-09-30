@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.88.0 · 16c6d82</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.89.0 · b742d1b</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -768,18 +768,21 @@ async function viewDashboard(v) {
     <!-- ── ATALHOS RÁPIDOS ── -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
       ${[
-        ["plus","Despesa","despesa","linear-gradient(135deg,#082D51,#1E4D8C)"],
-        ["arrowDown","Receita","receita","linear-gradient(135deg,#16A34A,#1A7A6E)"],
-        ["receipt","NF-e","nfe","linear-gradient(135deg,#D97706,#B45309)"],
-        ["trendUp","Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
-      ].map(([ic,lab,acao,grad,emoji]) => `
+        ["plus",     "Despesa",  "despesa",   "linear-gradient(135deg,#082D51,#1E4D8C)"],
+        ["arrowDown","Receita",  "receita",   "linear-gradient(135deg,#16A34A,#1A7A6E)"],
+        ["receipt",  "NF-e",    "nfe",        "linear-gradient(135deg,#D97706,#B45309)"],
+        ["trendUp",  "Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
+      ].map(([ic,lab,acao,grad]) => `
         <button data-acao="${acao}" onclick="_atalhoClick(this)"
           style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px 12px;
                  border-radius:18px;border:none;background:${grad};cursor:pointer;
                  transition:all .18s;box-shadow:0 4px 14px rgba(0,0,0,.15);position:relative;overflow:hidden"
           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.22)'"
           onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,0,0,.15)'">
-          <div style="font-size:26px;line-height:1;position:relative;z-index:1">${emoji}</div>
+          <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.18);
+               display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
+            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='24' height='24'>${P[ic]||""}</svg>
+          </div>
           <span style="font-size:11px;font-weight:800;color:rgba(255,255,255,.95);text-align:center;
                        line-height:1.2;position:relative;z-index:1;letter-spacing:.01em">${lab}</span>
           <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;
