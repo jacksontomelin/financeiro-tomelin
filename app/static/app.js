@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.95.0 · 0ed06b6 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.96.0 · 25ddaf5 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -724,7 +724,7 @@ async function viewDashboard(v) {
   v.innerHTML = `
     <!-- ── HERO ── -->
     <div style="background:linear-gradient(135deg,#06243F 0%,#082D51 45%,#0E3A63 100%);
-                border-radius:20px;padding:18px 20px 0;margin-bottom:14px;position:relative;overflow:hidden">
+                border-radius:16px;padding:16px 20px 0;margin-bottom:12px;position:relative;overflow:hidden">
       <div class="hero-circle-1"></div>
       <div class="hero-circle-2"></div>
       <!-- spark line decorativa -->
@@ -733,25 +733,25 @@ async function viewDashboard(v) {
         <polyline points="${sparkPts}" fill="none" stroke="#C9A94E" stroke-width="1.8" stroke-linejoin="round"/>
       </svg>
       <!-- saudação -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);
              display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div>
-          <div style="font-size:15px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
-          <div style="font-size:11.5px;color:rgba(255,255,255,.5)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
+          <div style="font-size:14px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
         </div>
       </div>
       <!-- saldo grande -->
       <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
-        <div style="font-size:clamp(22px,4vw,30px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div style="font-size:clamp(20px,3vw,26px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
           <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='12' height='12' style='display:inline;vertical-align:middle'>${saldoPos?'<polyline points="5 12 12 5 19 12"/>':'<polyline points="5 12 12 19 19 12"/>'}</svg>
           ${money(Math.abs(resultado))} ${resPos?"resultado positivo":"resultado negativo"} este mês
         </div>
       </div>
       <!-- mini KPIs dentro do hero -->
-      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -20px;margin-top:12px">
+      <div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.1);margin:0 -20px;margin-top:10px">
         ${[
           ["Receitas","#6FD4AF",money(k.receitas_mes),"setView('receber')"],
           ["Despesas","#E0A060",money(k.despesas_mes),"setView('pagar')"],
@@ -775,17 +775,17 @@ async function viewDashboard(v) {
         ["trendUp",  "Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
       ].map(([ic,lab,acao,grad]) => `
         <button data-acao="${acao}" onclick="_atalhoClick(this)"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px 12px;
-                 border-radius:18px;border:none;background:${grad};cursor:pointer;
-                 transition:all .18s;box-shadow:0 4px 14px rgba(0,0,0,.15);position:relative;overflow:hidden"
+          style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px 10px;
+                 border-radius:14px;border:none;background:${grad};cursor:pointer;
+                 transition:all .18s;box-shadow:0 3px 10px rgba(0,0,0,.12);position:relative;overflow:hidden"
           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.22)'"
           onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,0,0,.15)'">
-          <div style="width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.18);
+          <div style="width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.18);
                display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
-            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='24' height='24'>${P[ic]||""}</svg>
+            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='18' height='18'>${P[ic]||""}</svg>
           </div>
-          <span style="font-size:11px;font-weight:800;color:rgba(255,255,255,.95);text-align:center;
-                       line-height:1.2;position:relative;z-index:1;letter-spacing:.01em">${lab}</span>
+          <span style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,.95);text-align:center;
+                       line-height:1.2;position:relative;z-index:1">${lab}</span>
           <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;
                background:rgba(255,255,255,.08)"></div>
         </button>`).join("")}
@@ -3161,7 +3161,7 @@ function _renderPreviewNFe(d) {
   prev.style.display = "block";
   prev.innerHTML = `
     <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span class="card-ico i-green" style="width:36px;height:36px">${icon("checkCircle")}</span>
         <div>
           <div style="font-weight:700;font-size:15px;color:var(--ink)">${d.emitente || "Emitente não identificado"}</div>
