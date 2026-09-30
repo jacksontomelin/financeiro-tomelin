@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.99.0 · d8a6a02 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.100.0 · 93d8252 · 30/09/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1302,11 +1302,34 @@ async function formLancamentoId(id) {
 // Cache genérico para edições seguras (evita JSON.stringify em onclick)
 const _CACHE = { contas:{}, cats:{}, contatos:{}, veiculos:{}, usuarios:{} };
 
-function _editarConta(id)      { const o = _CACHE.contas[id];    if (o) formConta(o);     else toast("Recarregue a página.", "err"); }
-function _editarCategoria(id)  { const o = _CACHE.cats[id];      if (o) formCategoria(o); else toast("Recarregue a página.", "err"); }
-function _editarContato(id)    { const o = _CACHE.contatos[id];  if (o) formContato(o);   else toast("Recarregue a página.", "err"); }
-function _editarVeiculo(id)    { const o = _CACHE.veiculos[id];  if (o) formVeiculo(o);   else toast("Recarregue a página.", "err"); }
-function _editarUsuario(id)    { const o = _CACHE.usuarios[id];  if (o) formUsuario(o);   else toast("Recarregue a página.", "err"); }
+async function _editarConta(id) {
+  let o = _CACHE.contas?.[id];
+  if (!o) try { o = await api(`/api/contas/${id}`); } catch {}
+  if (o) formConta(o); else toast("Conta não encontrada.", "err");
+}
+async function _editarCategoria(id) {
+  let o = _CACHE.cats?.[id];
+  if (!o) try { const list = await api("/api/categorias"); list.forEach(c => _CACHE.cats[c.id]=c); o = _CACHE.cats[id]; } catch {}
+  if (o) formCategoria(o); else toast("Categoria não encontrada.", "err");
+}
+async function _editarContato(id) {
+  let o = _CACHE.contatos?.[id];
+  if (!o) {
+    try { o = await api(`/api/contatos/${id}`); } catch {}
+  }
+  if (o) formContato(o);
+  else toast("Contato não encontrado.", "err");
+}
+async function _editarVeiculo(id) {
+  let o = _CACHE.veiculos?.[id];
+  if (!o) try { o = await api(`/api/veiculos/${id}`); } catch {}
+  if (o) formVeiculo(o); else toast("Veículo não encontrado.", "err");
+}
+async function _editarUsuario(id) {
+  let o = _CACHE.usuarios?.[id];
+  if (!o) try { const list = await api("/api/usuarios"); list.forEach(u => _CACHE.usuarios[u.id]=u); o = _CACHE.usuarios[id]; } catch {}
+  if (o) formUsuario(o); else toast("Usuário não encontrado.", "err");
+}
 
 function formBaixa(l) {
   const rec = l.tipo === "receita";
