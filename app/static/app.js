@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.81.0 · 36c54f3</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.82.0 · 5a0db34</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -954,9 +954,9 @@ async function recarregarTabela() {
 
   // cores e estilos por status
   const STATUS_COR = {
-    pago:     { bg: "rgba(47,129,122,.08)",  borda: "rgba(47,129,122,.3)",  txt: "#1A6B63",  label: "Pago ✓"     },
-    pendente: { bg: "rgba(201,169,78,.08)",  borda: "rgba(201,169,78,.3)",  txt: "#8A6A1A",  label: "Pendente"   },
-    atrasado: { bg: "rgba(180,80,62,.09)",   borda: "rgba(180,80,62,.35)",  txt: "var(--red)", label: "Atrasado ⚠" },
+    pago:     { bg: "#F0FDF4", borda: "#86EFAC", txt: "#15803D", label: "Pago ✓"      },
+    pendente: { bg: "#FEFCE8", borda: "#FDE047", txt: "#854D0E", label: "Pendente"    },
+    atrasado: { bg: "#FEF2F2", borda: "#FCA5A5", txt: "#991B1B", label: "Atrasado ⚠" },
   };
 
   lista.innerHTML = itens.map(l => {
@@ -979,15 +979,18 @@ async function recarregarTabela() {
               onclick="formLancamentoId(${l.id})">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <!-- ícone de tipo -->
-        <div style="width:42px;height:42px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-             background:${rec ? "rgba(47,129,122,.15)" : "rgba(180,80,62,.12)"};margin-top:1px;font-size:20px">
+        <div style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+             background:${rec ? "linear-gradient(135deg,#DCFCE7,#BBF7D0)" : "linear-gradient(135deg,#FEE2E2,#FECACA)"};
+             margin-top:1px;font-size:22px;font-weight:800;color:${rec?"#15803D":"#991B1B"}">
           ${rec ? "↓" : "↑"}
         </div>
         <!-- info principal -->
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
             <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${l.descricao}</div>
-            <div style="font-family:monospace;font-size:16px;font-weight:800;color:${rec ? "var(--teal)" : "var(--red)"};flex-shrink:0">
+            <div style="font-family:monospace;font-size:17px;font-weight:900;
+                 color:${rec?"#15803D":"#DC2626"};flex-shrink:0;
+                 background:${rec?"#F0FDF4":"#FEF2F2"};padding:4px 10px;border-radius:10px">
               ${rec ? "+" : "−"} ${money(l.valor)}
             </div>
           </div>

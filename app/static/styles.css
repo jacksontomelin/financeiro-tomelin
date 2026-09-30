@@ -14,16 +14,18 @@
    ============================================================ */
 :root{
   /* paleta extraída pixel a pixel da logo Tomelin */
-  --navy:#082D51;      --navy-2:#0E3A63;   --navy-soft:#305C74;  /* steel azul da casa */
-  --steel:#305C74;     --blue-ink:#38648A;                       /* azul do subtítulo */
+  --navy:#082D51;      --navy-2:#0E3A63;   --navy-soft:#305C74;
+  --steel:#305C74;     --blue-ink:#38648A;
   --gold:#C9A94E;      --gold-2:#B8963B;   --gold-soft:#CDBB84;
-  --teal:#2F817A;      --green:#3E9079;    --green-2:#5E9B86;  --green-deep:#256B64;
-  --red:#B4503E;       --red-soft:#f5e6e2;                       /* terracota — só alerta */
-  --amber:#C08A2E;     --amber-soft:#f6ecd6;
+  --teal:#2DD4BF;      --green:#4ADE80;    --green-2:#15803D;  --green-deep:#14532D;
+  --red:#DC2626;       --red-soft:#FEF2F2;
+  --amber:#D97706;     --amber-soft:#FFFBEB;
+  --purple:#7C3AED;    --purple-soft:#F5F3FF;
+  --blue:#0284C7;      --blue-soft:#EFF6FF;
 
-  --bg:#F1F3F4;        --bg-2:#F8F9F9;
-  --card:#ffffff;      --line:#E4E8EB;     --line-2:#EEF1F3;
-  --ink:#0C2135;       --ink-2:#45586B;    --ink-3:#7E8C9A;
+  --bg:#F1F5F9;        --bg-2:#F8FAFC;
+  --card:#ffffff;      --line:#E2E8F0;     --line-2:#F1F5F9;
+  --ink:#0F172A;       --ink-2:#475569;    --ink-3:#94A3B8;
 
   --shadow-sm:0 1px 2px rgba(8,45,81,.06);
   --shadow:0 6px 22px rgba(8,45,81,.08);
@@ -246,7 +248,7 @@ html.dark .login-app-titulo { color: var(--ink); }
 
 /* --- sidebar (estilo NaPista) --- */
 .sidebar{
-  width:var(--sidebar); flex-shrink:0; background:linear-gradient(180deg,#06243F,#082D51);
+  width:var(--sidebar); flex-shrink:0; background:linear-gradient(180deg,#051C34 0%,#082D51 40%,#0A3666 100%);
   color:#cfe0f0; display:flex; flex-direction:column; position:fixed; inset:0 auto 0 0;
   z-index:40; transition:width .2s ease, transform .25s ease;
 }
@@ -1657,3 +1659,39 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 
 
 .login-form-wrap .campo[style*="position:relative"] input { padding-right: 44px; }
+
+/* ── Modais: borda gradiente colorida no topo ── */
+.modal-box::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, var(--navy), var(--teal), var(--gold));
+  border-radius: 22px 22px 0 0;
+  margin: -28px -28px 20px;
+}
+
+/* ── Toolbar melhorada ── */
+.toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+.search { display:flex; align-items:center; gap:8px; background:var(--card);
+  border:1.5px solid var(--line); border-radius:12px; padding:0 12px; flex:1; min-width:160px;
+  transition:border-color .15s; box-shadow:0 1px 3px rgba(8,45,81,.04); }
+.search:focus-within { border-color:var(--navy); box-shadow:0 0 0 3px rgba(8,45,81,.08); }
+.search-i { border:none; background:transparent; outline:none; flex:1; padding:10px 0; font-size:14px; }
+
+/* ── Seg buttons ── */
+.seg { display:flex; gap:4px; background:var(--bg); border-radius:12px; padding:4px; }
+.seg button { padding:7px 14px; border:none; background:transparent; border-radius:9px;
+  font-size:13px; font-weight:600; color:var(--ink-3); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.seg button:hover { background:var(--card); color:var(--ink); }
+.seg button.on { background:linear-gradient(135deg,var(--navy),var(--navy-2)); color:#fff;
+  box-shadow:0 2px 8px rgba(8,45,81,.25); font-weight:700; }
+
+/* ── Empty state ── */
+.empty { display:flex; flex-direction:column; align-items:center; gap:12px;
+  padding:48px 24px; color:var(--ink-3); text-align:center; }
+.empty svg { opacity:.3; width:48px; height:48px; }
+.empty p { font-size:14px; }
+
+/* ── Badge de vencimentos mais visível ── */
+.nav-badge { background:linear-gradient(135deg,#DC2626,#B91C1C) !important;
+  box-shadow:0 2px 6px rgba(220,38,38,.4); }
