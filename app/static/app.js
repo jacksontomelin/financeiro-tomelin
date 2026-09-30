@@ -357,7 +357,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.84.0 · d6fbf1f</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.85.0 · 2382a27</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1057,9 +1057,14 @@ function formLancamento(l, tipo, pre) {
         <input type="hidden" id="f-tipo" value="${tipoFinal}">
 
         <div class="campo full"><label>Descrição</label>
-          <div class="inp-wrap">
+          <div class="inp-wrap" style="position:relative">
             <div class="inp-ic">${icon("edit")}</div>
-            <input id="f-desc" value="${ed ? l.descricao : ""}" placeholder="Ex.: Aluguel, Salário...">
+            <input id="f-desc" value="${ed ? l.descricao : ""}" placeholder="Ex.: Aluguel, Salário..."
+              autocomplete="off"
+              oninput="_autoDesc(this.value)"
+              onfocus="_autoDesc(this.value)"
+              onblur="setTimeout(()=>{ const d=document.getElementById('f-desc-list'); if(d) d.remove(); },200)">
+            <div id="f-desc-list" style="display:none"></div>
           </div></div>
 
         <div class="campo"><label>Valor (R$)</label>
@@ -1114,7 +1119,95 @@ function formLancamento(l, tipo, pre) {
         </button>
       </div>
     </div>`);
+
+  // popula cache se vazio (para o autocomplete funcionar)
+  if (_LANC_CACHE.size < 5) {
+    api("/api/lancamentos?limite=200").then(itens => {
+      if (Array.isArray(itens)) itens.forEach(l => _LANC_CACHE.set(l.id, l));
+    }).catch(() => {});
+  }
+  // foca na descrição com pequeno delay
+  setTimeout(() => document.getElementById("f-desc")?.focus(), 120);
 }
+
+// ── AUTOCOMPLETE DE DESCRIÇÃO ──────────────────────────────
+function _autoDesc(q) {
+  const box = document.getElementById("f-desc-list");
+  if (!box) return;
+  const tipo = document.getElementById("f-tipo")?.value || "";
+  q = (q || "").toLowerCase().trim();
+
+  // busca nos lançamentos do cache — agrupa por descrição única
+  const vistos = new Map();
+  for (const [, l] of _LANC_CACHE) {
+    if (tipo && l.tipo !== tipo) continue;
+    const key = l.descricao?.toLowerCase();
+    if (!key) continue;
+    if (q && !key.includes(q)) continue;
+    if (!vistos.has(key)) vistos.set(key, l);
+  }
+
+  const sugs = [...vistos.values()]
+    .sort((a, b) => (b.id || 0) - (a.id || 0))
+    .slice(0, 6);
+
+  if (!sugs.length || (!q && sugs.length === 0)) {
+    box.style.display = "none";
+    return;
+  }
+
+  const catMap = Object.fromEntries((State.cats || []).map(c => [c.id, c]));
+  const cntMap = Object.fromEntries((State.contas || []).map(c => [c.id, c]));
+
+  box.innerHTML = sugs.map(l => {
+    const cat = catMap[l.categoria_id];
+    const cnt = cntMap[l.conta_id];
+    return `<div class="auto-item" onmousedown="event.preventDefault()" onclick="_escolherDesc(${l.id})">
+      <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${_highlight(l.descricao, q)}</div>
+      <div style="font-size:11.5px;color:var(--ink-3);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
+        ${cat ? `<span style="color:${cat.cor||'var(--ink-3)'}">${cat.nome}</span>` : ""}
+        ${cnt ? `<span>${cnt.nome}</span>` : ""}
+        <span class="mono-num">${money(l.valor)}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  box.style.display = "block";
+  box.style.cssText = `display:block;position:absolute;top:100%;left:0;right:0;z-index:9999;
+    background:var(--card);border:1.5px solid var(--navy);border-radius:14px;
+    box-shadow:0 8px 32px rgba(8,45,81,.18);overflow:hidden;margin-top:4px;`;
+}
+
+function _highlight(text, q) {
+  if (!q) return text;
+  const idx = text.toLowerCase().indexOf(q);
+  if (idx < 0) return text;
+  return text.slice(0, idx) +
+    `<mark style="background:#FEF9C3;border-radius:3px;padding:0 1px">${text.slice(idx, idx + q.length)}</mark>` +
+    text.slice(idx + q.length);
+}
+
+function _escolherDesc(id) {
+  const l = _LANC_CACHE.get(id);
+  if (!l) return;
+  const descEl = document.getElementById("f-desc");
+  const valEl  = document.getElementById("f-valor");
+  const catEl  = document.getElementById("f-cat");
+  const cntEl  = document.getElementById("f-conta");
+  const ctoEl  = document.getElementById("f-contato");
+  const box    = document.getElementById("f-desc-list");
+
+  if (descEl) descEl.value = l.descricao;
+  if (valEl && !valEl.value) valEl.value = l.valor;
+  if (catEl && l.categoria_id) catEl.value = l.categoria_id;
+  if (cntEl && l.conta_id) cntEl.value = l.conta_id;
+  if (ctoEl && l.contato_id) ctoEl.value = l.contato_id;
+  if (box) box.style.display = "none";
+
+  // foca no valor para confirmar/ajustar
+  setTimeout(() => valEl?.focus(), 50);
+}
+
 
 async function salvarLanc(id) {
   const pago = $("#f-pago").value;
@@ -4041,7 +4134,7 @@ Object.assign(window, {
   _setMetaIcone, _setMetaCor, buscaGlobal, fecharBusca,
   abrirBuscaMobile, fecharBuscaMobile, buscaMobileQuery, _atalhoClick,
   _toggleItensCompra, verParcelasCompra,
-  rodarDiagnosticoWA, salvarGatewayWA,
+  rodarDiagnosticoWA, salvarGatewayWA, _autoDesc, _escolherDesc,
   iniciarTour, fecharTour, tourProximo, tourAnterior, salvarNumeroWA, _previewNumeroWA, carregarGruposWA, filtrarGruposWA, escolherGrupoWA, copiarTexto,
   initLogo, escolherLogo, logoURLInput, limparLogo,
 });
