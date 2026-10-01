@@ -399,7 +399,16 @@ function abrirModal(html, cls = "") {
   modalRoot().appendChild(ov);
   return ov;
 }
-function fecharModal() { modalRoot().innerHTML = ""; }
+function fecharModal() {
+  const r = modalRoot();
+  if (State._contatoRapido && r.children.length > 1) {   // volta ao lançamento
+    State._contatoRapido = false;
+    r.lastElementChild.remove();
+    return;
+  }
+  State._contatoRapido = false;
+  r.innerHTML = "";
+}
 
 /* ---------- auth ---------- */
 function logout() {
@@ -542,7 +551,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.114.0 · cca647a · 01/10/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.115.0 · aff4b96 · 01/10/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1233,7 +1242,45 @@ function exportarCSV(tf) {
 }
 
 /* ---------- form lançamento ---------- */
-function formLancamento(l, tipo, pre) {
+async function formLancamento(l, tipo, pre) {
+  // As listas só eram carregadas na tela Lançamentos: abrindo pelo painel,
+  // pelo "Vencer" ou depois de cadastrar um contato, "Pago para" vinha vazio.
+  if (!State.contatos?.length || !State.contas?.length || !State.cats?.length) {
+    try { await carregarRefs(); } catch (e) { toast(`Não carreguei contatos e contas: ${e.message}`, "err"); }
+  } else {
+    carregarRefs().then(() => _recarregarSelContato()).catch(() => {});
+  }
+  _formLancamento(l, tipo, pre);
+}
+
+// Opções do "Pago para / Recebo de": os do tipo certo primeiro.
+function _opcoesContato(rec, selId) {
+  const lista = [...(State.contatos || [])].sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  const certo = lista.filter(c => c.tipo === "ambos" || c.tipo === (rec ? "cliente" : "fornecedor") || !c.tipo);
+  const outros = lista.filter(c => !certo.includes(c));
+  const opt = c => `<option value="${c.id}" ${selId === c.id ? "selected" : ""}>${esc(c.nome)}</option>`;
+  let html = `<option value="">${lista.length ? "Selecione" : "Nenhum contato ainda"}</option>`;
+  if (certo.length)  html += `<optgroup label="${rec ? "Quem me paga" : "Fornecedores"}">${certo.map(opt).join("")}</optgroup>`;
+  if (outros.length) html += `<optgroup label="Outros contatos">${outros.map(opt).join("")}</optgroup>`;
+  return html;
+}
+
+function _recarregarSelContato(novoId) {
+  const sel = document.getElementById("f-contato");
+  if (!sel) return;
+  const atual = novoId || Number(sel.value) || null;
+  sel.innerHTML = _opcoesContato(sel.dataset.rec === "1", atual);
+  const dica = document.getElementById("f-contato-dica");
+  if (dica) dica.style.display = State.contatos?.length ? "none" : "";
+}
+
+function _novoContatoRapido() {
+  const rec = document.getElementById("f-contato")?.dataset.rec === "1";
+  State._contatoRapido = true;
+  formContato({ tipo: rec ? "cliente" : "fornecedor" });
+}
+
+function _formLancamento(l, tipo, pre) {
   if (pre && !l) l = pre;
   const ed = !!l;
   const tipoFinal = tipo || (l && l.tipo) || "despesa";
@@ -1293,16 +1340,15 @@ function formLancamento(l, tipo, pre) {
           </select></div>
 
         <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
-          <div style="position:relative">
-            <select id="f-contato" style="width:100%">
-              <option value="">Selecione</option>
-              ${State.contatos.map(c => {
-                const tipo = c.tipo ? ` (${c.tipo})` : "";
-                return `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${esc(c.nome)}${tipo}</option>`;
-              }).join("")}
+          <div style="display:flex;gap:6px">
+            <select id="f-contato" data-rec="${rec ? 1 : 0}" style="flex:1;min-width:0">
+              ${_opcoesContato(rec, l?.contato_id ?? null)}
             </select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="_novoContatoRapido()"
+              title="Cadastrar ${rec ? "quem paga" : "para quem pago"}">${icon("plus")}</button>
           </div>
-          ${State.contatos.length === 0 ? `<div style="font-size:11px;color:var(--ink-3);margin-top:4px">Cadastre contatos em <b>Contatos</b> para vincular aqui</div>` : ""}
+          <div id="f-contato-dica" style="font-size:11px;color:var(--ink-3);margin-top:4px;${State.contatos?.length ? "display:none" : ""}">
+            Toque no <b>+</b> para cadastrar sem sair daqui.</div>
         </div>
 
         <div class="campo full"><label>Situação</label>
@@ -2003,7 +2049,7 @@ function formContato(c) {
     <div class="modal" style="max-width:600px">
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("users")}</span>
-        <h3>${c ? "Editar contato" : "Novo contato"}</h3>
+        <h3>${e.id ? "Editar contato" : "Novo contato"}</h3>
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b"><div class="frm">
@@ -2091,7 +2137,7 @@ function formContato(c) {
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
-        <button class="btn btn-primary" onclick="salvarContato(${c?e.id:"null"})">${icon("check")} Salvar contato</button>
+        <button class="btn btn-primary" onclick="salvarContato(${e.id || "null"})">${icon("check")} Salvar contato</button>
       </div>
     </div>`, "lg");
   initLogo(e.logo);
@@ -2220,8 +2266,15 @@ async function salvarContato(id) {
     return erroCampo("documento", "CPF/CNPJ inválido: confira os dígitos.");
   }
   try {
-    if (id) await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) });
-    else     await api("/api/contatos",       { method: "POST", body: JSON.stringify(body) });
+    const salvo = id ? await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) })
+                     : await api("/api/contatos",       { method: "POST", body: JSON.stringify(body) });
+    if (State._contatoRapido) {
+      fecharModal();                                   // fecha só o contato
+      try { await carregarRefs(); } catch {}
+      _recarregarSelContato(salvo?.id);
+      toast(`${body.nome} cadastrado e selecionado`, "ok");
+      return;
+    }
     fecharModal(); toast("Contato salvo", "ok"); setView("contatos");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -4762,6 +4815,7 @@ const IC_CSV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const IC_PLUS_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
 Object.assign(window, {
+  _novoContatoRapido,
   esc,
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,
   filtroStatus, filtroCat, debBusca, exportarCSV,
