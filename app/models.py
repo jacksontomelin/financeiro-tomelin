@@ -202,7 +202,7 @@ class UsuarioAvatar(Base):
     """Avatar/cor personalizada por usuário (perfil visual)."""
     __tablename__ = "usuario_avatares"
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
-    emoji = Column(String(8), default="👤")
+    emoji = Column(String(8), default="pessoa")
     cor = Column(String(9), default="#305C74")
     papel = Column(String(20), default="membro")  # admin | membro
 

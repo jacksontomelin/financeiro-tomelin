@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from .. import models, schemas, security
+from ..avatares import chave_avatar
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -59,7 +60,8 @@ def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db
         token=security.cria_token(u), id=u.id,
         nome=u.nome, email=u.email,
         ultimo_acesso=penultimo, ultimo_acesso_ip=penultimo_ip,
-        emoji=av.emoji if av else "👤",
+        emoji=chave_avatar(av.emoji if av else None),
+        papel=(av.papel if av else "membro"),
     )
 
 
@@ -71,7 +73,7 @@ def eu(u: models.Usuario = Depends(security.usuario_atual), db: Session = Depend
         av = None
     return {
         "id": u.id, "nome": u.nome, "email": u.email,
-        "emoji": av.emoji if av else "👤",
+        "emoji": chave_avatar(av.emoji if av else None),
         "cor": av.cor if av else "#305C74",
         "papel": av.papel if av else "membro",
         "ultimo_acesso": u.ultimo_acesso.isoformat() if u.ultimo_acesso else None,

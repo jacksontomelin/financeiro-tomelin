@@ -4,6 +4,35 @@ from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 
+def _ajusta_membros(engine):
+    """Emojis antigos dos membros viram nomes de ícone e garante pelo menos
+    um administrador ativo (sem isso ninguém conseguiria cadastrar membros)."""
+    try:
+        from sqlalchemy.orm import Session
+        from . import models
+        from .avatares import chave_avatar, cor_valida, COR_PADRAO
+        with Session(engine) as db:
+            for u in db.query(models.Usuario).all():
+                if not db.get(models.UsuarioAvatar, u.id):
+                    db.add(models.UsuarioAvatar(usuario_id=u.id, emoji="pessoa"))
+            db.flush()
+            for av in db.query(models.UsuarioAvatar).all():
+                av.emoji = chave_avatar(av.emoji)
+                if not cor_valida(av.cor):
+                    av.cor = COR_PADRAO
+            tem_admin = (db.query(models.UsuarioAvatar)
+                         .join(models.Usuario, models.Usuario.id == models.UsuarioAvatar.usuario_id)
+                         .filter(models.UsuarioAvatar.papel == "admin", models.Usuario.ativo.is_(True)).count())
+            if not tem_admin:
+                primeiro = (db.query(models.Usuario).filter(models.Usuario.ativo.is_(True))
+                            .order_by(models.Usuario.id).first())
+                if primeiro:
+                    db.get(models.UsuarioAvatar, primeiro.id).papel = "admin"
+            db.commit()
+    except Exception as e:  # nunca impede o sistema de subir
+        print("aviso: ajuste dos membros não aplicado:", e)
+
+
 def _migrar(engine):
     """Adiciona colunas novas em tabelas existentes sem quebrar o banco."""
     migrações = [
@@ -26,7 +55,7 @@ def _migrar(engine):
         "ALTER TABLE contatos ADD COLUMN IF NOT EXISTS estado VARCHAR(2)",
         # veiculos (tabela criada pelo create_all, mas garante colunas extras)
         "ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS extras JSONB",
-        """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT '👤', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
+        """CREATE TABLE IF NOT EXISTS usuario_avatares (usuario_id INTEGER PRIMARY KEY, emoji VARCHAR(8) DEFAULT 'pessoa', cor VARCHAR(9) DEFAULT '#305C74', papel VARCHAR(20) DEFAULT 'membro')""",
         """CREATE TABLE IF NOT EXISTS login_historico (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, data_hora TIMESTAMP DEFAULT NOW(), ip VARCHAR(60), dispositivo VARCHAR(200), sucesso BOOLEAN DEFAULT TRUE)""",
         "CREATE INDEX IF NOT EXISTS ix_login_hist_uid ON login_historico(usuario_id)",
         # cache de consultas externas (CNPJ / CEP)
@@ -65,6 +94,7 @@ def _migrar(engine):
                 conn.execute(text(sql))
         except Exception:
             pass  # coluna já existe / não suportado no SQLite: create_all cuida
+    _ajusta_membros(engine)
     log.info("Migrações aplicadas.")
 from pathlib import Path
 
@@ -100,6 +130,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _migrar(engine)
     seed.seed()
+    _ajusta_membros(engine)   # depois do seed: banco novo também ganha o admin
     # garante configurações padrão no banco
     from .database import SessionLocal as _SL
     from . import cfg as _cfg
