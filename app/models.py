@@ -63,17 +63,17 @@ class Contato(Base):
     nome = Column(String(160), nullable=False)
     tipo = Column(String(20), default="cliente")  # cliente, fornecedor, ambos
     documento = Column(String(30), nullable=True)  # CPF/CNPJ
-    telefone = Column(String(30), nullable=True)
+    telefone = Column(String(120), nullable=True)
     email = Column(String(160), nullable=True)
     obs = Column(Text, nullable=True)
     logo = Column(Text, nullable=True)  # data URI ou URL do logo
     # Endereço completo
     cep = Column(String(10), nullable=True)
     logradouro = Column(String(200), nullable=True)
-    numero = Column(String(20), nullable=True)
-    complemento = Column(String(100), nullable=True)
-    bairro = Column(String(100), nullable=True)
-    cidade = Column(String(100), nullable=True)
+    numero = Column(String(30), nullable=True)
+    complemento = Column(String(200), nullable=True)
+    bairro = Column(String(150), nullable=True)
+    cidade = Column(String(150), nullable=True)
     estado = Column(String(2), nullable=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
 

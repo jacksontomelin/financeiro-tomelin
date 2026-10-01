@@ -40,15 +40,21 @@ def _migrar(engine):
             cep VARCHAR(8) PRIMARY KEY, logradouro VARCHAR(200), bairro VARCHAR(100),
             cidade VARCHAR(100), estado VARCHAR(2), fonte VARCHAR(40),
             consultado_em TIMESTAMP DEFAULT NOW())""",
-
+        # campos de contato maiores (telefone da Receita pode vir com 2 números)
+        "ALTER TABLE contatos ALTER COLUMN telefone TYPE VARCHAR(120)",
+        "ALTER TABLE contatos ALTER COLUMN numero TYPE VARCHAR(30)",
+        "ALTER TABLE contatos ALTER COLUMN complemento TYPE VARCHAR(200)",
+        "ALTER TABLE contatos ALTER COLUMN bairro TYPE VARCHAR(150)",
+        "ALTER TABLE contatos ALTER COLUMN cidade TYPE VARCHAR(150)",
     ]
-    with engine.connect() as conn:
-        for sql in migrações:
-            try:
+    # Cada comando na sua própria transação: no PostgreSQL, um erro aborta
+    # a transação inteira e os comandos seguintes falhariam em silêncio.
+    for sql in migrações:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(sql))
-            except Exception:
-                pass  # coluna já existe ou tabela ainda não existe — create_all cuida
-        conn.commit()
+        except Exception:
+            pass  # coluna já existe / não suportado no SQLite — create_all cuida
     log.info("Migrações aplicadas.")
 from pathlib import Path
 
@@ -113,6 +119,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DataError, IntegrityError
+
+@app.exception_handler(DataError)
+async def _erro_dado(request: Request, exc: DataError):
+    log.warning("DataError em %s: %s", request.url.path, str(exc.orig)[:200])
+    return JSONResponse(status_code=422, content={"detail":
+        "Algum campo passou do tamanho permitido. Encurte o texto e tente de novo."})
+
+@app.exception_handler(IntegrityError)
+async def _erro_integridade(request: Request, exc: IntegrityError):
+    log.warning("IntegrityError em %s: %s", request.url.path, str(exc.orig)[:200])
+    return JSONResponse(status_code=409, content={"detail":
+        "Não foi possível salvar: registro duplicado ou vinculado a outro dado."})
 # CORS: a API é consumida pelo próprio front (mesma origem).
 # allow_credentials fica False de propósito — a auth é via Bearer, não cookie.
 app.add_middleware(
