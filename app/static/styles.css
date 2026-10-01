@@ -2047,3 +2047,10 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
 /* seletor da barra de filtros com o mesmo visual dos campos */
 .lanc-filtros select { padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 9px;
   background: var(--card); color: var(--ink-2); font: inherit; font-size: 13px; height: 38px; }
+
+/* painel: duas colunas reais no computador, uma no celular */
+.dash-col { min-width: 0; display: flex; flex-direction: column; }
+.dash-col > .card:last-child, .dash-col > .grid-2:last-child { margin-bottom: 0 !important; }
+
+/* subtítulo padrão dos cartões (antes herdava o tamanho do texto normal) */
+.sub { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
