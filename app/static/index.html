@@ -19,6 +19,18 @@
 <div id="root"></div>
 <div id="modal-root"></div>
 <div class="toast-wrap" id="toasts"></div>
+<script>
+  /* Se o app.js quebrar antes de desenhar, mostra o erro em vez de tela branca */
+  window.__bootErro = function (msg) {
+    var r = document.getElementById("root");
+    if (r && !r.innerHTML.trim()) r.innerHTML =
+      '<div style="font-family:system-ui;max-width:520px;margin:60px auto;padding:24px;border:1px solid #FCA5A5;border-radius:14px;background:#FEF2F2;color:#7F1D1D">' +
+      '<b>O sistema não conseguiu carregar.</b><br><br>Erro: <code>' + String(msg).replace(/</g,"&lt;") + '</code>' +
+      '<br><br><button onclick="caches.keys().then(k=>Promise.all(k.map(c=>caches.delete(c)))).then(()=>location.reload(true))" ' +
+      'style="padding:8px 14px;border:0;border-radius:8px;background:#082D51;color:#fff;cursor:pointer">Limpar cache e recarregar</button></div>';
+  };
+  window.addEventListener("error", function (e) { window.__bootErro(e.message); });
+</script>
 <script src="/static/app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
