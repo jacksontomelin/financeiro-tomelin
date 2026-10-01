@@ -2003,6 +2003,10 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
 
 .grid-2-igual { grid-template-columns: 1fr 1fr; }
 
+@media (min-width: 1800px) {
+  .grid-2:not(.grid-2-igual) { grid-template-columns: minmax(380px, 1.1fr) minmax(380px, 0.9fr); }
+  .grid-3 { grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr) minmax(320px, 1fr); }
+}
 @media (max-width: 1024px) {
   .dash-grid, .grid-2-igual { grid-template-columns: 1fr !important; }
 }
@@ -2048,9 +2052,24 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
 .lanc-filtros select { padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 9px;
   background: var(--card); color: var(--ink-2); font: inherit; font-size: 13px; height: 38px; }
 
-/* painel: duas colunas reais no computador, uma no celular */
+/* painel: duas colunas no computador, uma no celular
+   em telas grandes, gráficos ocupam mais espaço; vencimentos/patrimônio compactos */
+.dash-grid { grid-template-columns: minmax(480px, 0.65fr) minmax(450px, 1.35fr); }
 .dash-col { min-width: 0; display: flex; flex-direction: column; }
 .dash-col > .card:last-child, .dash-col > .grid-2:last-child { margin-bottom: 0 !important; }
 
 /* subtítulo padrão dos cartões (antes herdava o tamanho do texto normal) */
 .sub { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+
+/* Em telas grandes, reduzir margens horizontais dentro dos cards para aproveitar melhor */
+@media (min-width: 1600px) {
+  .card-pad { padding: 16px 18px; }
+}
+
+/* Vencimentos em tela grande: mais compacto */
+@media (min-width: 1200px) {
+  .venc-item { padding: 10px 4px; }
+}
+
+/* Grid de patrimônio + juros: mantém 50/50 mesmo em tela grande */
+.grid-2-igual { grid-template-columns: 1fr 1fr !important; }
