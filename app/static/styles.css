@@ -2043,7 +2043,7 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
   .pat-linha .mono-num { font-size: clamp(12.5px, 3.8vw, 15px) !important; }
   .pat-linha { padding: 11px 12px !important; }
 }
-@media (max-width: 640px) { .pat-total .mono-num { font-size: clamp(15px, 4.6vw, 20px) !important; } }
+@media (max-width: 640px) { .pat-total .mono-num { font-size: clamp(13px, 3.5vw, 20px) !important; } }
 
 /* legendas curtas não justificam (abriria buracos entre as palavras) */
 .meta, .sub, .kpi .meta, .campo-erro-msg, label { text-align: left; text-align-last: auto; hyphens: manual; }
@@ -2073,3 +2073,14 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
 
 /* Grid de patrimônio + juros: mantém 50/50 mesmo em tela grande */
 .grid-2-igual { grid-template-columns: 1fr 1fr !important; }
+
+@media (max-width: 640px) {
+  .kpi .val { font-size: clamp(12px, 8cqi, 24px) !important; }
+  .pat-linha .mono-num { font-size: clamp(11.5px, 3.2vw, 15px) !important; }
+  .nm { font-size: clamp(12.5px, 3vw, 14px) !important; }
+  /* patrimônio e juros no celular: seus estilos inline clamp passam por cima do CSS */
+  .pat-total .mono-num { font-size: 14px !important; }
+  /* dashboard cards patrimônio/juros no celular: encolhem bastante */
+  .dash-kpi { font-size: clamp(12px, 3.5vw, 22px) !important; }
+  @media (max-width: 480px) { .dash-kpi { font-size: clamp(12px, 3.2vw, 18px) !important; } }
+}

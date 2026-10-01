@@ -551,7 +551,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.119.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.120.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1017,7 +1017,7 @@ async function viewDashboard(v) {
           <span class="card-ico i-navy" style="width:34px;height:34px;border-radius:10px">${icon("shield")}</span>
           <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Patrimônio líquido ›</div></div>
         </div>
-        <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--navy)">${money(pat.patrimonio_liquido)}</div>
+        <div class="mono-num dash-kpi" style="font-size:22px;font-weight:900;color:var(--navy)">${money(pat.patrimonio_liquido)}</div>
         <div class="sub" style="margin-top:6px">Contas <b>${money(pat.total_contas)}</b> + Veículos <b>${money(pat.total_veiculos)}</b></div>
         ${pat.total_financiamentos > 0 ? `<div class="sub" style="color:var(--red)">Financiamentos: − ${money(pat.total_financiamentos)}</div>` : ""}
       </div>
@@ -1026,7 +1026,7 @@ async function viewDashboard(v) {
           <span class="card-ico i-red" style="width:34px;height:34px;border-radius:10px">${icon("alert")}</span>
           <div><div style="font-size:12.5px;font-weight:700;color:var(--ink-2)">Juros pagos no ano ›</div></div>
         </div>
-        <div class="mono-num" style="font-size:22px;font-weight:900;color:var(--red)">${money(jur.juros_pago_ano)}</div>
+        <div class="mono-num dash-kpi" style="font-size:22px;font-weight:900;color:var(--red)">${money(jur.juros_pago_ano)}</div>
         <div class="sub" style="margin-top:6px">Este mês: <b>${money(jur.juros_mes)}</b></div>
         ${jur.juros_a_pagar > 0 ? `<div class="sub" style="color:var(--red)">A pagar: ${money(jur.juros_a_pagar)}</div>` : ""}
       </div>
