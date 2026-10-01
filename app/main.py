@@ -181,6 +181,19 @@ def config_publica():
 
 
 # ---- Frontend (SPA + PWA) ----
+@app.middleware("http")
+async def _sem_cache_no_shell(request, call_next):
+    """Força o navegador (principalmente Safari/iOS) a revalidar o app a cada
+    acesso — sem isso ele reaproveita um app.js antigo depois do deploy."""
+    resp = await call_next(request)
+    p = request.url.path
+    if (p == "/" or p == "/sw.js" or p.endswith(".html")
+            or (p.startswith("/static/") and p.endswith((".js", ".css")))
+            or not p.startswith(("/api", "/static", "/verificar"))):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 

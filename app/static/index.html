@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="/static/icons/favicon-48.png">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/styles.css?v=108-1790827671">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,12 +26,12 @@
     if (r && !r.innerHTML.trim()) r.innerHTML =
       '<div style="font-family:system-ui;max-width:520px;margin:60px auto;padding:24px;border:1px solid #FCA5A5;border-radius:14px;background:#FEF2F2;color:#7F1D1D">' +
       '<b>O sistema não conseguiu carregar.</b><br><br>Erro: <code>' + String(msg).replace(/</g,"&lt;") + '</code>' +
-      '<br><br><button onclick="caches.keys().then(k=>Promise.all(k.map(c=>caches.delete(c)))).then(()=>location.reload(true))" ' +
+      '<br><br><button onclick="(navigator.serviceWorker?navigator.serviceWorker.getRegistrations():Promise.resolve([])).then(rs=>Promise.all(rs.map(r=>r.unregister()))).then(()=>caches.keys()).then(k=>Promise.all(k.map(c=>caches.delete(c)))).then(()=>location.replace(location.pathname+&quot;?r=&quot;+Date.now()))" ' +
       'style="padding:8px 14px;border:0;border-radius:8px;background:#082D51;color:#fff;cursor:pointer">Limpar cache e recarregar</button></div>';
   };
   window.addEventListener("error", function (e) { window.__bootErro(e.message); });
 </script>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=108-1790827671"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
