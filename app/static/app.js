@@ -369,7 +369,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.106.0 · f8dd0e5 · 30/09/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.107.0 · abf933b · 01/10/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1609,6 +1609,12 @@ async function viewContatos(v) {
       box.innerHTML = `${e.cnpjs} CNPJ e ${e.ceps} CEP guardados localmente — consultas repetidas não usam internet.`;
     }
   }).catch(() => {});
+}
+
+function filtroContato(t) {
+  FCONTATO = t;
+  document.querySelectorAll("#seg-cont button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  renderContatos();
 }
 
 function renderContatos() {
