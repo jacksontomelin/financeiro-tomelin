@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas, service
 from ..security import usuario_atual
+from ..erros import bloquear_se_em_uso, ErroCampo
 
 router = APIRouter(prefix="/api/contas", tags=["contas"],
                    dependencies=[Depends(usuario_atual)])
@@ -53,5 +54,9 @@ def excluir(cid: int, db: Session = Depends(get_db)):
     c = db.get(models.Conta, cid)
     if not c:
         raise HTTPException(404, "Conta não encontrada.")
+    bloquear_se_em_uso(db, "a conta", c.nome, [
+        (models.Lancamento, "conta_id", cid, "lançamento|lançamentos"),
+        (models.Parcelamento, "cartao_id", cid, "compra parcelada|compras parceladas"),
+    ])
     db.delete(c); db.commit()
     return {"ok": True}

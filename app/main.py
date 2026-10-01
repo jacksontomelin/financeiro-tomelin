@@ -120,21 +120,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import DataError, IntegrityError
-
-@app.exception_handler(DataError)
-async def _erro_dado(request: Request, exc: DataError):
-    log.warning("DataError em %s: %s", request.url.path, str(exc.orig)[:200])
-    return JSONResponse(status_code=422, content={"detail":
-        "Algum campo passou do tamanho permitido. Encurte o texto e tente de novo."})
-
-@app.exception_handler(IntegrityError)
-async def _erro_integridade(request: Request, exc: IntegrityError):
-    log.warning("IntegrityError em %s: %s", request.url.path, str(exc.orig)[:200])
-    return JSONResponse(status_code=409, content={"detail":
-        "Não foi possível salvar: registro duplicado ou vinculado a outro dado."})
+from . import erros
+erros.registrar(app)  # mensagens reais: qual campo, qual regra
 # CORS: a API é consumida pelo próprio front (mesma origem).
 # allow_credentials fica False de propósito — a auth é via Bearer, não cookie.
 app.add_middleware(

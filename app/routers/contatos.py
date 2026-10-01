@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
+from ..erros import bloquear_se_em_uso, ErroCampo
 import logging
 log = logging.getLogger("tomelin.contatos")
 from ..doc_utils import valida_documento, limpar as _limpar_doc, formatar as _fmt_doc
@@ -29,7 +30,7 @@ def _checa_doc(doc: str | None):
     ok, tipo = valida_documento(doc)
     if not ok:
         rotulo = {"cpf": "CPF", "cnpj": "CNPJ"}.get(tipo, "Documento")
-        raise HTTPException(422, f"{rotulo} inválido — confira os dígitos.")
+        raise ErroCampo("documento", f"{rotulo} inválido — confira os dígitos.")
     return _limpar_doc(doc)
 
 
@@ -67,6 +68,9 @@ def excluir(cid: int, db: Session = Depends(get_db)):
     c = db.get(models.Contato, cid)
     if not c:
         raise HTTPException(404, "Contato não encontrado.")
+    bloquear_se_em_uso(db, "o contato", c.nome, [
+        (models.Lancamento, "contato_id", cid, "lançamento|lançamentos"),
+    ])
     db.delete(c); db.commit()
     return {"ok": True}
 

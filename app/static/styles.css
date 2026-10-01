@@ -1913,3 +1913,9 @@ html.dark .frm textarea:focus { background: var(--bg-2); }
   text-overflow: ellipsis;
   max-width: 200px;
 }
+
+/* campo apontado pelo servidor como inválido */
+.campo-erro { border-color: var(--red, #dc2626) !important; box-shadow: 0 0 0 3px rgba(220,38,38,.15) !important; }
+.campo-erro-msg { display:block; margin-top:4px; font-size:11.5px; line-height:1.35; color: var(--red, #dc2626); font-weight:500; }
+.toast.err { cursor: pointer; max-width: min(440px, calc(100vw - 32px)); }
+.toast.err span { white-space: normal; }

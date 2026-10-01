@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
+from ..erros import bloquear_se_em_uso, ErroCampo
 
 router = APIRouter(prefix="/api/categorias", tags=["categorias"],
                    dependencies=[Depends(usuario_atual)])
@@ -40,5 +41,9 @@ def excluir(cid: int, db: Session = Depends(get_db)):
     c = db.get(models.Categoria, cid)
     if not c:
         raise HTTPException(404, "Categoria não encontrada.")
+    bloquear_se_em_uso(db, "a categoria", c.nome, [
+        (models.Lancamento, "categoria_id", cid, "lançamento|lançamentos"),
+        (models.ItemCompra, "categoria_id", cid, "item de compra|itens de compra"),
+    ])
     db.delete(c); db.commit()
     return {"ok": True}

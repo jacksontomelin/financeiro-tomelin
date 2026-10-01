@@ -127,15 +127,91 @@ const SVG_HOUSE = '<svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.o
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (State.token) headers.Authorization = `Bearer ${State.token}`;
-  const res = await fetch(path, { ...opts, headers });
-  if (res.status === 401) { logout(); throw new Error("Sessão expirada"); }
+  let res;
+  try {
+    res = await fetch(path, { ...opts, headers });
+  } catch {
+    throw new Error(navigator.onLine === false
+      ? "Sem internet. Verifique a conexão e tente de novo."
+      : "Não consegui falar com o servidor. Ele pode estar reiniciando (redeploy) — tente em alguns segundos.");
+  }
+  if (res.status === 401) { logout(); throw new Error("Sessão expirada. Entre de novo."); }
   if (!res.ok) {
-    let msg = "Erro na operação.";
-    try { const j = await res.json(); msg = j.detail || msg; } catch {}
-    throw new Error(msg);
+    let j = null;
+    try { j = await res.json(); } catch {}
+    const err = new Error(_msgErro(res.status, j, (opts.method || "GET").toUpperCase(), path));
+    err.status = res.status;
+    err.campo = j?.campo || j?.erros?.[0]?.campo || null;
+    if (err.campo) try { _marcarCampo(err.campo, err.message); } catch {}
+    throw err;
   }
   if (res.status === 204) return null;
   return res.json();
+}
+
+// Transforma a resposta de erro do servidor numa frase que diz o que houve.
+function _msgErro(status, j, metodo, path) {
+  const d = j?.detail;
+  if (typeof d === "string" && d) return d;
+  if (Array.isArray(d) && d.length)            // formato padrão do FastAPI
+    return d.map(e => `${(e.loc || []).filter(x => x !== "body").join(" › ")}: ${e.msg}`).join(" · ");
+  if (d && typeof d === "object") return d.mensagem || d.message || JSON.stringify(d);
+  const rota = path.split("?")[0];
+  return ({
+    400: "Requisição inválida.",
+    403: "Você não tem permissão para esta ação.",
+    404: `Não encontrado (${metodo} ${rota}). O registro pode ter sido excluído — recarregue a tela.`,
+    405: `Ação não suportada pelo servidor (${metodo} ${rota}).`,
+    409: "Conflito: o registro foi alterado ou já existe.",
+    413: "Arquivo ou conteúdo grande demais para enviar.",
+    422: "Algum campo está inválido.",
+    429: "Muitas tentativas seguidas. Aguarde um minuto.",
+    500: `Erro interno do servidor em ${metodo} ${rota}.`,
+    502: "Servidor fora do ar ou reiniciando (502). Tente em alguns segundos.",
+    503: "Servidor indisponível no momento (503). Tente em alguns segundos.",
+    504: "O servidor demorou demais para responder (504).",
+  })[status] || `Erro ${status} em ${metodo} ${rota}.`;
+}
+
+// Destaca no formulário aberto o campo que o servidor apontou.
+function _marcarCampo(campo, msg) {
+  const ov = [...document.querySelectorAll(".overlay")].pop();
+  if (!ov) return;
+  // nome no banco → sufixos usados nos ids dos formulários
+  const ALIAS = {
+    telefone: ["tel"], documento: ["doc"], descricao: ["desc"],
+    data_vencimento: ["venc"], data_competencia: ["comp"], data_pagamento: ["pago", "data"],
+    categoria_id: ["cat"], conta_id: ["conta"], contato_id: ["contato"],
+    saldo_inicial: ["saldo"], estabelecimento: ["estab"], total_parcelas: ["parcelas"],
+    forma_pagamento: ["forma"], valor_alvo: ["alvo"], valor_atual: ["atual"],
+    fipe_codigo: ["fipecod"], fipe_valor: ["fipeval"], valor_parcela: ["vparc"],
+    parcelas_total: ["ptot"], parcelas_pagas: ["ppag"], financiado: ["fin"],
+    financiamento_banco: ["banco"], venc_dia: ["dia"], valor_fixo: ["fixo"],
+  };
+  const nomes = [campo, ...(ALIAS[campo] || [])];
+  const sel = nomes.flatMap(n => [`[name="${n}"]`, `[id$="-${n}"]`, `[data-campo="${n}"]`]).join(", ");
+  const el = ov.querySelector(sel);
+  if (!el) return;
+  el.classList.add("campo-erro");
+  el.title = msg;
+  const box = el.closest("label, .fld, .campo, div");
+  let dica = box && box.querySelector(".campo-erro-msg");
+  if (box && !dica) {
+    dica = document.createElement("small");
+    dica.className = "campo-erro-msg";
+    el.insertAdjacentElement("afterend", dica);
+  }
+  if (dica) dica.textContent = msg;
+  try { el.scrollIntoView?.({ block: "center", behavior: "smooth" }); el.focus({ preventScroll: true }); } catch {}
+  const limpar = () => { el.classList.remove("campo-erro"); el.title = ""; dica?.remove(); };
+  el.addEventListener("input", limpar, { once: true });
+  el.addEventListener("change", limpar, { once: true });
+}
+
+// Erro de validação feito na própria tela: destaca o campo e avisa.
+function erroCampo(campo, msg) {
+  try { _marcarCampo(campo, msg); } catch {}
+  toast(msg, "err");
 }
 
 async function abrirPDF(path) {
@@ -212,9 +288,13 @@ function toast(msg, tipo = "") {
   const el = document.createElement("div");
   el.className = `toast ${tipo}`;
   const ic = tipo === "ok" ? "checkCircle" : tipo === "err" ? "alert" : "bell";
-  el.innerHTML = icon(ic) + `<span>${msg}</span>`;
+  el.innerHTML = icon(ic) + `<span>${esc(msg)}</span>`;
   $("#toasts").appendChild(el);
-  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(20px)"; setTimeout(() => el.remove(), 200); }, 3200);
+  // erro fica mais tempo (dá pra ler a mensagem inteira); clique fecha
+  const dur = tipo === "err" ? Math.min(12000, 5000 + String(msg).length * 40) : 3200;
+  const fechar = () => { el.style.opacity = "0"; el.style.transform = "translateX(20px)"; setTimeout(() => el.remove(), 200); };
+  el.addEventListener("click", fechar);
+  setTimeout(fechar, dur);
 }
 
 /* ---------- modal ---------- */
@@ -369,7 +449,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.112.0 · 66ac133 · 01/10/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.113.0 · 5542717 · 01/10/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1275,7 +1355,8 @@ async function salvarLanc(id) {
     juros: parseFloat($("#f-juros").value || "0"),
     multa: parseFloat($("#f-multa").value || "0"),
   };
-  if (!body.descricao || !body.valor) { toast("Preencha descrição e valor.", "err"); return; }
+  if (!body.descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório.");
+  if (!body.valor) return erroCampo("valor", "Valor: informe um valor maior que zero.");
   try {
     if (id) await api(`/api/lancamentos/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
@@ -1316,30 +1397,30 @@ const _CACHE = { contas:{}, cats:{}, contatos:{}, veiculos:{}, usuarios:{} };
 
 async function _editarConta(id) {
   let o = _CACHE.contas?.[id];
-  if (!o) try { o = await api(`/api/contas/${id}`); } catch {}
+  if (!o) try { o = await api(`/api/contas/${id}`); } catch (e) { return toast(`Não abri a conta: ${e.message}`, "err"); }
   if (o) formConta(o); else toast("Conta não encontrada.", "err");
 }
 async function _editarCategoria(id) {
   let o = _CACHE.cats?.[id];
-  if (!o) try { const list = await api("/api/categorias"); list.forEach(c => _CACHE.cats[c.id]=c); o = _CACHE.cats[id]; } catch {}
+  if (!o) try { const list = await api("/api/categorias"); list.forEach(c => _CACHE.cats[c.id]=c); o = _CACHE.cats[id]; } catch (e) { return toast(`Não abri a categoria: ${e.message}`, "err"); }
   if (o) formCategoria(o); else toast("Categoria não encontrada.", "err");
 }
 async function _editarContato(id) {
   let o = _CACHE.contatos?.[id];
   if (!o) {
-    try { o = await api(`/api/contatos/${id}`); } catch {}
+    try { o = await api(`/api/contatos/${id}`); } catch (e) { return toast(`Não abri o contato: ${e.message}`, "err"); }
   }
   if (o) formContato(o);
   else toast("Contato não encontrado.", "err");
 }
 async function _editarVeiculo(id) {
   let o = _CACHE.veiculos?.[id];
-  if (!o) try { o = await api(`/api/veiculos/${id}`); } catch {}
+  if (!o) try { o = await api(`/api/veiculos/${id}`); } catch (e) { return toast(`Não abri o veículo: ${e.message}`, "err"); }
   if (o) formVeiculo(o); else toast("Veículo não encontrado.", "err");
 }
 async function _editarUsuario(id) {
   let o = _CACHE.usuarios?.[id];
-  if (!o) try { const list = await api("/api/usuarios"); list.forEach(u => _CACHE.usuarios[u.id]=u); o = _CACHE.usuarios[id]; } catch {}
+  if (!o) try { const list = await api("/api/usuarios"); list.forEach(u => _CACHE.usuarios[u.id]=u); o = _CACHE.usuarios[id]; } catch (e) { return toast(`Não abri o usuário: ${e.message}`, "err"); }
   if (o) formUsuario(o); else toast("Usuário não encontrado.", "err");
 }
 
@@ -1494,7 +1575,7 @@ async function salvarConta(id) {
     cor: $("#c-cor").value,
     logo: LOGO_BUF || null,
   };
-  if (!body.nome) return toast("Informe o nome", "err");
+  if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/contas/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else await api("/api/contas", { method: "POST", body: JSON.stringify(body) });
@@ -1564,7 +1645,7 @@ function formCategoria(c, tipoPad) {
 }
 async function salvarCategoria(id) {
   const body = { nome: $("#k-nome").value.trim(), tipo: $("#k-tipo").value, cor: $("#k-cor").value, icone: $("#k-icone").value };
-  if (!body.nome) return toast("Informe o nome", "err");
+  if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/categorias/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else await api("/api/categorias", { method: "POST", body: JSON.stringify(body) });
@@ -1739,7 +1820,7 @@ function fmtDoc(d) {
 async function verContato(id) {
   let r;
   try { r = await api(`/api/contatos/${id}/resumo`); }
-  catch { return toast("Não foi possível carregar o resumo.", "err"); }
+  catch (e) { return toast(`Não carreguei o resumo: ${e.message}`, "err"); }
 
   const c = (window._contatos || []).find(x => x.id === id) || r.contato;
   const cli = c.tipo === "cliente";
@@ -1983,7 +2064,7 @@ async function _buscarCEP(cep, forcar) {
     set("o-estado", d.estado);
     document.getElementById("o-numero")?.focus();
     toast("CEP encontrado", "ok");
-  } catch { /* CEP não encontrado, deixa o usuário preencher */ }
+  } catch (e) { toast(`CEP: ${e.message} Preencha o endereço manualmente.`, "err"); }
 }
 
 async function salvarContato(id) {
@@ -2003,10 +2084,10 @@ async function salvarContato(id) {
     cidade:      ($("#o-cidade")?.value||"").trim() || null,
     estado:      ($("#o-estado")?.value||"").trim().toUpperCase() || null,
   };
-  if (!body.nome) return toast("Informe o nome", "err");
+  if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   const docEl = $("#o-doc");
   if (docEl && docEl.value.trim() && !_validaDoc(docEl)) {
-    return toast("CPF/CNPJ inválido — confira os dígitos", "err");
+    return erroCampo("documento", "CPF/CNPJ inválido — confira os dígitos.");
   }
   try {
     if (id) await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -2922,7 +3003,7 @@ async function salvarVeiculo(id) {
     venc_dia: +$("#v-dia").value || null,
     obs: $("#v-obs").value.trim() || null, extras,
   };
-  if (!body.nome) return toast("Informe o nome do veículo", "err");
+  if (!body.nome) return erroCampo("nome", "Nome do veículo: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/veiculos/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else await api("/api/veiculos", { method: "POST", body: JSON.stringify(body) });
@@ -3450,7 +3531,8 @@ async function salvarUsuario(id) {
     emoji: FORM_EMOJI,
     cor: FORM_COR,
   };
-  if (!body.nome || !body.email) return toast("Nome e e-mail obrigatórios", "err");
+  if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
+  if (!body.email) return erroCampo("email", "E-mail: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/usuarios/${id}`, { method:"PUT", body:JSON.stringify(body) });
     else     await api("/api/usuarios",         { method:"POST", body:JSON.stringify(body) });
@@ -3502,7 +3584,7 @@ async function abrirLeitorNFe() {
 
 async function consultarNFe() {
   const url = (document.getElementById("nfe-url")?.value || "").trim();
-  if (!url) { toast("Cole a URL ou a chave de acesso da nota", "err"); return; }
+  if (!url) return erroCampo("url", "Cole a URL do QR Code ou a chave de acesso (44 dígitos) da nota.");
 
   const btn = document.getElementById("nfe-btn-consultar");
   const erro = document.getElementById("nfe-erro");
@@ -3519,7 +3601,7 @@ async function consultarNFe() {
     _renderPreviewNFe(d);
   } catch(e) {
     if (erro) { erro.textContent = e.message; erro.classList.remove("hidden"); }
-    toast("Erro ao consultar NF-e", "err");
+    toast(`NF-e: ${e.message}`, "err");
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = icon("search") + " Consultar nota"; }
   }
@@ -3728,7 +3810,8 @@ function _removerItem(idx) {
 async function salvarCompra() {
   const descricao = $("#fc-desc").value.trim();
   const valor = parseFloat($("#fc-valor").value || "0");
-  if (!descricao || !valor) { toast("Preencha descrição e valor.", "err"); return; }
+  if (!descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório.");
+  if (!valor) return erroCampo("valor", "Valor: informe um valor maior que zero.");
 
   const dataCompra = $("#fc-data").value || hojeISO();
   const forma = $("#fc-forma").value;
@@ -3762,7 +3845,7 @@ async function salvarCompra() {
 
     if (parcelado) {
       const cartaoId = +$("#fc-cartao")?.value;
-      if (!cartaoId) { toast("Selecione um cartão para o parcelamento.", "err"); return; }
+      if (!cartaoId) return erroCampo("cartao", "Cartão: selecione o cartão do parcelamento.");
       bodyCompra.parcelamento = {
         cartao_id: cartaoId,
         total_parcelas: parseInt($("#fc-parcelas").value || "1"),
@@ -4147,7 +4230,8 @@ async function salvarMeta(id) {
     prazo: document.getElementById("mt-prazo").value || null,
     cor: _metaFormCor, icone: _metaFormIcone,
   };
-  if (!body.nome || !body.valor_alvo) { toast("Nome e valor alvo são obrigatórios.", "err"); return; }
+  if (!body.nome) return erroCampo("nome", "Nome da meta: preenchimento obrigatório.");
+  if (!body.valor_alvo) return erroCampo("valor_alvo", "Valor da meta: informe um valor maior que zero.");
   try {
     if (id) await api(`/api/metas/${id}`, {method:"PUT", body:JSON.stringify(body)});
     else     await api("/api/metas",       {method:"POST",body:JSON.stringify(body)});
@@ -4175,7 +4259,7 @@ function formAporte(id, nome) {
 
 async function confirmarAporte(id) {
   const v = parseFloat(document.getElementById("ap-valor").value || "0");
-  if (!v || v <= 0) { toast("Informe um valor positivo.", "err"); return; }
+  if (!v || v <= 0) return erroCampo("valor", "Valor: informe um valor maior que zero.");
   try {
     await api(`/api/metas/${id}/aporte`, {method:"POST", body:JSON.stringify({valor:v})});
     fecharModal(); toast("Aporte registrado!", "ok"); setView("metas");
@@ -4307,7 +4391,7 @@ async function buscaMobileQuery(q) {
       }
     }
     res.innerHTML = html;
-  } catch { res.innerHTML = `<div style="padding:20px 16px;color:var(--red)">Erro na busca.</div>`; }
+  } catch (e) { res.innerHTML = `<div style="padding:20px 16px;color:var(--red)">Erro na busca: ${esc(e.message)}</div>`; }
 }
 
 
