@@ -505,7 +505,7 @@ function renderLogin() {
   // busca versão
   fetch("/api/health").then(r=>r.json()).then(d=>{
     const el = document.getElementById("sb-version-login");
-    if (el && d.version) el.textContent = "v" + d.version + " · " + d.build;
+    if (el && d.version) el.textContent = "v" + d.version;
   }).catch(()=>{});
 
   _statusLogin();
@@ -551,7 +551,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.115.0 · aff4b96 · 01/10/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.116.0</div>
         </div>
       </div>
       <nav class="sb-nav">
