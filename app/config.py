@@ -1,4 +1,4 @@
-"""Configuração central — tudo vem de variáveis de ambiente (Coolify)."""
+"""Configuração central: tudo vem de variáveis de ambiente do servidor."""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     FECHAMENTO_HORA: int = 20       # hora do fechamento do dia (0-23)
     TIMEZONE: str = "America/Sao_Paulo"
 
-    # ---- FIPEConsulta (tecnologia própria) — valor automático dos veículos ----
+    # ---- FIPEConsulta (tecnologia própria): valor automático dos veículos ----
     FIPE_ATIVO: bool = False
     FIPE_API_URL: str = ""                       # ex.: https://fipe.unicontroller.com.br
     FIPE_API_TOKEN: str = ""                     # Bearer, se exigido
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     FIPE_ENDPOINT: str = "/api/fipe/{codigo}"
 
     # ---- Dados p/ recibos e balancetes em PDF ----
-    EMPRESA_NOME: str = "Tomelin — Gestão Financeira da Família"
+    EMPRESA_NOME: str = "Tomelin: Gestão Financeira da Família"
     EMPRESA_DOC: str = ""                        # CPF/CNPJ opcional no rodapé do PDF
     EMPRESA_CIDADE: str = "Blumenau/SC"
 
@@ -59,6 +59,6 @@ import secrets as _secrets, logging as _logging
 if not settings.SECRET_KEY or settings.SECRET_KEY.startswith("troque"):
     settings.SECRET_KEY = _secrets.token_urlsafe(48)
     _logging.getLogger("tomelin").warning(
-        "SECRET_KEY não definida — gerada aleatoriamente. "
+        "SECRET_KEY não definida: gerada aleatoriamente. "
         "Defina SECRET_KEY no ambiente para manter as sessões entre reinícios."
     )

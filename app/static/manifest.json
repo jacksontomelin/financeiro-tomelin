@@ -1,7 +1,7 @@
 {
   "name": "Tomelin Gestão Financeira",
   "short_name": "Tomelin",
-  "description": "Gestão financeira completa — contas, vencimentos e alertas no WhatsApp.",
+  "description": "Gestão financeira completa: contas, vencimentos e alertas no WhatsApp.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

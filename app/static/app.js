@@ -1,8 +1,8 @@
 /* ============================================================
-   Tomelin Gestão Financeira — SPA (vanilla JS, sem dependências)
+   Tomelin Gestão Financeira: SPA (vanilla JS, sem dependências)
    ============================================================ */
 
-// Cache de lançamentos por ID — evita JSON.stringify em onclick (quebra com aspas)
+// Cache de lançamentos por ID: evita JSON.stringify em onclick (quebra com aspas)
 const _LANC_CACHE = new Map();
 const State = {
   token: localStorage.getItem("tom_token") || null,
@@ -40,12 +40,12 @@ function toggleTema() {
 }
 
 function dataBR(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const [y, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}/${y}`;
 }
 function dataBRcurto(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const [, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}`;
 }
@@ -119,6 +119,99 @@ function esc(v) {
 function icon(name, cls = "") {
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</svg>`;
 }
+
+/* ---------- ilustrações SVG ----------
+   Desenhos pequenos com as cores do sistema. Usados em estados vazios,
+   buscas (CNPJ, CEP), sugestões e carregamento. */
+function ilus(name, cor = "var(--navy)", tam = 112) {
+  return `<svg class="ilus" viewBox="0 0 120 100" width="${tam}" height="${Math.round(tam * 100 / 120)}" fill="none" aria-hidden="true">
+    <ellipse cx="60" cy="91" rx="32" ry="4.5" fill="var(--ink-3)" opacity=".12"/>
+    <circle cx="60" cy="48" r="38" fill="${cor}" opacity=".06"/>
+    <rect x="34" y="22" width="52" height="52" rx="16" fill="var(--card)" stroke="${cor}" stroke-opacity=".22" stroke-width="1.5"/>
+    <g transform="translate(46 34) scale(1.17)" stroke="${cor}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</g>
+    <circle class="ilus-brilho" cx="97" cy="24" r="3.2" fill="var(--gold)"/>
+    <circle cx="21" cy="38" r="2.2" fill="var(--teal)"/>
+    <path class="ilus-brilho b2" d="M101 58l1.8 3.6 3.6 1.8-3.6 1.8-1.8 3.6-1.8-3.6-3.6-1.8 3.6-1.8z" fill="var(--gold)" opacity=".75"/>
+    <path d="M17 66h8M21 62v8" stroke="var(--teal)" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// Prédio + lupa varrendo as janelas (consultando CNPJ)
+function ilusBuscaEmpresa(tam = 64) {
+  return `<svg class="ilus ilus-scan" viewBox="0 0 64 64" width="${tam}" height="${tam}" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="var(--navy)" opacity=".07"/>
+    <rect x="14" y="16" width="24" height="36" rx="3" fill="var(--card)" stroke="var(--navy)" stroke-width="1.8"/>
+    <rect x="38" y="28" width="12" height="24" rx="2" fill="var(--card)" stroke="var(--navy)" stroke-width="1.8"/>
+    <g fill="var(--navy)" opacity=".35">
+      <rect x="19" y="21" width="5" height="4" rx="1"/><rect x="28" y="21" width="5" height="4" rx="1"/>
+      <rect x="19" y="29" width="5" height="4" rx="1"/><rect x="28" y="29" width="5" height="4" rx="1"/>
+      <rect x="19" y="37" width="5" height="4" rx="1"/><rect x="28" y="37" width="5" height="4" rx="1"/>
+      <rect x="42" y="33" width="4" height="4" rx="1"/><rect x="42" y="40" width="4" height="4" rx="1"/>
+    </g>
+    <rect x="23" y="45" width="6" height="7" rx="1" fill="var(--gold)"/>
+    <path d="M10 52h46" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round"/>
+    <g class="lupa">
+      <circle cx="27" cy="30" r="8" fill="var(--card)" fill-opacity=".55" stroke="var(--gold)" stroke-width="2.4"/>
+      <path d="M33 36l6 6" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </svg>`;
+}
+
+// Prédio com selo: verde (ativa), âmbar (situação irregular)
+function ilusEmpresa(ativa = true, tam = 64) {
+  const cor = ativa ? "#16A34A" : "#CA8A04";
+  const selo = ativa ? '<path d="M44.5 46.5l3 3 5.5-6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+                     : '<path d="M48.5 42.5v4.5M48.5 50.5v.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>';
+  return `<svg class="ilus ilus-pop" viewBox="0 0 64 64" width="${tam}" height="${tam}" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="${cor}" opacity=".09"/>
+    <rect x="14" y="16" width="24" height="36" rx="3" fill="var(--card)" stroke="var(--navy)" stroke-width="1.8"/>
+    <rect x="38" y="28" width="10" height="24" rx="2" fill="var(--card)" stroke="var(--navy)" stroke-width="1.8"/>
+    <g fill="var(--navy)" opacity=".35">
+      <rect x="19" y="21" width="5" height="4" rx="1"/><rect x="28" y="21" width="5" height="4" rx="1"/>
+      <rect x="19" y="29" width="5" height="4" rx="1"/><rect x="28" y="29" width="5" height="4" rx="1"/>
+      <rect x="19" y="37" width="5" height="4" rx="1"/><rect x="28" y="37" width="5" height="4" rx="1"/>
+    </g>
+    <rect x="23" y="45" width="6" height="7" rx="1" fill="var(--gold)"/>
+    <path d="M10 52h30" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="48.5" cy="47" r="9" fill="${cor}" stroke="var(--card)" stroke-width="2.5"/>${selo}
+  </svg>`;
+}
+
+// Mapa dobrado + alfinete pulando (CEP)
+function ilusMapa(buscando = false, tam = 52) {
+  return `<svg class="ilus ${buscando ? "ilus-pin" : "ilus-pop"}" viewBox="0 0 64 64" width="${tam}" height="${tam}" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="var(--teal)" opacity=".1"/>
+    <path d="M12 22l13-5 14 5 13-5v27l-13 5-14-5-13 5z" fill="var(--card)" stroke="var(--navy)" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M25 17v27M39 22v27" stroke="var(--navy)" stroke-width="1.4" opacity=".35"/>
+    <path d="M15 37c6-2 9 3 15 1s8-6 14-4" stroke="var(--teal)" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 3"/>
+    <ellipse class="sombra" cx="33" cy="41" rx="4" ry="1.5" fill="var(--navy)" opacity=".25"/>
+    <g class="pin">
+      <path d="M33 40s-8-8.5-8-14a8 8 0 0116 0c0 5.5-8 14-8 14z" fill="var(--red)" stroke="#fff" stroke-width="1.5"/>
+      <circle cx="33" cy="26" r="3" fill="#fff"/>
+    </g>
+  </svg>`;
+}
+
+// Barras subindo (carregando telas)
+function ilusCarregando(tam = 88) {
+  return `<svg class="ilus ilus-bars" viewBox="0 0 88 72" width="${tam}" height="${Math.round(tam * 72 / 88)}" fill="none" aria-hidden="true">
+    <ellipse cx="44" cy="66" rx="30" ry="4" fill="var(--ink-3)" opacity=".12"/>
+    <rect x="16" y="20" width="56" height="42" rx="10" fill="var(--card)" stroke="var(--navy)" stroke-opacity=".2" stroke-width="1.5"/>
+    <rect class="b b1" x="26" y="36" width="7" height="18" rx="2" fill="var(--navy)"/>
+    <rect class="b b2" x="37" y="30" width="7" height="24" rx="2" fill="var(--gold)"/>
+    <rect class="b b3" x="48" y="40" width="7" height="14" rx="2" fill="var(--teal)"/>
+    <circle class="ilus-brilho" cx="76" cy="16" r="3" fill="var(--gold)"/>
+  </svg>`;
+}
+
+// Alerta (erro em buscas)
+function ilusAlerta(tam = 64) {
+  return `<svg class="ilus ilus-pop" viewBox="0 0 64 64" width="${tam}" height="${tam}" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="var(--red)" opacity=".08"/>
+    <path d="M32 13L53 49H11z" fill="var(--card)" stroke="var(--red)" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M32 26v11M32 42.5v.5" stroke="var(--red)" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
 const LOGO_MARK = '<img class="brand-mark" src="/static/icons/logo-mark.png" alt="Tomelin" width="164" height="217">';
 const LOGO_LOCKUP = '<img class="login-lockup" src="/static/icons/logo-lockup.png" alt="Tomelin Gestão Financeira">';
 const SVG_HOUSE = '<svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 80 L100 20 L180 80 L180 150 L20 150 Z" fill="white" opacity=".6"/><rect x="70" y="100" width="30" height="50" fill="white" opacity=".8"/><rect x="120" y="85" width="35" height="30" fill="white" opacity=".5"/><circle cx="160" cy="35" r="18" fill="white" opacity=".3"/></svg>';
@@ -133,7 +226,7 @@ async function api(path, opts = {}) {
   } catch {
     throw new Error(navigator.onLine === false
       ? "Sem internet. Verifique a conexão e tente de novo."
-      : "Não consegui falar com o servidor. Ele pode estar reiniciando (redeploy) — tente em alguns segundos.");
+      : "Não consegui falar com o servidor. Ele pode estar reiniciando, tente de novo em alguns segundos.");
   }
   if (res.status === 401) { logout(); throw new Error("Sessão expirada. Entre de novo."); }
   if (!res.ok) {
@@ -160,7 +253,7 @@ function _msgErro(status, j, metodo, path) {
   return ({
     400: "Requisição inválida.",
     403: "Você não tem permissão para esta ação.",
-    404: `Não encontrado (${metodo} ${rota}). O registro pode ter sido excluído — recarregue a tela.`,
+    404: `Não encontrado (${metodo} ${rota}). O registro pode ter sido excluído. Recarregue a tela.`,
     405: `Ação não suportada pelo servidor (${metodo} ${rota}).`,
     409: "Conflito: o registro foi alterado ou já existe.",
     413: "Arquivo ou conteúdo grande demais para enviar.",
@@ -449,7 +542,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.113.0 · 5542717 · 01/10/2026</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.114.0 · cca647a · 01/10/2026</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -544,7 +637,7 @@ function marcarNav() {
   try { const ts = $("#tb-sub"); if (ts) ts.textContent = m.sub || ""; } catch {}
 }
 
-/* FAB (+) — abre mini-menu de novo lançamento */
+/* FAB (+): abre mini-menu de novo lançamento */
 function _atalhoClick(btn) {
   const a = btn.dataset.acao;
   if (a === "despesa") formLancamento(null,"despesa");
@@ -580,7 +673,7 @@ function abrirFabMenu() {
     </div>`);
 }
 
-/* Menu "Mais" — todas as outras seções */
+/* Menu "Mais": todas as outras seções */
 function abrirMenuMais() {
   const MAIS_ITENS = [
     { id:"relatorios",    ic:"chart",    nome:"Relatórios",         cor:"i-navy" },
@@ -625,7 +718,7 @@ async function setView(id) {
   marcarNav();
   const v = $("#view");
   if (!v) return;
-  v.innerHTML = `<div class="empty" style="padding:80px">${icon("refresh", "spin")}<p>Carregando...</p></div>`;
+  v.innerHTML = `<div class="empty" style="padding:80px">${ilusCarregando()}<p>Carregando...</p></div>`;
   try {
     if (id === "dashboard") await viewDashboard(v);
     else if (id === "vencimentos") await viewVencimentos(v);
@@ -643,7 +736,7 @@ async function setView(id) {
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
   } catch (e) {
-    v.innerHTML = `<div class="empty" style="padding:60px">${icon("alert")}<p>${e.message}</p></div>`;
+    v.innerHTML = `<div class="empty" style="padding:60px">${ilusAlerta(80)}<p>${esc(e.message)}</p></div>`;
   }
 }
 
@@ -721,7 +814,7 @@ function niceStep(max) {
 }
 
 function donut(dados) {
-  if (!dados.length) return `<div class="empty">${icon("pie")}<p>Sem despesas categorizadas neste mês.</p></div>`;
+  if (!dados.length) return `<div class="empty">${ilus("pie")}<p>Sem despesas categorizadas neste mês.</p></div>`;
   const total = dados.reduce((s, d) => s + d.valor, 0);
   const R = 78, r = 48, cx = 100, cy = 100;
   let ang = -Math.PI / 2, segs = "";
@@ -749,7 +842,7 @@ function donut(dados) {
 }
 
 /* ============================================================
-   VIEW: DASHBOARD — layout premium
+   VIEW: DASHBOARD: layout premium
    ============================================================ */
 async function viewDashboard(v) {
   const [k, fluxo, desp, venc, jur, pat] = await Promise.all([
@@ -890,7 +983,7 @@ async function viewDashboard(v) {
       <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#DC2626,#991B1B);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(220,38,38,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13.5px;color:var(--red)">${atrasadas.length} conta${atrasadas.length>1?"s":""} vencida${atrasadas.length>1?"s":""}</div>
-        <div style="font-size:12px;color:var(--red);opacity:.8">${money(atrasadas.reduce((s,l)=>s+l.valor,0))} em atraso — toque para ver</div>
+        <div style="font-size:12px;color:var(--red);opacity:.8">${money(atrasadas.reduce((s,l)=>s+l.valor,0))} em atraso. Toque para ver</div>
       </div>
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
     </div>` : ""}
@@ -1051,7 +1144,7 @@ async function recarregarTabela() {
   if (!lista) return;
 
   if (!itens.length) {
-    lista.innerHTML = `<div class="empty">${icon("wallet")}<p>Nenhum lançamento encontrado.</p></div>`;
+    lista.innerHTML = `<div class="empty">${ilus("wallet")}<p>Nenhum lançamento encontrado.</p></div>`;
     return;
   }
 
@@ -1114,7 +1207,7 @@ async function recarregarTabela() {
           </div>
         </div>
       </div>
-      <!-- botões de ação — linha separada -->
+      <!-- botões de ação: linha separada -->
       <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
         ${podeBaixar
           ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='16' height='16'><polyline points='20 6 9 17 4 12'/></svg> Dar baixa</button>`
@@ -1177,7 +1270,7 @@ function formLancamento(l, tipo, pre) {
         <div class="campo"><label>Categoria</label>
           <div style="position:relative">
             <select id="f-cat" onchange="_previewCat(this)" style="width:100%;padding-left:28px">
-              <option value="">— Sem categoria —</option>
+              <option value="">Sem categoria</option>
               ${cats.map(c => `<option value="${c.id}" ${ed && l.categoria_id === c.id ? "selected" : ""} data-cor="${c.cor||"#94A3B8"}">${esc(c.nome)}</option>`).join("")}
             </select>
             <span id="f-cat-dot" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
@@ -1195,14 +1288,14 @@ function formLancamento(l, tipo, pre) {
 
         <div class="campo"><label>Conta / carteira</label>
           <select id="f-conta">
-            <option value="">— Qualquer —</option>
+            <option value="">Qualquer</option>
             ${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}
           </select></div>
 
         <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
           <div style="position:relative">
             <select id="f-contato" style="width:100%">
-              <option value="">— Selecione —</option>
+              <option value="">Selecione</option>
               ${State.contatos.map(c => {
                 const tipo = c.tipo ? ` (${c.tipo})` : "";
                 return `<option value="${c.id}" ${ed && l.contato_id === c.id ? "selected" : ""}>${esc(c.nome)}${tipo}</option>`;
@@ -1252,7 +1345,7 @@ function _autoDesc(q) {
   const tipo = document.getElementById("f-tipo")?.value || "";
   q = (q || "").toLowerCase().trim();
 
-  // busca nos lançamentos do cache — agrupa por descrição única
+  // busca nos lançamentos do cache: agrupa por descrição única
   const vistos = new Map();
   for (const [, l] of _LANC_CACHE) {
     if (tipo && l.tipo !== tipo) continue;
@@ -1266,31 +1359,41 @@ function _autoDesc(q) {
     .sort((a, b) => (b.id || 0) - (a.id || 0))
     .slice(0, 6);
 
-  if (!sugs.length || (!q && sugs.length === 0)) {
-    box.style.display = "none";
+  const estilo = `display:block;position:absolute;top:100%;left:0;right:0;z-index:9999;
+    background:var(--card);border:1.5px solid var(--navy);border-radius:14px;
+    box-shadow:0 8px 32px rgba(8,45,81,.18);overflow:hidden;margin-top:4px;`;
+
+  if (!sugs.length) {
+    // digitou algo que nunca foi lançado: avisa com desenho em vez de sumir
+    if (q.length >= 3) {
+      box.innerHTML = `<div class="auto-vazio">${ilus("doc", "var(--navy)", 56)}
+        <div><b>Nenhum lançamento parecido</b><span>“${esc(q)}” será um lançamento novo.</span></div></div>`;
+      box.style.cssText = estilo;
+    } else box.style.display = "none";
     return;
   }
 
   const catMap = Object.fromEntries((State.cats || []).map(c => [c.id, c]));
   const cntMap = Object.fromEntries((State.contas || []).map(c => [c.id, c]));
 
-  box.innerHTML = sugs.map(l => {
+  box.innerHTML = `<div class="auto-cab">${icon("clock")} Usados antes, toque para preencher</div>` + sugs.map(l => {
     const cat = catMap[l.categoria_id];
     const cnt = cntMap[l.conta_id];
+    const rec = l.tipo === "receita";
     return `<div class="auto-item" onmousedown="event.preventDefault()" onclick="_escolherDesc(${l.id})">
-      <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${_highlight(l.descricao, q)}</div>
+      <span class="auto-ic ${rec ? "rec" : "desp"}">${icon(rec ? "arrowUp" : "arrowDown")}</span>
+      <div class="auto-txt">
+      <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${_highlight(esc(l.descricao), esc(q))}</div>
       <div style="font-size:11.5px;color:var(--ink-3);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
-        ${cat ? `<span style="color:${cat.cor||'var(--ink-3)'}">${cat.nome}</span>` : ""}
-        ${cnt ? `<span>${cnt.nome}</span>` : ""}
+        ${cat ? `<span style="color:${cat.cor||'var(--ink-3)'}">${esc(cat.nome)}</span>` : ""}
+        ${cnt ? `<span>${esc(cnt.nome)}</span>` : ""}
         <span class="mono-num">${money(l.valor)}</span>
+      </div>
       </div>
     </div>`;
   }).join("");
 
-  box.style.display = "block";
-  box.style.cssText = `display:block;position:absolute;top:100%;left:0;right:0;z-index:9999;
-    background:var(--card);border:1.5px solid var(--navy);border-radius:14px;
-    box-shadow:0 8px 32px rgba(8,45,81,.18);overflow:hidden;margin-top:4px;`;
+  box.style.cssText = estilo;
 }
 
 function _previewCat(sel) {
@@ -1366,7 +1469,7 @@ async function salvarLanc(id) {
 }
 
 
-// Wrappers seguros para onclick — buscam o objeto do cache global em vez de
+// Wrappers seguros para onclick: buscam o objeto do cache global em vez de
 // embutir JSON.stringify() (que quebra quando há apóstrofos nos dados)
 async function formBaixaId(id) {
   let l = _LANC_CACHE.get(id);
@@ -1456,7 +1559,7 @@ async function confirmarBaixa(id) {
 async function reciboWhats(id) {
   try {
     const r = await api(`/api/lancamentos/${id}/recibo/whatsapp`, { method: "POST" });
-    toast(r.enviado ? "Recibo enviado no grupo do WhatsApp" : "WhatsApp desativado — configure a integração", r.enviado ? "ok" : "err");
+    toast(r.enviado ? "Recibo enviado no grupo do WhatsApp" : "WhatsApp desativado: configure a integração", r.enviado ? "ok" : "err");
   } catch (e) { toast(e.message, "err"); }
 }
 async function estornar(id) {
@@ -1477,7 +1580,7 @@ async function viewVencimentos(v) {
   const bloco = (titulo, arr, ic, cls) => `
     <div class="card card-pad">
       <div class="card-h"><span class="card-ico ${cls}">${icon(ic)}</span><div class="grow"><h3>${titulo} (${arr.length})</h3></div></div>
-      <div class="venc-list">${arr.length ? arr.map(item(true)).join("") : `<div class="empty">${icon("checkCircle")}<p>Nada por aqui.</p></div>`}</div>
+      <div class="venc-list">${arr.length ? arr.map(item(true)).join("") : `<div class="empty">${ilus("checkCircle")}<p>Nada por aqui.</p></div>`}</div>
     </div>`;
   function item(mostrarBotao) {
     return (l) => {
@@ -1540,7 +1643,7 @@ async function viewContas(v) {
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarConta(${c.id})">${icon("edit")}Editar</button>
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();excluirConta(${c.id})">${icon("trash")}Excluir</button>
           </div>
-        </div>`).join("") || `<div class="empty">${icon("wallet")}<p>Nenhuma conta ainda.</p></div>`}
+        </div>`).join("") || `<div class="empty">${ilus("wallet")}<p>Nenhuma conta ainda.</p></div>`}
     </div>`;
 }
 function formConta(c) {
@@ -1607,7 +1710,7 @@ async function viewCategorias(v) {
             <div class="grow"><div class="nm">${esc(c.nome)}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
             <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-          </div>`).join("") || `<div class="empty" style="padding:20px">${icon("tag")}<p>Nenhuma.</p></div>`}
+          </div>`).join("") || `<div class="empty" style="padding:20px">${ilus("tag")}<p>Nenhuma.</p></div>`}
     </div>`;
   v.innerHTML = `
     <div class="toolbar"><div class="grow"></div>
@@ -1687,7 +1790,7 @@ async function viewContatos(v) {
   api("/api/contatos/cache/estatisticas").then(e => {
     const box = document.getElementById("cache-info");
     if (box && (e.cnpjs || e.ceps)) {
-      box.innerHTML = `${e.cnpjs} CNPJ e ${e.ceps} CEP guardados localmente — consultas repetidas não usam internet.`;
+      box.innerHTML = `${e.cnpjs} CNPJ e ${e.ceps} CEP guardados localmente: as consultas repetidas não usam internet.`;
     }
   }).catch(() => {});
 }
@@ -1713,7 +1816,7 @@ function renderContatos() {
   if (!box) return;
 
   if (!arr.length) {
-    box.innerHTML = `<div class="empty" style="grid-column:1/-1">${icon("users")}<p>Nenhum contato encontrado.</p></div>`;
+    box.innerHTML = `<div class="empty" style="grid-column:1/-1">${ilus("users")}<p>Nenhum contato encontrado.</p></div>`;
     return;
   }
 
@@ -1796,7 +1899,7 @@ function _validaDoc(el) {
   else if (c.length === 14) { ok = _validaCNPJ(c); tipo = "CNPJ"; }
   else { msg.textContent = "Documento incompleto"; msg.style.color = "var(--ink-3)"; el.style.borderColor = ""; return false; }
 
-  msg.textContent = ok ? `${tipo} válido` : `${tipo} inválido — confira os dígitos`;
+  msg.textContent = ok ? `${tipo} válido` : `${tipo} inválido: confira os dígitos`;
   msg.style.color = ok ? "#16A34A" : "var(--red)";
   el.style.borderColor = ok ? "#86EFAC" : "#FCA5A5";
 
@@ -1894,6 +1997,7 @@ function fmtCep(v) {
 }
 
 function formContato(c) {
+  _buscarCEP.ultimo = null;
   const e = c || {};
   abrirModal(`
     <div class="modal" style="max-width:600px">
@@ -1957,6 +2061,7 @@ function formContato(c) {
               ${icon("search")}
             </button>
           </div>
+          <div id="o-cep-status"></div>
         </div>
 
         <div class="campo full"><label>Logradouro</label>
@@ -1979,7 +2084,7 @@ function formContato(c) {
             oninput="this.value=this.value.toUpperCase()"></div>
 
         <!-- Logo e obs -->
-        ${campoLogo("Logo da empresa (PNG/JPG — salvo no sistema)")}
+        ${campoLogo("Logo da empresa (PNG ou JPG, fica salvo no sistema)")}
         <div class="campo full"><label>Observações</label>
           <textarea id="o-obs" rows="2">${e.obs||""}</textarea></div>
 
@@ -1997,12 +2102,19 @@ async function _buscarCNPJ(forcar) {
   const st  = document.getElementById("o-cnpj-status");
   const raw = (el?.value || "").replace(/\D/g, "");
 
-  const aviso = (txt, cor) => { if (st) { st.textContent = txt; st.style.color = cor; } };
+  const aviso = (txt, cor) => {
+    if (!st) return;
+    const erro = cor === "var(--red)";
+    st.innerHTML = erro
+      ? `<div class="busca-card erro">${ilusAlerta(44)}<div><b>${esc(txt)}</b></div></div>`
+      : `<div class="busca-card">${ilusBuscaEmpresa(52)}<div><b>${esc(txt)}</b>
+           <span>Consultando a Receita Federal por três fontes ao mesmo tempo</span></div></div>`;
+  };
 
   if (raw.length !== 14) return aviso("Digite os 14 dígitos do CNPJ.", "var(--red)");
-  if (!_validaCNPJ(raw)) return aviso("CNPJ inválido — confira os dígitos.", "var(--red)");
+  if (!_validaCNPJ(raw)) return aviso("CNPJ inválido: confira os dígitos.", "var(--red)");
 
-  aviso(forcar ? "Atualizando na Receita Federal..." : "Consultando...", "var(--ink-3)");
+  aviso(forcar ? "Atualizando os dados da empresa..." : "Buscando os dados da empresa...", "var(--ink-3)");
 
   let d;
   try {
@@ -2034,19 +2146,24 @@ async function _buscarCNPJ(forcar) {
 
   const inativa = d.situacao && !/ATIVA/i.test(d.situacao);
   if (st) {
+    const local = [d.cidade, d.estado].filter(Boolean).join("/");
+    const fantasia = d.nome && d.nome !== d.razao_social ? d.nome : "";
     st.innerHTML = `
-      <span style="color:${inativa ? "#CA8A04" : "#16A34A"}">
-        ${esc(d.razao_social || d.nome)}${d.situacao ? " · " + esc(d.situacao) : ""}
-      </span>
-      ${d.do_cache ? `
-        <span style="color:var(--ink-3)"> · guardado localmente</span>
-        <button onclick="_buscarCNPJ(true)" style="background:none;border:none;color:var(--navy);
-          font-size:11px;font-weight:700;cursor:pointer;padding:0 0 0 6px;text-decoration:underline">
-          atualizar
-        </button>` : ""}`;
+      <div class="busca-card ${inativa ? "aviso" : "ok"}">
+        ${ilusEmpresa(!inativa, 52)}
+        <div>
+          <b>${esc(d.razao_social || d.nome)}</b>
+          <span>${[fantasia, local].filter(Boolean).map(esc).join(" · ")}</span>
+          <div class="busca-chips">
+            ${d.situacao ? `<i class="chip ${inativa ? "amb" : "ver"}">${esc(d.situacao)}</i>` : ""}
+            <i class="chip">${d.do_cache ? icon("clock") + " guardado no sistema" : icon("check") + " " + esc(d.fonte || "Receita")}</i>
+            ${d.do_cache ? `<button type="button" class="chip link" onclick="_buscarCNPJ(true)">${icon("refresh")} atualizar</button>` : ""}
+          </div>
+        </div>
+      </div>`;
   }
   toast(
-    inativa ? `Empresa encontrada — situação: ${d.situacao}`
+    inativa ? `Empresa encontrada, mas a situação é ${d.situacao}`
             : (d.do_cache ? "Dados do cache local" : "Dados preenchidos"),
     inativa ? "err" : "ok"
   );
@@ -2055,8 +2172,17 @@ async function _buscarCNPJ(forcar) {
 async function _buscarCEP(cep, forcar) {
   const raw = (cep||"").replace(/\D/g,"");
   if (raw.length !== 8) return;
+  // sair do campo e clicar na lupa disparavam duas buscas iguais
+  if (!forcar && raw === _buscarCEP.ultimo) return;
+  _buscarCEP.ultimo = raw;
+  const st = document.getElementById("o-cep-status");
+  const mostra = (html) => { if (st) st.innerHTML = html; };
+  mostra(`<div class="busca-card mini">${ilusMapa(true, 40)}<div><b>Buscando o endereço...</b></div></div>`);
   try {
     const d = await api(`/api/contatos/buscar-cep/${raw}`);
+    mostra(`<div class="busca-card mini ok">${ilusMapa(false, 40)}<div>
+      <b>${esc([d.logradouro, d.bairro].filter(Boolean).join(", ") || "CEP encontrado")}</b>
+      <span>${esc([d.cidade, d.estado].filter(Boolean).join("/"))}</span></div></div>`);
     const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
     set("o-logradouro", d.logradouro);
     set("o-bairro", d.bairro);
@@ -2064,7 +2190,11 @@ async function _buscarCEP(cep, forcar) {
     set("o-estado", d.estado);
     document.getElementById("o-numero")?.focus();
     toast("CEP encontrado", "ok");
-  } catch (e) { toast(`CEP: ${e.message} Preencha o endereço manualmente.`, "err"); }
+  } catch (e) {
+    _buscarCEP.ultimo = null;   // permite tentar de novo
+    mostra(`<div class="busca-card mini erro">${ilusAlerta(36)}<div><b>${esc(e.message)}</b>
+      <span>Preencha o endereço manualmente.</span></div></div>`);
+  }
 }
 
 async function salvarContato(id) {
@@ -2087,7 +2217,7 @@ async function salvarContato(id) {
   if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   const docEl = $("#o-doc");
   if (docEl && docEl.value.trim() && !_validaDoc(docEl)) {
-    return erroCampo("documento", "CPF/CNPJ inválido — confira os dígitos.");
+    return erroCampo("documento", "CPF/CNPJ inválido: confira os dígitos.");
   }
   try {
     if (id) await api(`/api/contatos/${id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -2110,7 +2240,7 @@ async function viewWhatsapp(v) {
   let st = {}, tunnelUrl = "";
   try { st = await api("/api/whatsapp/status"); } catch { st = {}; }
   try { const t = await api("/api/whatsapp/tunnel-url"); tunnelUrl = t.url || ""; } catch {}
-  // URL direta por IP:porta — igual ao Sentinela (bypassa o Traefik)
+  // URL direta por IP:porta: igual ao Sentinela (bypassa o Traefik)
   const _host = location.hostname;
   const webhookUrl = tunnelUrl || st.tunnel_url || `http://189.126.105.8:8788/api/whatsapp/webhook`;
   const webhookUrlAlt = location.origin + "/api/whatsapp/webhook";
@@ -2233,7 +2363,7 @@ async function viewWhatsapp(v) {
         <div class="campo full"><label>URL do gateway</label>
           <input id="wa-url" value="${st.gateway||"https://zap.unicontroller.com.br"}" placeholder="https://zap.unicontroller.com.br"></div>
         <div class="campo full"><label>Chave de API <span style="font-weight:400;color:var(--ink-3)">(API Keys no painel do gateway)</span></label>
-          <input id="wa-chave" type="password" placeholder="${st.chave_configurada?"••••••••  (já salva — deixe em branco para manter)":"Cole a chave gerada no painel"}"></div>
+          <input id="wa-chave" type="password" placeholder="${st.chave_configurada?"••••••••  (já salva, deixe em branco para manter)":"Cole a chave gerada no painel"}"></div>
         <div class="campo full" style="flex-direction:row;align-items:center;gap:10px">
           <label class="switch"><input type="checkbox" id="wa-ativo" ${st.ativo?"checked":""}><span class="slider"></span></label>
           <span style="font-size:13.5px;color:var(--ink);font-weight:600">Ativar envio de mensagens</span>
@@ -2404,7 +2534,7 @@ async function viewWhatsapp(v) {
           </div>
           <div id="wa-num-preview" style="margin-top:6px;font-size:12.5px;
             color:${st.meu_numero ? "#128C7E" : "var(--ink-3)"}">
-            ${st.meu_numero ? "✓ Somente você controla o sistema pelo grupo."
+            ${st.meu_numero ? `<span class="ic-inline" style="color:currentColor">${icon("check")}</span> Somente você controla o sistema pelo grupo.`
               : "Deixe em branco para qualquer membro do grupo usar."}
           </div>
         </div>
@@ -2431,14 +2561,14 @@ async function viewWhatsapp(v) {
     <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)">
       ${stepCircle(3, false)}
       <div>
-        <div style="font-weight:800;font-size:15px;color:var(--ink)">Webhook — resposta imediata</div>
-        <div style="font-size:12px;color:var(--ink-3)">Igual ao Sentinela — sem atraso, responde na hora</div>
+        <div style="font-weight:800;font-size:15px;color:var(--ink)">Webhook: resposta imediata</div>
+        <div style="font-size:12px;color:var(--ink-3)">Igual ao Sentinela: sem atraso, responde na hora</div>
       </div>
     </div>
     <div style="padding:16px 18px">
       <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(7,94,84,.05));border:2px solid rgba(37,211,102,.4);border-radius:14px;margin-bottom:12px">
         <div style="font-size:11px;font-weight:800;color:#128C7E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
-          ⚡ URL por IP direto — igual ao Sentinela (recomendado)
+          <span class="ic-inline" style="color:var(--gold)">${icon("send")}</span> URL por IP direto: igual ao Sentinela (recomendado)
         </div>
         <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.05);border-radius:10px;padding:10px 12px;margin-bottom:6px">
           <code style="flex:1;font-size:12.5px;color:var(--navy);font-weight:700;overflow-wrap:anywhere">http://189.126.105.8:8788/api/whatsapp/webhook</code>
@@ -2452,7 +2582,7 @@ async function viewWhatsapp(v) {
           <span style="background:#25D366;color:#fff;font-size:12px;font-weight:800;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
         </div>
         <div style="font-size:11.5px;color:var(--ink-3)">
-          ⚠️ Apague o webhook antigo com a URL do domínio e cadastre este com o IP direto.
+          <span class="ic-inline" style="color:#CA8A04">${icon("alert")}</span> Apague o webhook antigo com a URL do domínio e cadastre este com o IP direto.
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;background:var(--bg);border:1px solid var(--line);border-radius:12px">
@@ -2581,7 +2711,7 @@ async function viewWhatsapp(v) {
 async function rodarDiagnosticoWA() {
   const box = document.getElementById("wa-diag");
   if (!box) return;  // tela não está aberta
-  box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:4px 0">Verificando…</div>`;
+  box.innerHTML = `<div style="font-size:13px;color:var(--ink-3);padding:4px 0;display:flex;align-items:center;gap:6px">${icon("refresh", "spin")} Verificando...</div>`;
   let d;
   try { d = await api("/api/whatsapp/debug"); }
   catch (e) { box.innerHTML = `<div style="color:var(--red);font-size:13px">${e.message}</div>`; return; }
@@ -2618,7 +2748,7 @@ async function rodarDiagnosticoWA() {
 
     <!-- URL do webhook -->
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">
-      ⚡ URL do webhook — cadastre no gateway
+      <span class="ic-inline" style="color:var(--gold)">${icon("send")}</span> URL do webhook: cadastre no gateway
     </div>
     <div style="padding:14px;background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(7,94,84,.05));border:2px solid rgba(37,211,102,.4);border-radius:14px;margin-bottom:10px">
       <div style="font-size:11px;color:#128C7E;font-weight:700;margin-bottom:6px">
@@ -2634,7 +2764,7 @@ async function rodarDiagnosticoWA() {
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;color:var(--ink-2)">Evento:</span>
         <span style="font-size:12px;font-weight:800;background:#25D366;color:#fff;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
-        <span style="font-size:12px;color:var(--ink-3)">— só este, uma vez</span>
+        <span style="font-size:12px;color:var(--ink-3)">só este, uma vez</span>
       </div>
     </div>
 
@@ -2644,7 +2774,7 @@ async function rodarDiagnosticoWA() {
     </div>
     ${(d.ultimos_payloads||[]).length === 0 ? `
       <div style="padding:14px;background:rgba(255,193,7,.08);border:1.5px solid rgba(255,193,7,.3);border-radius:12px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:#8A6A1A;margin-bottom:8px">⚠️ Gateway não está chamando o webhook</div>
+        <div style="font-size:13px;font-weight:700;color:#8A6A1A;margin-bottom:8px"><span class="ic-inline" style="color:#CA8A04">${icon("alert")}</span> Gateway não está chamando o webhook</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;gap:8px;align-items:flex-start">
             <span style="width:20px;height:20px;border-radius:50%;background:#C9A94E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">1</span>
@@ -2705,7 +2835,7 @@ async function salvarGatewayWA() {
     await api("/api/configuracoes", { method: "POST", body: JSON.stringify(dados) });
     const st = await api("/api/whatsapp/status");
     if (st.erro_gateway) toast(st.erro_gateway, "err");
-    else toast(st.conectado ? "Gateway conectado!" : "Salvo — WhatsApp desconectado no gateway", st.conectado ? "ok" : "err");
+    else toast(st.conectado ? "Gateway conectado!" : "Salvo, mas o WhatsApp está desconectado no gateway", st.conectado ? "ok" : "err");
     setView("whatsapp");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -2813,9 +2943,9 @@ function _previewNumeroWA(v) {
   const completo = d.length >= 10;
 
   if (el) {
-    el.textContent = !d ? "Deixe em branco para qualquer membro do grupo usar."
-      : completo ? "✓ Somente você controla o sistema pelo grupo."
-      : fmt + "…";
+    el.innerHTML = !d ? "Deixe em branco para qualquer membro do grupo usar."
+      : completo ? `<span class="ic-inline">${icon("check")}</span> Somente você controla o sistema pelo grupo.`
+      : esc(fmt) + "…";
     el.style.color = completo ? "#128C7E" : "var(--ink-3)";
   }
   if (st2) st2.innerHTML = completo ? `<svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>` : "";
@@ -2879,7 +3009,7 @@ async function viewVeiculos(v) {
       <button class="btn btn-primary" onclick="formVeiculo(null)">${icon("plus")}Novo veículo</button>
     </div>
     <div class="grid-3">
-      ${veics.map(cardVeiculo).join("") || `<div class="empty">${icon("car")}<p>Nenhum veículo cadastrado.</p></div>`}
+      ${veics.map(cardVeiculo).join("") || `<div class="empty">${ilus("car")}<p>Nenhum veículo cadastrado.</p></div>`}
     </div>`;
 }
 
@@ -2892,7 +3022,7 @@ function cardVeiculo(x) {
     <div class="card card-pad">
       <div class="card-h">
         <span class="card-ico" style="background:${x.cor_card}22;color:${x.cor_card}">${icon("car")}</span>
-        <div class="grow"><h3>${x.nome}</h3><div class="sub">${[x.marca, x.modelo, x.ano].filter(Boolean).join(" · ") || "—"}</div></div>
+        <div class="grow"><h3>${x.nome}</h3><div class="sub">${[x.marca, x.modelo, x.ano].filter(Boolean).join(" · ") || "-"}</div></div>
         <span class="tag ${fipe ? "rec" : "pendente"}">${fipe ? "FIPE" : "Valor fixo"}</span>
       </div>
       <div class="val mono-num" style="font-size:24px;color:var(--navy);margin:6px 0 0">${money(x.valor_atual)}</div>
@@ -3045,7 +3175,7 @@ async function viewRelatorios(v) {
   const clicavel = `cursor:pointer;transition:all .15s;user-select:none`;
   const hoverEfect = `onmouseover="this.style.transform='scale(1.01)';this.style.boxShadow='0 4px 16px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''"`;
 
-  // linha de categoria clicável — filtra o extrato por categoria
+  // linha de categoria clicável: filtra o extrato por categoria
   const linhaCat = (arr, total, cor, tipo) => {
     if (!arr?.length) return `<div class="meta" style="padding:12px 0">Sem lançamentos no período.</div>`;
     return arr.map(([nome, val]) => {
@@ -3148,14 +3278,14 @@ async function viewRelatorios(v) {
       <div class="card-h">
         <span class="card-ico i-navy">${icon("trendUp")}</span>
         <div class="grow">
-          <h3>Projeção — próximos 6 meses</h3>
+          <h3>Projeção: próximos 6 meses</h3>
           <div class="sub">Saldo projetado: <b>${money(proj[proj.length - 1]?.saldo || 0)}</b></div>
         </div>
       </div>
       <div style="overflow-x:auto;margin-top:8px">${barChart(proj)}</div>
     </div>
 
-    <!-- Patrimônio — cada linha clicável -->
+    <!-- Patrimônio: cada linha clicável -->
     <div class="card card-pad" style="margin-bottom:14px">
       <div class="card-h" style="margin-bottom:16px">
         <span class="card-ico i-navy">${icon("shield")}</span>
@@ -3326,7 +3456,7 @@ async function viewConfiguracoes(v) {
         </div>`).join("")}
     </div>
     <div class="card card-pad" style="margin-top:4px">
-      <div class="meta"> As configurações são salvas no banco de dados e valem imediatamente — sem reiniciar o sistema. Variáveis de ambiente no Coolify servem de fallback caso uma chave não esteja salva aqui.</div>
+      <div class="meta"> As configurações são salvas no banco de dados e valem na hora, sem reiniciar o sistema. Se alguma chave não estiver salva aqui, o sistema usa o valor definido no servidor.</div>
     </div>`;
 
   // toggle label ao clicar
@@ -3356,7 +3486,7 @@ async function testarWhatsappCfg() {
   await salvarConfiguracoes();
   try {
     const r = await api("/api/configuracoes/whatsapp/testar");
-    toast(r.enviado ? "Mensagem enviada no grupo!" : "Falha — verifique URL, token e grupo.", r.enviado ? "ok" : "err");
+    toast(r.enviado ? "Mensagem enviada no grupo!" : "Falha: verifique URL, token e grupo.", r.enviado ? "ok" : "err");
   } catch(e) { toast(e.message, "err"); }
 }
 
@@ -3486,12 +3616,12 @@ async function verHistoricoLogin(uid, nome) {
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
       <span style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${ok ? '#2F817A18' : '#B4503E18'};flex-shrink:0">${ok ? icon("checkCircle") : icon("x")}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${r.dispositivo || "—"}</div>
-        <div style="font-size:11.5px;color:var(--ink-2)">${data} às ${hora} · ${r.ip || "—"}</div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--ink)">${r.dispositivo || "-"}</div>
+        <div style="font-size:11.5px;color:var(--ink-2)">${data} às ${hora} · ${r.ip || "-"}</div>
       </div>
       <div style="font-size:11px;color:var(--ink-3);white-space:nowrap">${quando}</div>
     </div>`;
-  }).join("") : `<div class="empty" style="padding:30px">${icon("clock")}<p>Nenhum login registrado.</p></div>`;
+  }).join("") : `<div class="empty" style="padding:30px">${ilus("clock")}<p>Nenhum login registrado.</p></div>`;
 
   const falhas = rows.filter(r => !r.sucesso).length;
   const aviso = falhas > 0
@@ -3502,7 +3632,7 @@ async function verHistoricoLogin(uid, nome) {
     <div class="modal" style="max-width:480px">
       <div class="modal-h">
         <span class="card-ico i-navy">${icon("clock")}</span>
-        <h3>Histórico de logins — ${nome}</h3>
+        <h3>Histórico de logins: ${nome}</h3>
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
       </div>
       <div class="modal-b">
@@ -3630,7 +3760,7 @@ function _renderPreviewNFe(d) {
           </tbody>
         </table>
        </div>`
-    : `<div class="dica ouro" style="margin-top:8px">${icon("alert")} <span>O portal não retornou a lista de itens — apenas o valor total está disponível.</span></div>`;
+    : `<div class="dica ouro" style="margin-top:8px">${icon("alert")} <span>O portal não retornou a lista de itens: apenas o valor total está disponível.</span></div>`;
 
   prev.style.display = "block";
   prev.innerHTML = `
@@ -3675,7 +3805,7 @@ async function cadastrarDaNFe() {
 }
 
 /* ============================================================
-   FORM DE COMPRA — itens da nota + parcelamento no cartão
+   FORM DE COMPRA: itens da nota + parcelamento no cartão
    ============================================================ */
 let COMPRA_ITENS = [];
 let COMPRA_PARCELADO = false;
@@ -3705,7 +3835,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
         <div class="campo"><label>Valor total (R$)</label>
           <input id="fc-valor" type="number" step="0.01" value="${valorTotal}" oninput="_recalcularParcelas()"></div>
         <div class="campo"><label>Categoria</label>
-          <select id="fc-cat"><option value="">—</option>${State.cats.filter(c => c.tipo === 'despesa').map(c =>
+          <select id="fc-cat"><option value="">-</option>${State.cats.filter(c => c.tipo === 'despesa').map(c =>
             `<option value="${c.id}" ${d.categoria_sugerida?.id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
         <div class="campo"><label>Data da compra</label>
           <input id="fc-data" type="date" value="${dataRef}"></div>
@@ -3729,7 +3859,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
             <div class="campo"><label>1ª parcela vence em</label>
               <input id="fc-1parc" type="date" value="${_add30dias(dataRef)}" oninput="_recalcularParcelas()"></div>
             <div class="campo"><label>Valor de cada parcela</label>
-              <div id="fc-valor-parcela" class="mono-num" style="padding-top:8px;font-weight:700;color:var(--navy)">—</div></div>
+              <div id="fc-valor-parcela" class="mono-num" style="padding-top:8px;font-weight:700;color:var(--navy)">-</div></div>
           </div>
           ${cartoes.length === 0 ? `<div class="dica ouro" style="margin-top:8px">${icon("alert")}<div>Cadastre um cartão em <b>Contas</b> (tipo "cartão") antes de usar o parcelamento.</div></div>` : ""}
         </div>
@@ -3765,12 +3895,12 @@ function _recalcularParcelas() {
   const valor = parseFloat(document.getElementById("fc-valor")?.value || "0");
   const n = Math.max(1, parseInt(document.getElementById("fc-parcelas")?.value || "1"));
   const el = document.getElementById("fc-valor-parcela");
-  if (el) el.textContent = n > 0 ? `${n}x de ${money(valor / n)}` : "—";
+  if (el) el.textContent = n > 0 ? `${n}x de ${money(valor / n)}` : "-";
 }
 
 function _renderItensCompra() {
   if (!COMPRA_ITENS.length) {
-    return `<div class="empty" style="padding:16px">${icon("receipt")}<p>Nenhum item — adicione manualmente ou volte e leia o QR code da nota.</p></div>`;
+    return `<div class="empty" style="padding:16px">${ilus("receipt")}<p>Nenhum item: adicione manualmente ou volte e leia o QR code da nota.</p></div>`;
   }
   return `<div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
     <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -3865,7 +3995,7 @@ async function salvarCompra() {
 
 
 /* ============================================================
-   VIEW: COMPRAS E CARTÕES — itens comprados + controle de parcelas
+   VIEW: COMPRAS E CARTÕES: itens comprados + controle de parcelas
    ============================================================ */
 async function viewCompras(v) {
   const [compras, parcelasPend] = await Promise.all([
@@ -3885,7 +4015,7 @@ async function viewCompras(v) {
       <button class="btn btn-ghost" onclick="verParcelasPendentes()">${icon("clock")}Parcelas pendentes${totalParcelasPend ? ` (${totalParcelasPend})` : ''}</button>
     </div>
 
-    ${atrasadas.length ? `<div class="dica vermelho" style="margin-bottom:14px">${icon("alert")}<div><b>${atrasadas.length} parcela(s) atrasada(s)</b> — total de ${money(atrasadas.reduce((s,p)=>s+p.valor,0))}.</div></div>` : ""}
+    ${atrasadas.length ? `<div class="dica vermelho" style="margin-bottom:14px">${icon("alert")}<div><b>${atrasadas.length} parcela(s) atrasada(s)</b>: total de ${money(atrasadas.reduce((s,p)=>s+p.valor,0))}.</div></div>` : ""}
 
     <div class="kpi-grid" style="margin-bottom:20px">
       <div class="kpi navy"><div class="lab"><span class="i i-navy">${icon("receipt")}</span>Compras registradas</div><div class="val mono-num">${compras.length}</div><div class="meta">com itens detalhados</div></div>
@@ -3894,7 +4024,7 @@ async function viewCompras(v) {
 
     ${compras.length === 0 ? `
       <div class="empty" style="padding:50px 20px">
-        ${icon("receipt")}
+        ${ilus("receipt")}
         <p>Nenhuma compra detalhada ainda.</p>
         <div class="sub">Use "Ler Nota Fiscal" em Lançamentos para cadastrar compras com itens e parcelamento.</div>
       </div>` : compras.map(c => _cardCompra(c)).join("")}
@@ -3972,7 +4102,7 @@ async function verParcelasCompra(cid) {
   abrirModal(`
     <div class="modal" style="max-width:480px">
       <div class="modal-h"><span class="card-ico i-gold">${icon("wallet")}</span>
-        <h3>Parcelas — ${c.estabelecimento || 'Compra'}</h3>
+        <h3>Parcelas: ${c.estabelecimento || 'Compra'}</h3>
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
         <div class="sub" style="margin-bottom:10px">${pm.cartao_nome} · ${pm.total_parcelas}x de ${money(pm.valor_parcela)}</div>
@@ -4021,11 +4151,11 @@ async function verParcelasPendentes() {
         <h3>Parcelas pendentes</h3>
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
-        ${parcelas.length === 0 ? `<div class="empty" style="padding:30px">${icon("checkCircle")}<p>Nenhuma parcela pendente!</p></div>` :
+        ${parcelas.length === 0 ? `<div class="empty" style="padding:30px">${ilus("checkCircle")}<p>Nenhuma parcela pendente!</p></div>` :
           parcelas.map(p => `
             <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
               <div style="flex:1">
-                <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.estabelecimento || 'Compra'} — parcela ${p.numero}/${p.total_parcelas}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.estabelecimento || 'Compra'}: parcela ${p.numero}/${p.total_parcelas}</div>
                 <div class="sub">${p.cartao_nome} · vence ${dataBR(p.data_vencimento)}</div>
               </div>
               <div style="text-align:right">
@@ -4084,7 +4214,7 @@ document.addEventListener("keydown", (e) => {
 // expõe funções usadas por onclick inline
 
 /* ============================================================
-   METAS FINANCEIRAS — funções que precisam ser definidas
+   METAS FINANCEIRAS: funções que precisam ser definidas
    ============================================================ */
 const METAS_ICONES = ["🎯","🏠","🚗","✈️","📱","💻","🎓","💰","🏖️","👶","🏋️","🎸","📚","🩺","💍"];
 const METAS_CORES  = ["#082D51","#2F817A","#C9A94E","#B4503E","#6B3FA0","#D9772E","#1E5FA8","#3B6D11","#C74B4B","#305C74"];
@@ -4116,7 +4246,7 @@ async function viewMetas(v) {
     </div>
     ${metas.length === 0 ? `
       <div class="empty" style="padding:60px 20px">
-        ${icon("star")}<p>Nenhuma meta ainda.</p>
+        ${ilus("star")}<p>Nenhuma meta ainda.</p>
         <button class="btn btn-primary" style="margin-top:20px" onclick="formMeta(null)">${icon("plus")}Criar primeira meta</button>
       </div>` : `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
@@ -4130,7 +4260,7 @@ function _cardMeta(m) {
   const prazoStr = m.prazo ? (dias < 0 ? `Prazo vencido há ${Math.abs(dias)}d` : dias === 0 ? "Prazo hoje!" : `${dias} dias restantes`) : "Sem prazo";
   const prazoClass = dias !== null && dias <= 30 && !m.concluida ? "color:var(--red)" : "color:var(--ink-2)";
   return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative;cursor:pointer;transition:all .15s" onclick="_editarMeta(${m.id})" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-    ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída ✓</span></div>` : ""}
+    ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída <span class="ic-inline">${icon("check")}</span></span></div>` : ""}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
       <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${m.icone}</div>
       <div><div style="font-weight:700;color:var(--ink)">${esc(m.nome)}</div>
@@ -4286,7 +4416,7 @@ async function buscaGlobal(q) {
     let box = document.getElementById("busca-box");
     if (!box) return;
     if (!res.length) {
-      box.innerHTML = `<div style="padding:12px 16px;color:var(--ink-2);font-size:13px">Nenhum resultado.</div>`;
+      box.innerHTML = `<div class="auto-vazio">${ilus("search", "var(--navy)", 56)}<div><b>Nenhum resultado</b><span>Tente outra palavra, um valor ou o nome do contato.</span></div></div>`;
       box.style.display = "block"; return;
     }
     box.innerHTML = res.map(r => {
@@ -4295,7 +4425,7 @@ async function buscaGlobal(q) {
         return `<div class="busca-item" onclick="setView('lancamentos');fecharBusca()">
           <span style="font-size:16px">${l.tipo==="receita" ? `<svg viewBox='0 0 24 24' fill='none' stroke='#15803D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='5' x2='12' y2='19'/><polyline points="19 12 12 19 5 12"/></svg>` : `<svg viewBox='0 0 24 24' fill='none' stroke='#991B1B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='22' height='22' ><line x1='12' y1='19' x2='12' y2='5'/><polyline points="5 12 12 5 19 12"/></svg>`}</span>
           <div style="flex:1;min-width:0"><div class="busca-nome">${esc(l.descricao)}</div>
-            <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"—"}</div></div>
+            <div class="busca-sub">${l.data_vencimento?dataBR(l.data_vencimento):""} · ${l.categoria_nome||"-"}</div></div>
           <span class="mono-num" style="font-size:12px;font-weight:700">${money(l.valor)}</span>
         </div>`;
       }
@@ -4333,7 +4463,7 @@ function abrirBuscaMobile() {
      </div>
      <div id="busca-mob-res" style="flex:1;overflow-y:auto;padding:8px 0">
        <div style="padding:48px 20px;text-align:center;color:var(--ink-3)">
-         ${icon("search")}<p style="margin-top:14px;font-size:14px">Digite para buscar</p>
+         ${ilus("search")}<p style="margin-top:10px;font-size:14px">Digite para buscar lançamentos e contatos</p>
        </div>
      </div>`;
   document.body.appendChild(ov);
@@ -4357,7 +4487,7 @@ async function buscaMobileQuery(q) {
       api("/api/contatos").then(cs => cs.filter(c => c.nome.toLowerCase().includes(q.toLowerCase())).slice(0,5)),
     ]);
     if (!lancs.length && !conts.length) {
-      res.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--ink-3)"><p>Nenhum resultado para <b>${q}</b></p></div>`;
+      res.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--ink-3)">${ilus("search")}<p style="margin-top:10px">Nenhum resultado para <b>${esc(q)}</b></p></div>`;
       return;
     }
     let html = "";
@@ -4391,12 +4521,12 @@ async function buscaMobileQuery(q) {
       }
     }
     res.innerHTML = html;
-  } catch (e) { res.innerHTML = `<div style="padding:20px 16px;color:var(--red)">Erro na busca: ${esc(e.message)}</div>`; }
+  } catch (e) { res.innerHTML = `<div style="padding:30px 16px;text-align:center;color:var(--red)">${ilusAlerta(64)}<p style="margin-top:8px">Erro na busca: ${esc(e.message)}</p></div>`; }
 }
 
 
 /* ============================================================
-   TOUR INTERATIVO — guia completo do sistema
+   TOUR INTERATIVO: guia completo do sistema
    ============================================================ */
 const TOUR_PASSOS = [
   {
@@ -4406,13 +4536,13 @@ const TOUR_PASSOS = [
     destaque: null,
   },
   {
-    titulo: "Dashboard — Visão geral",
+    titulo: "Dashboard: Visão geral",
     texto: "A tela principal mostra seu <b>saldo consolidado</b>, receitas e despesas do mês, alertas de vencimento e atalhos rápidos.",
     acao: () => setView("dashboard"),
     destaque: null,
   },
   {
-    titulo: "Hero card — Saldo",
+    titulo: "Hero card: Saldo",
     texto: "O card escuro no topo mostra seu <b>saldo total</b> somando todas as contas, o resultado do mês (verde = positivo, vermelho = negativo) e os 3 KPIs principais.",
     acao: () => setView("dashboard"),
     destaque: ".dash-hero, [style*='#06243F'], [style*='#082D51'][style*='border-radius:22px']",
@@ -4437,13 +4567,13 @@ const TOUR_PASSOS = [
   },
   {
     titulo: "Dar baixa",
-    texto: "Toque no botão <b>✓</b> de qualquer lançamento para registrar o pagamento. Você define a data, conta e eventuais juros/multa.",
+    texto: "Toque no botão <b>Baixar</b> de qualquer lançamento para registrar o pagamento. Você define a data, conta e eventuais juros/multa.",
     acao: () => setView("pagar"),
     destaque: ".btn-green",
   },
   {
     titulo: "Contas a receber",
-    texto: "Suas <b>receitas pendentes e recebidas</b>. Mesmo sistema das despesas — filtre, busque, confirme recebimento.",
+    texto: "Suas <b>receitas pendentes e recebidas</b>. Mesmo sistema das despesas: filtre, busque, confirme recebimento.",
     acao: () => setView("receber"),
     destaque: null,
   },
@@ -4527,7 +4657,7 @@ const TOUR_PASSOS = [
   },
   {
     titulo: "Busca rápida",
-    texto: "No desktop, use a <b>barra de busca</b> no topo. No celular, toque na <b>lupa</b> — abre uma busca fullscreen de lançamentos e contatos.",
+    texto: "No desktop, use a <b>barra de busca</b> no topo. No celular, toque na <b>lupa</b> para abrir uma busca fullscreen de lançamentos e contatos.",
     acao: () => setView("dashboard"),
     destaque: ".busca-global-wrap, .show-mob[title='Buscar']",
   },

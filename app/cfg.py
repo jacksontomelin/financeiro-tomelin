@@ -1,4 +1,4 @@
-"""Configurações dinâmicas — salvas no banco, editáveis pela interface.
+"""Configurações dinâmicas: salvas no banco, editáveis pela interface.
 
 Hierarquia: banco de dados > variável de ambiente > valor padrão.
 Assim quem ainda usa .env continua funcionando, mas o painel sobrescreve.
@@ -16,7 +16,7 @@ DEFS = [
     ("WHATSAPP_GRUPO",           "JID do grupo de controle (escolha na tela WhatsApp)",               ""),
     ("WHATSAPP_ENDPOINT_ENVIAR", "Endpoint de envio da API v1 (padrão /api/v1/enviar)",               "/api/v1/enviar"),
     ("WHATSAPP_TUNNEL_URL",       "URL pública do túnel Cloudflare (gerada automaticamente)",            ""),
-    ("WHATSAPP_MEU_NUMERO",      "Seu número com DDA (ex: 5547999990000) — só responde comandos seus",   ""),
+    ("WHATSAPP_MEU_NUMERO",      "Seu número com DDA (ex: 5547999990000): só responde comandos seus",   ""),
     ("WHATSAPP_ESCUTA",          "Ler comandos direto do grupo a cada 4s (não depende de webhook)",   "true"),
     ("RECIBO_WHATSAPP_AUTO",     "Enviar recibo automático ao dar baixa",                             "true"),
     # ---- Alertas ----

@@ -23,5 +23,5 @@ def salvar(dados: dict, db: Session = Depends(get_db)):
 @router.get("/whatsapp/testar")
 def testar_whatsapp(db: Session = Depends(get_db)):
     from .. import whatsapp as wa
-    ok = wa.enviar("✅ *Tomelin Financeiro* — teste de conexão OK!", db=db)
+    ok = wa.enviar("✅ *Tomelin Financeiro*: teste de conexão OK!", db=db)
     return {"enviado": bool(ok)}

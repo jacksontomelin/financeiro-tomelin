@@ -29,7 +29,7 @@ class Usuario(Base):
 
 
 class Conta(Base):
-    """Carteira / conta bancária — controla saldo."""
+    """Carteira / conta bancária: controla saldo."""
     __tablename__ = "contas"
     id = Column(Integer, primary_key=True)
     nome = Column(String(120), nullable=False)
@@ -134,7 +134,7 @@ class Lancamento(Base):
 
 
 class Veiculo(Base):
-    """Veículo como patrimônio — valor FIPE (automático) ou fixo, e financiamento."""
+    """Veículo como patrimônio: valor FIPE (automático) ou fixo, e financiamento."""
     __tablename__ = "veiculos"
     id = Column(Integer, primary_key=True)
     nome = Column(String(120), nullable=False)          # apelido: "Corolla da família"
@@ -219,7 +219,7 @@ class LoginHistorico(Base):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  COMPRAS — itens de nota fiscal + controle de parcelamento no cartão
+#  COMPRAS: itens de nota fiscal + controle de parcelamento no cartão
 # ═══════════════════════════════════════════════════════════════
 
 class Compra(Base):
@@ -328,7 +328,7 @@ class ParcelaCartao(Base):
 
 
 class Meta(Base):
-    """Meta financeira — ex: 'Reserva de emergência', 'Trocar o carro'."""
+    """Meta financeira, ex: 'Reserva de emergência', 'Trocar o carro'."""
     __tablename__ = "metas"
     id = Column(Integer, primary_key=True)
     nome = Column(String(120), nullable=False)
@@ -355,7 +355,7 @@ class Meta(Base):
 class CnpjCache(Base):
     """
     Cache local de consultas de CNPJ.
-    Evita bater na API externa toda vez — dado cadastral muda pouco.
+    Evita bater na API externa toda vez: dado cadastral muda pouco.
     """
     __tablename__ = "cnpj_cache"
     cnpj = Column(String(14), primary_key=True)          # só dígitos

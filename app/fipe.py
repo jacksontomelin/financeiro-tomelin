@@ -2,7 +2,7 @@
 
 É tolerante ao formato da resposta: procura o preço em várias chaves comuns
 (valor, preco, price, valor_fipe, fipe...). Configurável por variáveis de ambiente,
-igual ao gateway do WhatsApp — assim funciona com o endpoint que você já tem.
+igual ao gateway do WhatsApp: assim funciona com o endpoint que você já tem.
 """
 import logging
 import re

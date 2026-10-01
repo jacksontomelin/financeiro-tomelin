@@ -242,8 +242,8 @@ async def erro_interno(request: Request, exc: Exception):
     texto = str(exc).split("\n")[0][:160]
     return JSONResponse(status_code=500, content={
         "detail": f"Erro interno ao processar {request.method} {request.url.path}: "
-                  f"{type(exc).__name__}{(' — ' + texto) if texto else ''}. "
-                  f"Código {codigo} (procure no log do Coolify).",
+                  f"{type(exc).__name__}{(': ' + texto) if texto else ''}. "
+                  f"Código do erro: {codigo}.",
         "codigo": codigo})
 
 

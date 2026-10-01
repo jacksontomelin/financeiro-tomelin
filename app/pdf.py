@@ -39,12 +39,12 @@ def brl(v) -> str:
 
 def pct(parte, total) -> str:
     if not total:
-        return "—"
+        return "-"
     return f"{(parte/total*100):.1f}%"
 
 
 def _hash(*args) -> str:
-    """Hash determinístico — mesmo args sempre gera mesmo código."""
+    """Hash determinístico: mesmo args sempre gera mesmo código."""
     seed = "|".join(str(a) for a in args)
     return hashlib.sha256(seed.encode()).hexdigest()[:20].upper()
 
@@ -156,13 +156,13 @@ def recibo(l, categoria="", conta="", contato="") -> bytes:
 
     linhas = [
         ("Descrição", l.descricao),
-        ("Categoria", categoria or "—"),
+        ("Categoria", categoria or "-"),
         ("Situação", l.status.capitalize()),
-        ("Competência", l.data_competencia.strftime("%d/%m/%Y") if l.data_competencia else "—"),
-        ("Vencimento", l.data_vencimento.strftime("%d/%m/%Y") if l.data_vencimento else "—"),
-        ("Pagamento", l.data_pagamento.strftime("%d/%m/%Y") if l.data_pagamento else "—"),
-        ("Conta", conta or "—"),
-        (("Recebido de" if l.tipo.value == "receita" else "Pago para"), contato or "—"),
+        ("Competência", l.data_competencia.strftime("%d/%m/%Y") if l.data_competencia else "-"),
+        ("Vencimento", l.data_vencimento.strftime("%d/%m/%Y") if l.data_vencimento else "-"),
+        ("Pagamento", l.data_pagamento.strftime("%d/%m/%Y") if l.data_pagamento else "-"),
+        ("Conta", conta or "-"),
+        (("Recebido de" if l.tipo.value == "receita" else "Pago para"), contato or "-"),
     ]
     t = Table([[Paragraph(f"<b>{k}</b>", ss["Cell"]), Paragraph(str(v), ss["Cell"])] for k, v in linhas],
               colWidths=[40 * mm, None])
@@ -266,7 +266,7 @@ def balancete(periodo_label, receitas, despesas, tot_rec, tot_desp, juros_total=
         els.append(Paragraph(f"Juros e multas pagos no período: <b>{brl(juros_total)}</b>"
                               f" &nbsp;·&nbsp; Equivalente anualizado: <b>{brl(juros_total*12)}</b>", ss["Cell"]))
 
-    # Nota rápida — maior categoria de despesa (informação extra, discreta)
+    # Nota rápida: maior categoria de despesa (informação extra, discreta)
     if despesas:
         maior = max(despesas, key=lambda x: x[1])
         if maior[1] / tot_desp > 0.3:
@@ -350,7 +350,7 @@ def patrimonio(contas, veiculos, total_contas, total_veic, total_financ) -> byte
     ]))
     els.append(dt)
 
-    # Nota rápida — nível de alavancagem (informação extra, discreta)
+    # Nota rápida: nível de alavancagem (informação extra, discreta)
     if total_ativos:
         alav = total_financ / total_ativos * 100
         els.append(Spacer(1, 4))

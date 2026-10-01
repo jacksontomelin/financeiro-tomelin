@@ -1,12 +1,12 @@
 """
-Integração WhatsApp — Tomelin Gestão Financeira.
+Integração WhatsApp: Tomelin Gestão Financeira.
 Gateway: whatsapp.jackson (zap.unicontroller.com.br) via Baileys 6.7.
 Payload de envio: POST {grupo, mensagem} com Authorization Bearer.
 
 NOVOS COMANDOS v2:
   Consultas: saldo, vencer, resumo, pagar, receber, patrimonio, juros, metas, categorias, contas
   Cadastros: despesa, receita, baixa, lanc (modo livre)
-  Nota fiscal: nf <url> ou nota <url> — consulta NF-e pelo QR code
+  Nota fiscal: nf <url> ou nota <url>consulta NF-e pelo QR code
   Ajuda: menu, ajuda
 """
 import logging
@@ -28,37 +28,37 @@ log = logging.getLogger("tomelin.whatsapp")
 _SESSOES: dict[str, dict] = {}
 
 MENU = (
-    "🏠 *Tomelin — Finanças da Família*\n"
+    "🏠 *Tomelin: Finanças da Família*\n"
     "Responda com o número ou o comando:\n\n"
     "*📊 Consultas:*\n"
-    "1️⃣  `saldo` — saldo das contas\n"
-    "2️⃣  `vencer` — contas a vencer\n"
-    "3️⃣  `resumo` — resumo do mês\n"
-    "4️⃣  `pagar` — contas a pagar\n"
-    "5️⃣  `receber` — contas a receber\n"
-    "6️⃣  `patrimonio` — patrimônio líquido\n"
-    "7️⃣  `juros` — juros e multas\n"
-    "8️⃣  `metas` — metas financeiras\n"
-    "9️⃣  `categorias` — ver categorias\n"
-    "🔟  `contas` — ver contas\n\n"
+    "1️⃣  `saldo`: saldo das contas\n"
+    "2️⃣  `vencer`: contas a vencer\n"
+    "3️⃣  `resumo`: resumo do mês\n"
+    "4️⃣  `pagar`: contas a pagar\n"
+    "5️⃣  `receber`: contas a receber\n"
+    "6️⃣  `patrimonio`: patrimônio líquido\n"
+    "7️⃣  `juros`: juros e multas\n"
+    "8️⃣  `metas`: metas financeiras\n"
+    "9️⃣  `categorias`: ver categorias\n"
+    "🔟  `contas`: ver contas\n\n"
     "*✏️ Cadastros rápidos:*\n"
-    "`despesa 150 mercado` — lança despesa\n"
-    "`receita 2000 salario` — lança receita\n"
-    "`baixa 42` — dá baixa no lançamento #42\n"
-    "`buscar pagamento` — busca lançamentos\n\n"
+    "`despesa 150 mercado`: lança despesa\n"
+    "`receita 2000 salario`: lança receita\n"
+    "`baixa 42`: dá baixa no lançamento #42\n"
+    "`buscar pagamento`: busca lançamentos\n\n"
     "*📎 PDFs no grupo:*\n"
-    "`recibo 42` — recibo em PDF (`recibo cupom 42` = estilo cupom)\n"
-    "`balancete` — balancete do mês em PDF\n"
-    "`patrimonio pdf` — patrimônio em PDF\n\n"
+    "`recibo 42`: recibo em PDF (`recibo cupom 42` = estilo cupom)\n"
+    "`balancete`: balancete do mês em PDF\n"
+    "`patrimonio pdf`: patrimônio em PDF\n\n"
     "*📄 Nota Fiscal:*\n"
-    "`nf https://...` — lê QR code da NF-e\n\n"
+    "`nf https://...`: lê QR code da NF-e\n\n"
     "Digite *menu* para ver isto novamente."
 )
 
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  CATÁLOGO ÚNICO DE COMANDOS — gera o menu completo e a "ajuda X"
+#  CATÁLOGO ÚNICO DE COMANDOS: gera o menu completo e a "ajuda X"
 #  (cmd, descrição, exemplo, apelidos)
 # ════════════════════════════════════════════════════════════════════════════
 CATALOGO = [
@@ -117,18 +117,18 @@ CATALOGO = [
 def _texto_menu() -> str:
     num = {"1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣", "5": "5️⃣", "6": "6️⃣",
            "7": "7️⃣", "8": "8️⃣", "9": "9️⃣", "10": "🔟"}
-    L = ["🏠 *Tomelin — comandos do grupo*",
+    L = ["🏠 *Tomelin: comandos do grupo*",
          "_Digite o número ou a palavra. Maiúscula e acento tanto faz._", ""]
     for sec, cmds in CATALOGO:
         L.append(f"*{sec}*")
         for cmd, desc, ex, _ in cmds:
             if " · " in cmd:
                 n, nome = cmd.split(" · ")
-                L.append(f"{num.get(n, n)} *{nome}* — {desc}")
+                L.append(f"{num.get(n, n)} *{nome}*: {desc}")
             elif ex != cmd:
-                L.append(f"▪️ *{cmd}* — {desc}\n      ex.: `{ex}`")
+                L.append(f"▪️ *{cmd}*, {desc}\n      ex.: `{ex}`")
             else:
-                L.append(f"▪️ *{cmd}* — {desc}")
+                L.append(f"▪️ *{cmd}*: {desc}")
         L.append("")
     L.append("💡 _Detalhes de qualquer um: `ajuda baixa`, `ajuda nf`..._")
     return "\n".join(L)
@@ -309,7 +309,7 @@ def _lancar(db: Session, tipo: str, texto: str) -> str:
     cat_str = f" · {cat.nome}" if cat else ""
     return (
         f"{emoji} *{tipo.title()} lançada!*\n\n"
-        f"📌 #{l.id} — {l.descricao}\n"
+        f"📌 #{l.id}: {l.descricao}\n"
         f"💰 {_brl(valor)}{cat_str}\n"
         f"📅 {hoje.strftime('%d/%m/%Y')}\n\n"
         f"Status: *pendente* · Dê baixa com `baixa {l.id}`"
@@ -326,7 +326,7 @@ def _buscar_lancamentos(db: Session, termo: str) -> str:
     linhas = [f"🔍 *Busca: \"{termo}\"*", ""]
     for l in rows:
         st = {"pago": "✅", "pendente": "🟡", "atrasado": "🔴"}.get(l.status, "•")
-        linhas.append(f"{st} #{l.id} — {l.descricao}")
+        linhas.append(f"{st} #{l.id}: {l.descricao}")
         linhas.append(f"   {_brl(l.valor)} · {l.data_vencimento.strftime('%d/%m/%Y') if l.data_vencimento else 'sem data'}")
     return "\n".join(linhas)
 
@@ -346,7 +346,7 @@ def _dar_baixa(db: Session, lid_str: str) -> str:
     tipo_str = "Recebimento" if l.tipo == models.TipoMov.receita else "Pagamento"
     return (
         f"✅ *Baixa registrada!*\n\n"
-        f"#{lid} — {l.descricao}\n"
+        f"#{lid}: {l.descricao}\n"
         f"💰 {_brl(l.valor)}\n"
         f"📅 Pago em {l.data_pagamento.strftime('%d/%m/%Y')}\n"
         f"Tipo: {tipo_str}"
@@ -381,7 +381,7 @@ def _consultar_nfe_zap(db: Session, url: str) -> str:
     if itens:
         linhas.append(f"\n📦 *{len(itens)} iten(s):*")
         for it in itens[:6]:
-            linhas.append(f"  • {it['descricao'][:35]} — {_brl(it['valor'])}")
+            linhas.append(f"  • {it['descricao'][:35]}: {_brl(it['valor'])}")
         if len(itens) > 6:
             linhas.append(f"  ... e mais {len(itens)-6} itens")
 
@@ -508,9 +508,9 @@ def processar_comando(texto: str, db: Session | None = None,
                 return "📭 Nenhum lançamento cadastrado ainda."
             st = {"pago": "✅", "pendente": "🟡", "atrasado": "🔴"}.get(l.status, "•")
             return (f"{st} *Último lançamento*\n\n"
-                    f"#{l.id} — {l.descricao}\n"
+                    f"#{l.id}: {l.descricao}\n"
                     f"💰 {_brl(l.valor)}\n"
-                    f"📅 {l.data_vencimento.strftime('%d/%m/%Y') if l.data_vencimento else '—'}\n"
+                    f"📅 {l.data_vencimento.strftime('%d/%m/%Y') if l.data_vencimento else '-'}\n"
                     f"Status: {l.status}")
 
         # ── Fluxo mensal (gráfico ASCII) ─────────────────────────────────────
@@ -593,7 +593,7 @@ def job_resumo_semanal():
         return
     db = SessionLocal()
     try:
-        enviar("🗓️ *Resumo da semana — Finanças da família*\n\n" + service.texto_resumo_mes(db))
+        enviar("🗓️ *Resumo da semana: Finanças da família*\n\n" + service.texto_resumo_mes(db))
     finally:
         db.close()
 
@@ -611,22 +611,22 @@ def job_fechamento_dia():
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  NOVOS COMANDOS — adicionados na expansão v3
+#  NOVOS COMANDOS: adicionados na expansão v3
 # ════════════════════════════════════════════════════════════════════════════
 
 MENU_EXTRA = (
     "\n*🆕 Mais comandos:*\n"
-    "`fluxo` — gráfico dos últimos 6 meses\n"
-    "`gastos` — top categorias do mês\n"
-    "`hoje` — resumo do dia\n"
-    "`semana` — movimentos da semana\n"
-    "`projecao` — projeção 3 meses\n"
-    "`parcelas` — cartão: parcelas pendentes\n"
-    "`carros` — veículos e financiamentos\n"
-    "`dica` — dica financeira do dia\n"
-    "`nova conta NOME` — cadastra conta\n"
-    "`nova cat NOME` — cadastra categoria\n"
-    "`ajuda COMANDO` — detalhes de um comando"
+    "`fluxo`: gráfico dos últimos 6 meses\n"
+    "`gastos`: top categorias do mês\n"
+    "`hoje`: resumo do dia\n"
+    "`semana`: movimentos da semana\n"
+    "`projecao`: projeção 3 meses\n"
+    "`parcelas`, cartão: parcelas pendentes\n"
+    "`carros`: veículos e financiamentos\n"
+    "`dica`: dica financeira do dia\n"
+    "`nova conta NOME`: cadastra conta\n"
+    "`nova cat NOME`: cadastra categoria\n"
+    "`ajuda COMANDO`: detalhes de um comando"
 )
 
 AJUDAS = {
@@ -714,7 +714,7 @@ def _texto_fluxo(db: Session) -> str:
     if not meses:
         return "📭 Sem dados de fluxo mensal ainda."
     maximo = max(max(m["receitas"], m["despesas"]) for m in meses) or 1
-    linhas = ["📈 *Fluxo mensal — últimos 6 meses*", ""]
+    linhas = ["📈 *Fluxo mensal: últimos 6 meses*", ""]
     for m in meses:
         r = m["receitas"]; d = m["despesas"]
         sinal = "📈" if r >= d else "📉"
@@ -754,13 +754,13 @@ def _texto_hoje(db: Session) -> str:
              .filter(models.Lancamento.data_pagamento == hoje)
              .all())
 
-    linhas = [f"📅 *Resumo de hoje — {hoje.strftime('%d/%m/%Y')}*", ""]
+    linhas = [f"📅 *Resumo de hoje: {hoje.strftime('%d/%m/%Y')}*", ""]
 
     if vence:
         linhas.append("⏰ *Vence hoje:*")
         for l in vence:
             ico = "💸" if l.tipo == models.TipoMov.despesa else "💵"
-            linhas.append(f"  {ico} #{l.id} — {l.descricao}: {_brl(l.valor)}")
+            linhas.append(f"  {ico} #{l.id}, {l.descricao}: {_brl(l.valor)}")
         linhas.append("")
     else:
         linhas.append("✅ Nada vence hoje!\n")
@@ -875,7 +875,7 @@ def _texto_parcelas_zap(db: Session) -> str:
         cartao = pm.cartao.nome if pm and pm.cartao else "Cartão"
         st = "🔴" if p.status == "atrasada" else "🟡"
         venc = p.data_vencimento.strftime("%d/%m")
-        linhas.append(f"{st} {estab} — parcela {p.numero}/{pm.total_parcelas}")
+        linhas.append(f"{st} {estab}: parcela {p.numero}/{pm.total_parcelas}")
         linhas.append(f"   {cartao} · {_brl(p.valor)} · vence {venc}")
     linhas.append(f"\nDê baixa em parcela: `baixa parc ID`")
     return "\n".join(linhas)
@@ -1130,14 +1130,14 @@ def _texto_lembrete_mes_seguinte(db: Session) -> str:
     for l in prox_mes[:10]:
         ico = "💸" if l.tipo == models.TipoMov.despesa else "💵"
         d = l.data_vencimento.strftime("%d/%m") if l.data_vencimento else ""
-        linhas.append(f"{ico} {l.descricao} — {_brl(l.valor)}{' (dia '+d+')' if d else ''}")
+        linhas.append(f"{ico} {l.descricao}: {_brl(l.valor)}{' (dia '+d+')' if d else ''}")
     if len(prox_mes) > 10:
         linhas.append(f"... e mais {len(prox_mes)-10}")
     return "\n".join(linhas)
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#  COMANDOS QUE ENVIAM ARQUIVO (PDF) NO GRUPO — via /api/v1/enviar-anexo
+#  COMANDOS QUE ENVIAM ARQUIVO (PDF) NO GRUPO: via /api/v1/enviar-anexo
 # ════════════════════════════════════════════════════════════════════════════
 def processar_arquivo(texto: str, db: Session):
     """
@@ -1174,7 +1174,7 @@ def processar_arquivo(texto: str, db: Session):
         else:
             from .pdf import recibo as gerar
         pdf = gerar(l, categoria=cat, conta=conta, contato=contato)
-        return (pdf, f"recibo-{l.id:04d}.pdf", f"🧾 Recibo #{l.id:04d} — {l.descricao} · {_brl(l.valor_total)}")
+        return (pdf, f"recibo-{l.id:04d}.pdf", f"🧾 Recibo #{l.id:04d}: {l.descricao} · {_brl(l.valor_total)}")
 
     if partes[0] in ("balancete", "relatorio", "relatório"):
         from calendar import monthrange

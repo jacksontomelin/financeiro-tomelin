@@ -22,7 +22,7 @@ Endpoints v1 (todos exigem a chave):
   POST /api/v1/delete-message{msgId}
   POST /api/v1/read-message  {jid|numero}
 
-Webhook (cadastrado no painel do gateway → Webhooks) — POST JSON:
+Webhook (cadastrado no painel do gateway → Webhooks), POST JSON:
   { evento: received|sent|status|mensagem_apagada, jid, deMim, tipo, texto,
     autorNome, autorNumero, id, ts, midia, timestamp }
 """
@@ -59,7 +59,7 @@ def config(db=None) -> dict:
     try:
         endpoint = cfg.get(db, "WHATSAPP_ENDPOINT_ENVIAR", "/api/v1/enviar") or "/api/v1/enviar"
         if endpoint.strip() in ("/api/enviar", "api/enviar", ""):
-            endpoint = "/api/v1/enviar"  # rota antiga exige login do painel — migra para v1
+            endpoint = "/api/v1/enviar"  # rota antiga exige login do painel: migra para v1
         return {
             "ativo": cfg.get_bool(db, "WHATSAPP_ATIVO", False),
             "url": (cfg.get(db, "WHATSAPP_API_URL", "") or "").rstrip("/"),
@@ -129,7 +129,7 @@ def responder(msg_id: str, texto: str, db=None) -> bool:
         _req("POST", "/api/v1/reply", db, json={"msgId": msg_id, "texto": texto})
         return True
     except Exception as e:
-        log.warning("reply falhou (%s) — caindo para envio simples", e)
+        log.warning("reply falhou (%s): caindo para envio simples", e)
         return False
 
 

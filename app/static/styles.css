@@ -1,6 +1,6 @@
 
 /* ============================================================
-   SAFE AREA (PWA em tela cheia no iOS) — evita conteúdo colado
+   SAFE AREA (PWA em tela cheia no iOS): evita conteúdo colado
    na status bar ou cortado pela barra inferior/home indicator
    ============================================================ */
 :root {
@@ -9,7 +9,7 @@
 }
 
 /* ============================================================
-   Tomelin Gestão Financeira — Design System
+   Tomelin Gestão Financeira: Design System
    Paleta da marca: navy + dourado + verde
    ============================================================ */
 :root{
@@ -56,7 +56,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
 
 
 /* ══════════════════════════════════════════════════════
-   LOGIN — estilo app mobile
+   LOGIN: estilo app mobile
    ══════════════════════════════════════════════════════ */
 .login-app {
   min-height: 100dvh;
@@ -304,7 +304,7 @@ html.dark .login-app-titulo { color: var(--ink); }
 .btn::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
 .btn:hover::after{background:rgba(255,255,255,.08)}
 
-/* Primary — navy gradiente com brilho */
+/* Primary: navy gradiente com brilho */
 .btn-primary{
   background:linear-gradient(135deg,#0E3A63 0%,#082D51 100%);
   color:#fff;
@@ -316,7 +316,7 @@ html.dark .login-app-titulo { color: var(--ink); }
   transform:translateY(-1px);
 }
 
-/* Gold — dourado da marca */
+/* Gold: dourado da marca */
 .btn-gold{
   background:linear-gradient(135deg,#C9A94E 0%,#B8963B 100%);
   color:#2a1f00;
@@ -327,7 +327,7 @@ html.dark .login-app-titulo { color: var(--ink); }
   transform:translateY(-1px);
 }
 
-/* Green — teal da marca */
+/* Green: teal da marca */
 .btn-green{
   background:linear-gradient(135deg,#3E9079 0%,#2F817A 100%);
   color:#fff;
@@ -335,7 +335,7 @@ html.dark .login-app-titulo { color: var(--ink); }
 }
 .btn-green:hover{box-shadow:0 6px 20px rgba(47,129,122,.35);transform:translateY(-1px)}
 
-/* Ghost — contorno sutil */
+/* Ghost: contorno sutil */
 .btn-ghost{
   background:transparent;
   color:var(--navy);
@@ -359,7 +359,7 @@ html.dark .login-app-titulo { color: var(--ink); }
 .btn-sm svg{width:14px;height:14px}
 .btn-lg{padding:13px 24px;font-size:15px;border-radius:14px}
 
-/* Icon button — quadrado com ícone */
+/* Icon button: quadrado com ícone */
 .btn-icon{
   padding:8px;border-radius:10px;
   background:transparent;
@@ -561,13 +561,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 
 /* ============================================================
-   TEMA ESCURO — mesma paleta da logo, superfícies escuras
+   TEMA ESCURO: mesma paleta da logo, superfícies escuras
    ============================================================ */
 html.dark{
   --bg:#0A1B2E;        --bg-2:#0E2438;
   --card:#122A42;      --line:#20364E;     --line-2:#1A2E44;
   --ink:#E9F0F7;       --ink-2:#AFC2D6;    --ink-3:#7F94A9;
-  /* matizes da marca — leve realce p/ contraste no escuro */
+  /* matizes da marca: leve realce p/ contraste no escuro */
   --gold:#D6B65E;      --gold-2:#E4C778;   --gold-soft:#8A7A45;
   --teal:#3E9E95;      --green:#4FA98D;    --green-2:#6FB89E;  --green-deep:#8EC7B2;
   --red:#D2705C;       --red-soft:#3A221D;
@@ -713,7 +713,7 @@ html.dark .cfg-input { background: var(--card); border-color: var(--line); }
   }
   /* linha 1: descrição full */
   .tbl-wrap tbody td:first-child { font-weight: 600; padding: 0; border: none; }
-  /* linha 2: status + valor lado a lado (hide-mob oculta cat/venc/sit — mantemos só o td de valor e ações) */
+  /* linha 2: status + valor lado a lado (hide-mob oculta cat/venc/sit: mantemos só o td de valor e ações) */
   .tbl-wrap tbody td.hide-mob { display: none !important; }
   .tbl-wrap tbody td:nth-child(5) {
     padding: 0; border: none;
@@ -735,15 +735,15 @@ html.dark .cfg-input { background: var(--card); border-color: var(--line); }
 
 /* ---------- Fix: esconde td vazio de vencimento no card mobile ---------- */
 @media(max-width:820px){
-  /* td de vencimento (3ª col) — aparece como bloco vazio sem hide-mob */
+  /* td de vencimento (3ª col): aparece como bloco vazio sem hide-mob */
   .tbl-wrap tbody td:nth-child(4) { display: none !important; }
   /* tag de status fica no td da situação que mostramos via show-mob inline */
   .tbl-wrap tbody td:nth-child(5) { padding-top: 0; }
 }
 
-/* ---------- Remove o traço (—) do td de vencimento nos cards mobile ---------- */
+/* ---------- Remove o traço ( - ) do td de vencimento nos cards mobile ---------- */
 @media(max-width:820px){
-  /* o td de situação (4ª col) estava sendo exibido como "—" */
+  /* o td de situação (4ª col) estava sendo exibido como "-" */
   .tbl-wrap tbody td:nth-child(4),
   .tbl-wrap tbody td:nth-child(3) { display: none !important; }
 }
@@ -786,7 +786,7 @@ html.dark .cfg-input { background: var(--card); border-color: var(--line); }
 .sec-header h2 { font-size: 15px; font-weight: 700; color: var(--navy); margin: 0; }
 .sec-header .sub { font-size: 12px; color: var(--ink-2); margin: 0; }
 
-/* Usuários — avatares de família */
+/* Usuários: avatares de família */
 .familia-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 8px; }
 .familia-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; position: relative; transition: box-shadow .15s; }
 .familia-card:hover { box-shadow: var(--shadow-lg); }
@@ -976,7 +976,7 @@ html.dark
 }
 
 /* ============================================================
-   MELHORIAS GERAIS — KPIs, cards, estados
+   MELHORIAS GERAIS: KPIs, cards, estados
    ============================================================ */
 .kpi.red   { background: linear-gradient(135deg,#B4503E,#C74B4B); color:#fff; border:none; }
 .kpi.red .lab,.kpi.red .val,.kpi.red .meta { color:#fff; }
@@ -985,7 +985,7 @@ html.dark
 /* Opacidade para itens concluídos */
 .op-6 { opacity: .6; }
 
-/* Card de meta — hover destaca */
+/* Card de meta: hover destaca */
 .card { transition: box-shadow .15s, transform .1s; }
 
 /* Barra de progresso das metas */
@@ -1002,7 +1002,7 @@ html.dark
 }
 
 /* ══════════════════════════════════════════════════════════════
-   REDESIGN COMPLETO — MODAIS, BOTÕES, INPUTS
+   REDESIGN COMPLETO: MODAIS, BOTÕES, INPUTS
    ══════════════════════════════════════════════════════════════ */
 
 /* ── OVERLAY atualizado ── */
@@ -1213,7 +1213,7 @@ html.dark .i-red{background:rgba(180,80,62,.2);color:#E07060}
 
 
 /* ══════════════════════════════════════════════════════════════
-   BOTTOM TAB BAR — menu fixo no celular (estilo app nativo)
+   BOTTOM TAB BAR: menu fixo no celular (estilo app nativo)
    ══════════════════════════════════════════════════════════════ */
 .btab{display:none} /* oculto no desktop */
 
@@ -1247,7 +1247,7 @@ html.dark .i-red{background:rgba(180,80,62,.2);color:#E07060}
 }
 
 @media(max-width:820px){
-  /* Esconde o hamburger — navegação vira bottom tab */
+  /* Esconde o hamburger: navegação vira bottom tab */
   .topbar .menu-btn{display:none !important}
 
   /* Barra fixa embaixo */
@@ -1319,13 +1319,13 @@ html.dark .i-red{background:rgba(180,80,62,.2);color:#E07060}
   /* Conteúdo não fica atrás da barra */
   .content{padding-bottom:calc(76px + var(--safe-bottom)) !important}
 
-  /* Esconde sidebar lateral no mobile — usa bottom tab no lugar */
+  /* Esconde sidebar lateral no mobile: usa bottom tab no lugar */
   .sidebar{display:none}
   .backdrop{display:none !important}
 }
 
 /* ══════════════════════════════════════════════════════════════
-   RESPONSIVIDADE GERAL — fixes de overflow
+   RESPONSIVIDADE GERAL: fixes de overflow
    ══════════════════════════════════════════════════════════════ */
 
 /* Tudo que pode estourar horizontalmente fica contido */
@@ -1346,7 +1346,7 @@ img,svg,video{max-width:100%}
 .kpi .val{overflow-wrap:anywhere;font-size:clamp(18px,5.2vw,28px)}
 .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 
-/* Toolbar não estoura — botões menores no mobile */
+/* Toolbar não estoura: botões menores no mobile */
 .toolbar{flex-wrap:wrap;gap:8px;min-width:0}
 .toolbar h2{font-size:clamp(15px,4vw,20px)}
 
@@ -1438,7 +1438,7 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 @media(max-width:520px){.wa-chips{grid-template-columns:1fr 1fr}.wa-chip span{font-size:11px}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Scrollbar discreta — não estoura o layout */
+/* Scrollbar discreta: não estoura o layout */
 /* Scrollbar invisível em todo o sistema */
 *::-webkit-scrollbar { width: 0; height: 0; background: transparent }
 * { scrollbar-width: none; -ms-overflow-style: none }
@@ -1630,7 +1630,7 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 }
 .venc-item:hover { transform:translateX(4px); border-color:var(--navy); }
 
-/* Badge de status — mais moderno */
+/* Badge de status: mais moderno */
 .status-badge {
   display:inline-flex; align-items:center; gap:5px;
   font-size:11px; font-weight:800; padding:4px 10px;
@@ -1647,7 +1647,7 @@ html.dark .btab-item.on::before{background:#AFC2D6}
 .status-badge.atrasado::before { background:#DC2626; }
 @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:.7} }
 
-/* Progresso de metas — mais colorida */
+/* Progresso de metas: mais colorida */
 .meta-bar-wrap { background:var(--line); border-radius:99px; height:8px; overflow:hidden; }
 .meta-bar {
   height:100%; border-radius:99px;
@@ -1754,7 +1754,7 @@ select {
 }
 
 /* ══════════════════════════════════════════════════════
-   OVERLAY + MODAL — sistema unificado
+   OVERLAY + MODAL: sistema unificado
    ══════════════════════════════════════════════════════ */
 
 /* Overlay: fundo escuro que cobre tudo */
@@ -1919,3 +1919,70 @@ html.dark .frm textarea:focus { background: var(--bg-2); }
 .campo-erro-msg { display:block; margin-top:4px; font-size:11.5px; line-height:1.35; color: var(--red, #dc2626); font-weight:500; }
 .toast.err { cursor: pointer; max-width: min(440px, calc(100vw - 32px)); }
 .toast.err span { white-space: normal; }
+
+/* ══════════════════════════════════════════════════════
+   ILUSTRAÇÕES SVG (estados vazios, buscas, sugestões)
+   ══════════════════════════════════════════════════════ */
+.empty svg.ilus { opacity:1; width:auto; height:auto; margin:0 auto 4px; color:inherit; stroke-width:initial; }
+.ilus { display:block; flex-shrink:0; overflow:visible; }
+.ilus-brilho { animation: ilusBrilho 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+.ilus-brilho.b2 { animation-delay: 1.2s; }
+@keyframes ilusBrilho { 0%,100%{ opacity:.35; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.15) } }
+
+.ilus-scan .lupa { animation: ilusLupa 1.8s ease-in-out infinite; }
+@keyframes ilusLupa { 0%,100%{ transform:translate(0,0) } 25%{ transform:translate(9px,-4px) } 50%{ transform:translate(16px,6px) } 75%{ transform:translate(4px,10px) } }
+
+.ilus-pin .pin { animation: ilusPin .9s ease-in-out infinite; }
+.ilus-pin .sombra { animation: ilusSombra .9s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+@keyframes ilusPin { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-6px) } }
+@keyframes ilusSombra { 0%,100%{ transform:scale(1); opacity:.25 } 50%{ transform:scale(.6); opacity:.12 } }
+
+.ilus-pop { animation: ilusPop .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes ilusPop { from{ transform:scale(.6); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+.ilus-bars .b { transform-box:fill-box; transform-origin:bottom; animation: ilusBar 1s ease-in-out infinite alternate; }
+.ilus-bars .b2 { animation-delay:.2s } .ilus-bars .b3 { animation-delay:.4s }
+@keyframes ilusBar { from{ transform:scaleY(.35) } to{ transform:scaleY(1) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ilus *, .ilus { animation:none !important; }
+}
+
+/* cartão de resultado das buscas (CNPJ, CEP) */
+.busca-card { display:flex; align-items:center; gap:12px; margin-top:10px; padding:10px 12px;
+  background:var(--card); border:1.5px solid var(--line); border-radius:14px; animation: fade .2s; }
+.busca-card > div { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.busca-card b { font-size:13px; font-weight:700; color:var(--ink); line-height:1.3; overflow-wrap:anywhere; }
+.busca-card span { font-size:11.5px; color:var(--ink-3); line-height:1.35; }
+.busca-card.ok { border-color: rgba(22,163,74,.35); background: linear-gradient(135deg, rgba(22,163,74,.06), transparent 60%), var(--card); }
+.busca-card.aviso { border-color: rgba(202,138,4,.45); background: linear-gradient(135deg, rgba(202,138,4,.07), transparent 60%), var(--card); }
+.busca-card.erro { border-color: rgba(220,38,38,.35); background: linear-gradient(135deg, rgba(220,38,38,.06), transparent 60%), var(--card); }
+.busca-card.erro b { color: var(--red); }
+.busca-card.mini { margin-top:6px; padding:6px 10px; gap:8px; border-radius:12px; }
+.busca-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+.busca-chips .chip { display:inline-flex; align-items:center; gap:4px; font-style:normal; font-size:10.5px; font-weight:700;
+  padding:3px 8px; border-radius:99px; background:var(--bg); color:var(--ink-2); border:1px solid var(--line); }
+.busca-chips .chip svg { width:11px; height:11px; }
+.busca-chips .chip.ver { background:rgba(22,163,74,.12); color:#15803D; border-color:transparent; }
+.busca-chips .chip.amb { background:rgba(202,138,4,.14); color:#A16207; border-color:transparent; }
+.busca-chips .chip.link { cursor:pointer; color:var(--navy); font-family:inherit; }
+.busca-chips .chip.link:hover { border-color:var(--navy); }
+
+/* autocomplete */
+.auto-cab { display:flex; align-items:center; gap:6px; padding:8px 12px 6px; font-size:10.5px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); border-bottom:1px solid var(--line); }
+.auto-cab svg { width:13px; height:13px; }
+.auto-item { display:flex !important; align-items:center; gap:10px; }
+.auto-txt { min-width:0; flex:1; }
+.auto-ic { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; }
+.auto-ic svg { width:15px; height:15px; }
+.auto-ic.rec { background:rgba(22,163,74,.12); color:#15803D; }
+.auto-ic.desp { background:rgba(220,38,38,.1); color:var(--red); }
+.auto-vazio { display:flex; align-items:center; gap:10px; padding:10px 14px; }
+.auto-vazio > div { display:flex; flex-direction:column; gap:2px; }
+.auto-vazio b { font-size:13px; color:var(--ink); }
+.auto-vazio span { font-size:11.5px; color:var(--ink-3); }
+
+/* ícone SVG no meio do texto (substitui emojis da interface) */
+.ic-inline { display:inline-flex; vertical-align:-2px; }
+.ic-inline svg { width:14px; height:14px; }

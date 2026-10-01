@@ -1,4 +1,4 @@
-"""Metas financeiras — guardar dinheiro, pagar dívida, trocar o carro, etc."""
+"""Metas financeiras: guardar dinheiro, pagar dívida, trocar o carro, etc."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel

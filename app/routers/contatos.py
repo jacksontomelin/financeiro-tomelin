@@ -30,7 +30,7 @@ def _checa_doc(doc: str | None):
     ok, tipo = valida_documento(doc)
     if not ok:
         rotulo = {"cpf": "CPF", "cnpj": "CNPJ"}.get(tipo, "Documento")
-        raise ErroCampo("documento", f"{rotulo} inválido — confira os dígitos.")
+        raise ErroCampo("documento", f"{rotulo} inválido: confira os dígitos.")
     return _limpar_doc(doc)
 
 
@@ -150,7 +150,7 @@ def buscar_cep(cep: str, forcar: bool = False, db: Session = Depends(get_db)):
         except Exception as e:
             erros.append(f"{nome}: {type(e).__name__}")
 
-    # 4) rede falhou — se tem cache vencido, usa mesmo assim
+    # 4) rede falhou: se tem cache vencido, usa mesmo assim
     if reg:
         log.warning("CEP %s: rede falhou (%s), usando cache vencido", c, "; ".join(erros))
         return {"cep": c, "logradouro": reg.logradouro or "", "bairro": reg.bairro or "",
@@ -175,7 +175,7 @@ def buscar_cnpj(cnpj: str, forcar: bool = False, db: Session = Depends(get_db)):
 
     ok, _ = valida_documento(c)
     if not ok:
-        raise HTTPException(422, "CNPJ inválido — confira os dígitos.")
+        raise HTTPException(422, "CNPJ inválido: confira os dígitos.")
 
     def _do_cache(reg, sufixo="(cache)"):
         return {
@@ -282,7 +282,7 @@ def buscar_cnpj(cnpj: str, forcar: bool = False, db: Session = Depends(get_db)):
     if nao_encontrado and not reg:
         raise HTTPException(404, "CNPJ não encontrado na Receita Federal.")
 
-    # 4) rede falhou — usa cache vencido se existir
+    # 4) rede falhou: usa cache vencido se existir
     if reg:
         log.warning("CNPJ %s: rede falhou (%s), usando cache vencido", c, "; ".join(erros))
         return _do_cache(reg, "(cache antigo)")

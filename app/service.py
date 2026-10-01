@@ -168,7 +168,7 @@ def texto_vencimentos(db: Session, dias_antes: int = 7) -> str:
         for l in v["atrasados"]:
             dias = (hoje - l.data_vencimento).days
             ico = "🔴" if l.tipo == TipoMov.despesa else "🟠"
-            linhas.append(f"{ico} {l.descricao} — {brl(l.valor)} (há {dias}d, venc. {l.data_vencimento.strftime('%d/%m')})")
+            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} (há {dias}d, venc. {l.data_vencimento.strftime('%d/%m')})")
         linhas.append("")
     if v["proximos"]:
         linhas.append(f"🔔 *Próximos {dias_antes} dias:*")
@@ -176,7 +176,7 @@ def texto_vencimentos(db: Session, dias_antes: int = 7) -> str:
             dias = (l.data_vencimento - hoje).days
             quando = "hoje" if dias == 0 else ("amanhã" if dias == 1 else f"em {dias}d")
             ico = "💸" if l.tipo == TipoMov.despesa else "💵"
-            linhas.append(f"{ico} {l.descricao} — {brl(l.valor)} ({quando}, {l.data_vencimento.strftime('%d/%m')})")
+            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} ({quando}, {l.data_vencimento.strftime('%d/%m')})")
     if not v["atrasados"] and not v["proximos"]:
         linhas.append("✅ Nenhum vencimento no período. Tudo em dia!")
     return "\n".join(linhas)
@@ -207,7 +207,7 @@ def texto_a_pagar(db: Session) -> str:
     for l in itens:
         total += Decimal(l.valor)
         venc = l.data_vencimento.strftime("%d/%m") if l.data_vencimento else "s/ venc."
-        linhas.append(f"• {l.descricao} — {brl(l.valor)} (venc. {venc})")
+        linhas.append(f"• {l.descricao}: {brl(l.valor)} (venc. {venc})")
     linhas.append("")
     linhas.append(f"*Total: {brl(total)}*")
     return "\n".join(linhas)
@@ -225,7 +225,7 @@ def texto_a_receber(db: Session) -> str:
     for l in itens:
         total += Decimal(l.valor)
         venc = l.data_vencimento.strftime("%d/%m") if l.data_vencimento else "s/ venc."
-        linhas.append(f"• {l.descricao} — {brl(l.valor)} (venc. {venc})")
+        linhas.append(f"• {l.descricao}: {brl(l.valor)} (venc. {venc})")
     linhas.append("")
     linhas.append(f"*Total: {brl(total)}*")
     return "\n".join(linhas)
@@ -391,7 +391,7 @@ def texto_juros(db: Session) -> str:
 
 def texto_recibo(l, categoria="", conta="", contato="") -> str:
     tipo = "Recebimento" if l.tipo == TipoMov.receita else "Pagamento"
-    linhas = [f"🧾 *Recibo de {tipo}* — nº {l.id:04d}", "",
+    linhas = [f"🧾 *Recibo de {tipo}*, nº {l.id:04d}", "",
               f"*{l.descricao}*"]
     if categoria:
         linhas.append(f"Categoria: {categoria}")
@@ -432,7 +432,7 @@ def texto_fechamento_dia(db: Session, ref: date | None = None) -> str | None:
             tot_desp += Decimal(l.valor_total)
             tot_juros += Decimal(l.juros or 0)
             extra = f" (+{brl(l.juros)} juros)" if l.juros else ""
-            linhas.append(f"✅ {l.descricao} — {brl(l.valor_total)}{extra}")
+            linhas.append(f"✅ {l.descricao}: {brl(l.valor_total)}{extra}")
         linhas.append(f"   _Total pago: {brl(tot_desp)}_")
         linhas.append("")
     tot_rec = D0
@@ -440,7 +440,7 @@ def texto_fechamento_dia(db: Session, ref: date | None = None) -> str | None:
         linhas.append("💵 *Recebimentos:*")
         for l in receitas:
             tot_rec += Decimal(l.valor_total)
-            linhas.append(f"✅ {l.descricao} — {brl(l.valor_total)}")
+            linhas.append(f"✅ {l.descricao}: {brl(l.valor_total)}")
         linhas.append(f"   _Total recebido: {brl(tot_rec)}_")
         linhas.append("")
     linhas.append(f"💰 Saldo atual: {brl(saldo_total(db))}")

@@ -1,7 +1,7 @@
 """
 PDFs estilo impressora matricial / cupom térmico.
 Papel estreito (bobina 80mm), fonte monoespaçada, bordas tracejadas,
-separadores pontilhados, texto tipo "===" e "---" — visual retrô de
+separadores pontilhados, texto tipo "===" e "---": visual retrô de
 impressora de ponto ou impressora térmica de caixa registradora.
 """
 import io
@@ -217,7 +217,7 @@ def _rodape_bobina(mono, bold, center, tiny, auth):
 
 
 # ================================================================
-#  RECIBO — estilo cupom
+#  RECIBO: estilo cupom
 # ================================================================
 def recibo_matricial(l, categoria="", conta="", contato="") -> bytes:
     mono, bold, center, center_b, title, tiny, label = _styles_mono()
@@ -280,7 +280,7 @@ def recibo_matricial(l, categoria="", conta="", contato="") -> bytes:
 
 
 # ================================================================
-#  BALANCETE — estilo cupom
+#  BALANCETE: estilo cupom
 # ================================================================
 def balancete_matricial(periodo_label, receitas, despesas, tot_rec, tot_desp, juros_total=0) -> bytes:
     mono, bold, center, center_b, title, tiny, label = _styles_mono()
@@ -339,7 +339,7 @@ def balancete_matricial(periodo_label, receitas, despesas, tot_rec, tot_desp, ju
 
 
 # ================================================================
-#  PATRIMÔNIO — estilo cupom
+#  PATRIMÔNIO: estilo cupom
 # ================================================================
 def patrimonio_matricial(contas, veiculos, total_contas, total_veic, total_financ) -> bytes:
     mono, bold, center, center_b, title, tiny, label = _styles_mono()

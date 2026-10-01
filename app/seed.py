@@ -136,23 +136,23 @@ def _demo(db):
     for i in range(5, 0, -1):
         m = hoje - relativedelta(months=i)
         r = m.strftime('%m/%Y')
-        add(f"Salário — {r}", TipoMov.receita, 5800, "Salário", m, m, m, cc, contato="Empresa (Salário)")
-        add(f"Salário cônjuge — {r}", TipoMov.receita, 3200, "Salário", m, m, m, cc)
-        add(f"Rendimento poupança — {r}", TipoMov.receita, 120 + i * 8, "Rendimentos", m, m, m, poup)
-        add(f"Mercado do mês — {r}", TipoMov.despesa, 1450, "Mercado", m, m, m, cc, contato="Supermercado Angeloni")
-        add(f"Prestação da casa — {r}", TipoMov.despesa, 1850, "Moradia", m, m, m, cc, juros=430)
-        add(f"Luz, água e internet — {r}", TipoMov.despesa, 540, "Contas de Casa", m, m, m, cc)
-        add(f"Mensalidade escolar — {r}", TipoMov.despesa, 980, "Escola", m, m, m, cc, contato="Escola das crianças")
-        add(f"Plano de saúde — {r}", TipoMov.despesa, 720, "Saúde", m, m, m, cc, contato="Plano de saúde")
-        add(f"Combustível / transporte — {r}", TipoMov.despesa, 600, "Transporte", m, m, m, cc)
+        add(f"Salário: {r}", TipoMov.receita, 5800, "Salário", m, m, m, cc, contato="Empresa (Salário)")
+        add(f"Salário cônjuge: {r}", TipoMov.receita, 3200, "Salário", m, m, m, cc)
+        add(f"Rendimento poupança: {r}", TipoMov.receita, 120 + i * 8, "Rendimentos", m, m, m, poup)
+        add(f"Mercado do mês: {r}", TipoMov.despesa, 1450, "Mercado", m, m, m, cc, contato="Supermercado Angeloni")
+        add(f"Prestação da casa: {r}", TipoMov.despesa, 1850, "Moradia", m, m, m, cc, juros=430)
+        add(f"Luz, água e internet: {r}", TipoMov.despesa, 540, "Contas de Casa", m, m, m, cc)
+        add(f"Mensalidade escolar: {r}", TipoMov.despesa, 980, "Escola", m, m, m, cc, contato="Escola das crianças")
+        add(f"Plano de saúde: {r}", TipoMov.despesa, 720, "Saúde", m, m, m, cc, contato="Plano de saúde")
+        add(f"Combustível / transporte: {r}", TipoMov.despesa, 600, "Transporte", m, m, m, cc)
 
-    # mês corrente — já recebido/pago
-    add("Salário — mês corrente", TipoMov.receita, 5800, "Salário", hoje, None, hoje, cc)
+    # mês corrente: já recebido/pago
+    add("Salário: mês corrente", TipoMov.receita, 5800, "Salário", hoje, None, hoje, cc)
     add("Mercado (1ª quinzena)", TipoMov.despesa, 780, "Mercado", hoje, None, hoje, cc, contato="Supermercado Angeloni")
     add("Combustível", TipoMov.despesa, 320, "Transporte", hoje, None, hoje, cart)
     add("Cinema em família", TipoMov.despesa, 180, "Lazer", hoje, None, hoje, cart)
 
-    # A RECEBER (pendentes) — alimentam o popup e os alertas
+    # A RECEBER (pendentes): alimentam o popup e os alertas
     add("Reembolso do convênio médico", TipoMov.receita, 340,
         "Rendimentos", hoje, hoje - timedelta(days=2))          # atrasado
     add("Vale / adiantamento", TipoMov.receita, 800,

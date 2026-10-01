@@ -1,4 +1,4 @@
-"""Tomelin Gestão Financeira — aplicação principal FastAPI."""
+"""Tomelin Gestão Financeira: aplicação principal FastAPI."""
 import logging
 from contextlib import asynccontextmanager
 from sqlalchemy import text
@@ -41,6 +41,16 @@ def _migrar(engine):
             cidade VARCHAR(100), estado VARCHAR(2), fonte VARCHAR(40),
             consultado_em TIMESTAMP DEFAULT NOW())""",
         # campos de contato maiores (telefone da Receita pode vir com 2 números)
+        # remove travessões dos dados já gravados
+        "UPDATE lancamentos SET descricao = REPLACE(REPLACE(REPLACE(descricao, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE descricao LIKE '%\u2014%' OR descricao LIKE '%\u2013%'",
+        "UPDATE lancamentos SET obs = REPLACE(REPLACE(REPLACE(obs, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE obs LIKE '%\u2014%' OR obs LIKE '%\u2013%'",
+        "UPDATE contatos SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
+        "UPDATE contas SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
+        "UPDATE categorias SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
+        "UPDATE metas SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
+        "UPDATE metas SET descricao = REPLACE(REPLACE(REPLACE(descricao, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE descricao LIKE '%\u2014%' OR descricao LIKE '%\u2013%'",
+        "UPDATE veiculos SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
+        "UPDATE compras SET estabelecimento = REPLACE(REPLACE(REPLACE(estabelecimento, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE estabelecimento LIKE '%\u2014%' OR estabelecimento LIKE '%\u2013%'",
         "ALTER TABLE contatos ALTER COLUMN telefone TYPE VARCHAR(120)",
         "ALTER TABLE contatos ALTER COLUMN numero TYPE VARCHAR(30)",
         "ALTER TABLE contatos ALTER COLUMN complemento TYPE VARCHAR(200)",
@@ -54,7 +64,7 @@ def _migrar(engine):
             with engine.begin() as conn:
                 conn.execute(text(sql))
         except Exception:
-            pass  # coluna já existe / não suportado no SQLite — create_all cuida
+            pass  # coluna já existe / não suportado no SQLite: create_all cuida
     log.info("Migrações aplicadas.")
 from pathlib import Path
 
@@ -123,7 +133,7 @@ app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
 from . import erros
 erros.registrar(app)  # mensagens reais: qual campo, qual regra
 # CORS: a API é consumida pelo próprio front (mesma origem).
-# allow_credentials fica False de propósito — a auth é via Bearer, não cookie.
+# allow_credentials fica False de propósito: a auth é via Bearer, não cookie.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -143,7 +153,7 @@ def verificar_autenticidade(code: str):
     """Página pública de verificação de autenticidade de documentos."""
     from fastapi.responses import HTMLResponse
     import re as _re
-    # o código é sempre 20 hex maiúsculos — qualquer outra coisa é rejeitada
+    # o código é sempre 20 hex maiúsculos: qualquer outra coisa é rejeitada
     if not _re.fullmatch(r"[A-F0-9]{20}", code or ""):
         return HTMLResponse("<h1>Código inválido</h1>", status_code=400)
     html = f"""<!DOCTYPE html>
@@ -193,7 +203,7 @@ def config_publica():
 @app.middleware("http")
 async def _sem_cache_no_shell(request, call_next):
     """Força o navegador (principalmente Safari/iOS) a revalidar o app a cada
-    acesso — sem isso ele reaproveita um app.js antigo depois do deploy."""
+    acesso: sem isso ele reaproveita um app.js antigo depois do deploy."""
     resp = await call_next(request)
     p = request.url.path
     if (p == "/" or p == "/sw.js" or p.endswith(".html")

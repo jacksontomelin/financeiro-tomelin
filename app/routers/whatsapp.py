@@ -1,5 +1,5 @@
 """
-Webhook WhatsApp — cópia fiel da lógica do Sentinela.
+Webhook WhatsApp: cópia fiel da lógica do Sentinela.
 Sem dedup, sem cache, sem complexidade. Só recebe, checa e responde.
 """
 from fastapi import APIRouter, Depends, Request, HTTPException
@@ -29,7 +29,7 @@ def _log(texto, resultado, autor=""):
 async def webhook(req: Request, db: Session = Depends(get_db)):
     try:
         raw = await req.body()
-        if len(raw) > 256 * 1024:          # 256 KB — payload legítimo é ~1 KB
+        if len(raw) > 256 * 1024:          # 256 KB: payload legítimo é ~1 KB
             return {"ok": False, "erro": "payload grande demais"}
         body = __import__("json").loads(raw)
     except Exception as e:
@@ -37,7 +37,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
             "payload": {"erro_parse": str(e), "raw": raw.decode("utf-8", errors="replace")[:500]}})
         return {"ok": False, "erro": "json inválido"}
 
-    # loga TUDO que chega — antes de qualquer filtro
+    # loga TUDO que chega: antes de qualquer filtro
     import logging as _lg
     client_ip = req.headers.get("x-forwarded-for","") or (req.client.host if req.client else "?")
     _lg.getLogger("tomelin.webhook").info("webhook de %s: evento=%s jid=%s", client_ip, body.get("evento"), str(body.get("jid"))[:30])
@@ -64,7 +64,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     if grupo and grupo not in jid:
         return {"ok": True, "ignorado": "outro grupo"}
 
-    # só o dono — igual ao Sentinela
+    # só o dono: igual ao Sentinela
     meu_num = (cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "").replace("+","").replace("-","").replace(" ","")
     autor_limpo = autor_num.replace("+","").replace("-","").replace(" ","")
     eh_meu = de_mim or (meu_num and autor_limpo.endswith(meu_num[-8:]))
@@ -336,7 +336,7 @@ _DEBUG_PAYLOADS: _deque = _deque(maxlen=20)
 
 @router.post("/webhook/debug")
 async def webhook_debug(req: Request, db: Session = Depends(get_db)):
-    """Endpoint de debug — só funciona com WHATSAPP_DEBUG ativo nas configurações."""
+    """Endpoint de debug: só funciona com WHATSAPP_DEBUG ativo nas configurações."""
     if not cfg.get_bool(db, "WHATSAPP_DEBUG", False):
         raise HTTPException(404, "Não encontrado.")
     try:
@@ -371,7 +371,7 @@ def debug_log(db: Session = Depends(get_db)):
 
 @router.get("/testar-url", dependencies=[Depends(usuario_atual)])
 async def testar_url(req: Request):
-    """Retorna a URL pública deste servidor — confirma que o webhook está acessível."""
+    """Retorna a URL pública deste servidor: confirma que o webhook está acessível."""
     host = req.headers.get("x-forwarded-host") or req.headers.get("host") or ""
     proto = req.headers.get("x-forwarded-proto") or "https"
     base = f"{proto}://{host}" if host else ""
@@ -387,7 +387,7 @@ async def testar_url(req: Request):
 @router.get("/webhook/ping")
 @router.post("/webhook/ping")  
 async def webhook_ping(req: Request):
-    """Endpoint público para testar conectividade — o gateway pode chamar isso."""
+    """Endpoint público para testar conectividade: o gateway pode chamar isso."""
     headers_dict = dict(req.headers)
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
@@ -408,7 +408,7 @@ async def webhook_ping(req: Request):
 
 
 # ── URL do túnel (salvo pelo start.sh quando cloudflared sobe) ──
-_TUNNEL_URL: list = []  # [url] — lista de 1 elemento para ser mutável
+_TUNNEL_URL: list = []  # [url]: lista de 1 elemento para ser mutável
 
 @router.post("/tunnel-url")
 async def salvar_tunnel_url(body: dict, req: Request, db: Session = Depends(get_db)):

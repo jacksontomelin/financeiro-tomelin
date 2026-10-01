@@ -35,7 +35,7 @@ def valida_cnpj(cnpj: str) -> bool:
 
 
 def valida_documento(doc: str) -> tuple[bool, str]:
-    """Retorna (válido, tipo) — tipo é 'cpf', 'cnpj' ou ''."""
+    """Retorna (válido, tipo): tipo é 'cpf', 'cnpj' ou ''."""
     c = limpar(doc)
     if not c:
         return True, ""          # vazio é permitido

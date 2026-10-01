@@ -108,7 +108,7 @@ def historico_usuario(uid: int, limite: int = 20,
 
 @router.get("/status")
 def status_publico(db: Session = Depends(get_db)):
-    """Info pública da tela de login — sem autenticação."""
+    """Info pública da tela de login: sem autenticação."""
     from sqlalchemy import func
     total_usuarios = db.query(models.Usuario).filter(models.Usuario.ativo.is_(True)).count()
     total_lanc = db.query(func.count(models.Lancamento.id)).scalar() or 0

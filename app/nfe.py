@@ -229,7 +229,7 @@ def consultar_qrcode(url_ou_chave: str, timeout: int = 15) -> dict:
             log.warning("chave inválida: %s", e)
 
     if not url:
-        raise ValueError("URL inválida — cole a URL completa do QR code da nota fiscal.")
+        raise ValueError("URL inválida: cole a URL completa do QR code da nota fiscal.")
 
     # Acessa o portal estadual
     headers = {
