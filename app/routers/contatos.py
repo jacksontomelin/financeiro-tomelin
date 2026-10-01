@@ -215,36 +215,68 @@ def buscar_cnpj(cnpj: str, forcar: bool = False, db: Session = Depends(get_db)):
                 "cidade": d.get("municipio") or "", "estado": d.get("uf") or "",
                 "cep": re.sub(r"\D", "", d.get("cep") or ""), "fonte": "ReceitaWS"}
 
-    erros = []
-    for nome, fn in (("BrasilAPI", _brasilapi), ("ReceitaWS", _receitaws)):
-        try:
-            res = fn()
-            if res == "NAO_ENCONTRADO":
-                raise HTTPException(404, "CNPJ não encontrado na Receita Federal.")
-            if res and (res.get("razao_social") or res.get("nome_fantasia")):
-                # 3) grava no cache
-                if reg:
-                    for k, v in res.items():
-                        setattr(reg, k, v)
-                    reg.consultado_em = datetime.utcnow()
-                else:
-                    db.add(models.CnpjCache(cnpj=c, consultado_em=datetime.utcnow(), **res))
-                db.commit()
-                return {
-                    "nome": res.get("nome_fantasia") or res.get("razao_social") or "",
-                    "razao_social": res.get("razao_social") or "", "documento": c,
-                    "telefone": res.get("telefone") or "", "email": res.get("email") or "",
-                    "logradouro": res.get("logradouro") or "", "numero": res.get("numero") or "",
-                    "complemento": res.get("complemento") or "", "bairro": res.get("bairro") or "",
-                    "cidade": res.get("cidade") or "", "estado": res.get("estado") or "",
-                    "cep": res.get("cep") or "", "situacao": res.get("situacao") or "",
-                    "fonte": res.get("fonte") or "", "do_cache": False,
-                }
+    def _minhareceita():
+        r = httpx.get(f"https://minhareceita.org/{c}", timeout=6)
+        if r.status_code == 404: return "NAO_ENCONTRADO"
+        r.raise_for_status(); d = r.json()
+        tel = (d.get("ddd_telefone_1") or "").strip()
+        return {"razao_social": d.get("razao_social") or "", "nome_fantasia": d.get("nome_fantasia") or "",
+                "situacao": d.get("descricao_situacao_cadastral") or "",
+                "telefone": tel, "email": d.get("email") or "",
+                "logradouro": " ".join(x for x in [d.get("descricao_tipo_de_logradouro") or "", d.get("logradouro") or ""] if x),
+                "numero": d.get("numero") or "",
+                "complemento": d.get("complemento") or "", "bairro": d.get("bairro") or "",
+                "cidade": d.get("municipio") or "", "estado": d.get("uf") or "",
+                "cep": re.sub(r"\D", "", str(d.get("cep") or "")), "fonte": "Minha Receita"}
+
+    # Consulta todos os provedores AO MESMO TEMPO; o primeiro válido vence.
+    # Antes era em fila: um provedor lento segurava a resposta por até 18s.
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    provedores = {"BrasilAPI": _brasilapi, "Minha Receita": _minhareceita, "ReceitaWS": _receitaws}
+    t0 = time.monotonic()
+    erros, nao_encontrado, res = [], 0, None
+    pool = ThreadPoolExecutor(max_workers=len(provedores))
+    futs = {pool.submit(fn): nome for nome, fn in provedores.items()}
+    try:
+        for fut in as_completed(futs, timeout=12):
+            nome = futs[fut]
+            try:
+                r_ = fut.result()
+            except Exception as e:
+                erros.append(f"{nome}: {type(e).__name__}"); continue
+            if r_ == "NAO_ENCONTRADO":
+                nao_encontrado += 1; continue
+            if r_ and (r_.get("razao_social") or r_.get("nome_fantasia")):
+                res = r_; break
             erros.append(f"{nome}: vazio")
-        except HTTPException:
-            raise
-        except Exception as e:
-            erros.append(f"{nome}: {type(e).__name__}")
+    except Exception:
+        erros.append("tempo esgotado")
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)   # não espera os lentos
+
+    if res:
+        log.info("CNPJ %s via %s em %.0fms", c, res["fonte"], (time.monotonic() - t0) * 1000)
+        if reg:
+            for k, v in res.items():
+                setattr(reg, k, v)
+            reg.consultado_em = datetime.utcnow()
+        else:
+            db.add(models.CnpjCache(cnpj=c, consultado_em=datetime.utcnow(), **res))
+        db.commit()
+        return {
+            "nome": res.get("nome_fantasia") or res.get("razao_social") or "",
+            "razao_social": res.get("razao_social") or "", "documento": c,
+            "telefone": res.get("telefone") or "", "email": res.get("email") or "",
+            "logradouro": res.get("logradouro") or "", "numero": res.get("numero") or "",
+            "complemento": res.get("complemento") or "", "bairro": res.get("bairro") or "",
+            "cidade": res.get("cidade") or "", "estado": res.get("estado") or "",
+            "cep": res.get("cep") or "", "situacao": res.get("situacao") or "",
+            "fonte": res.get("fonte") or "", "do_cache": False,
+        }
+
+    if nao_encontrado and not reg:
+        raise HTTPException(404, "CNPJ não encontrado na Receita Federal.")
 
     # 4) rede falhou — usa cache vencido se existir
     if reg:
