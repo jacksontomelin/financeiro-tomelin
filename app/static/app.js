@@ -551,7 +551,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.116.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.117.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -950,11 +950,11 @@ async function viewDashboard(v) {
           ["Despesas","#E0A060",money(k.despesas_mes),"setView('pagar')"],
           ["A pagar","#AFC2D6",money(k.a_pagar),"setView('pagar')"],
         ].map(([lab,cor,val,nav],i) => `
-          <div style="flex:1;padding:10px 12px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
+          <div class="hero-mini" style="flex:1;min-width:0;padding:10px 10px;border-right:${i<2?"1px solid rgba(255,255,255,.08)":"none"};cursor:pointer;transition:background .15s"
                onclick="${nav}"
                onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background=''">
             <div style="font-size:9.5px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">${lab} ›</div>
-            <div style="font-size:13px;font-weight:800;color:${cor};font-family:monospace">${val}</div>
+            <div class="hero-mini-val" style="color:${cor}">${val}</div>
           </div>`).join("")}
       </div>
     </div>
@@ -998,7 +998,7 @@ async function viewDashboard(v) {
     </div>` : ""}
 
     <!-- ── CONTEÚDO INFERIOR (2 colunas no desktop) ── -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start" class="dash-grid">
+    <div class="dash-grid">
     <div>
     <!-- ── PRÓXIMOS VENCIMENTOS ── -->
     ${todasVenc.length ? `
@@ -1108,9 +1108,9 @@ async function viewLancamentos(v, tipoFixo) {
           <button data-s="atrasado" onclick="filtroStatus('atrasado')">Atrasados</button>
           <button data-s="pago" onclick="filtroStatus('pago')">Pagos</button>
         </div>
-        <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')">+ Novo</button>
+        <button class="btn ${tipoFixo === 'receita' ? 'btn-green' : 'btn-primary'}" onclick="formLancamento(null,'${tipoFixo || 'despesa'}')" title="Novo lançamento">+<span class="so-desktop"> Novo</span></button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="lanc-filtros" style="display:flex;gap:8px;align-items:center">
         <div class="search" style="flex:1"><span>${icon("search")}</span>
           <input class="search-i" id="busca" placeholder="Buscar..." oninput="debBusca(this.value)">
         </div>
@@ -1645,7 +1645,7 @@ async function viewVencimentos(v) {
   }
   const totAtraso = venc.atrasados.reduce((s, x) => s + (x.tipo === 'despesa' ? x.valor : 0), 0);
   v.innerHTML = `
-    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    <div class="kpi-grid">
       <div class="kpi red" style="cursor:pointer" onclick="setView('pagar')" title="Ver contas a pagar atrasadas"><div class="lab"><span class="i i-red">${icon("alert")}</span>Atrasados</div><div class="val mono-num">${venc.atrasados.length}</div><div class="meta">${money(totAtraso)} a pagar vencido</div></div>
       <div class="kpi gold" style="cursor:pointer" onclick="setView('lancamentos')" title="Ver todos os lançamentos"><div class="lab"><span class="i i-gold">${icon("clock")}</span>Próximos 15 dias</div><div class="val mono-num">${venc.proximos.length}</div><div class="meta">Contas a vencer</div></div>
     </div>
@@ -1756,14 +1756,15 @@ async function viewCategorias(v) {
             <div class="grow"><div class="nm">${esc(c.nome)}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
             <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-          </div>`).join("") || `<div class="empty" style="padding:20px">${ilus("tag")}<p>Nenhuma.</p></div>`}
+          </div>`).join("") || `<div class="empty" style="padding:20px">${ilus("tag")}<p>Nenhuma categoria ainda.</p></div>`}
+      </div>
     </div>`;
   v.innerHTML = `
     <div class="toolbar"><div class="grow"></div>
       <button class="btn btn-green" onclick="formCategoria(null,'receita')">${icon("plus")}Categoria de receita</button>
       <button class="btn btn-primary" onclick="formCategoria(null,'despesa')">${icon("plus")}Categoria de despesa</button>
     </div>
-    <div class="grid-2" style="grid-template-columns:1fr 1fr">
+    <div class="grid-2 grid-2-igual">
       ${bloco("Receitas", rec, "arrowDown", "i-green")}
       ${bloco("Despesas", desp, "arrowUp", "i-red")}
     </div>`;
@@ -1822,13 +1823,13 @@ async function viewContatos(v) {
           <button data-t="cliente" onclick="filtroContato('cliente')">Recebo de</button>
           <button data-t="fornecedor" onclick="filtroContato('fornecedor')">Pago para</button>
         </div>
-        <button class="btn btn-primary" onclick="formContato(null)">${icon("plus")} Novo contato</button>
+        <button class="btn btn-primary" onclick="formContato(null)" title="Novo contato">${icon("plus")}<span class="so-desktop"> Novo contato</span></button>
       </div>
       <div class="search"><span>${icon("search")}</span>
         <input class="search-i" id="bc" placeholder="Buscar por nome, documento ou cidade..." oninput="renderContatos()">
       </div>
     </div>
-    <div id="lista-contatos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
+    <div id="lista-contatos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px"></div>
     <div id="cache-info" style="margin-top:16px;font-size:11.5px;color:var(--ink-3);text-align:center"></div>`;
   FCONTATO = ""; renderContatos();
 
@@ -2366,7 +2367,7 @@ async function viewWhatsapp(v) {
         ["Respostas","instantâneas"],
       ].map(([e,t,s])=>`
         <div style="background:rgba(0,0,0,.2);padding:12px 10px;text-align:center">
-          <div style="font-size:20px;margin-bottom:4px">${e}</div>
+          <div style="font-size:clamp(14px,4.6vw,20px);margin-bottom:4px;overflow-wrap:anywhere">${e}</div>
           <div style="font-size:12px;font-weight:700;color:#fff">${t}</div>
           <div style="font-size:10.5px;color:rgba(255,255,255,.5)">${s}</div>
         </div>`).join("")}
@@ -2631,7 +2632,7 @@ async function viewWhatsapp(v) {
           </button>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <span style="font-size:12px;color:var(--ink-2)">Evento:</span>
+          <span style="font-size:12px;color:var(--ink-2);flex-shrink:0">Evento:</span>
           <span style="background:#25D366;color:#fff;font-size:12px;font-weight:800;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
         </div>
         <div style="font-size:11.5px;color:var(--ink-3)">
@@ -2815,7 +2816,7 @@ async function rodarDiagnosticoWA() {
         </button>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:12px;color:var(--ink-2)">Evento:</span>
+        <span style="font-size:12px;color:var(--ink-2);flex-shrink:0">Evento:</span>
         <span style="font-size:12px;font-weight:800;background:#25D366;color:#fff;padding:2px 10px;border-radius:8px">Mensagem recebida</span>
         <span style="font-size:12px;color:var(--ink-3)">só este, uma vez</span>
       </div>
@@ -3345,7 +3346,7 @@ async function viewRelatorios(v) {
         <div class="grow"><h3>Patrimônio detalhado</h3></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+        <div class="pat-linha" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
              background:var(--bg);border-radius:12px;${clicavel}" ${hoverEfect}
              onclick="setView('contas')" title="Ver contas e carteiras">
           <div style="display:flex;align-items:center;gap:10px">
@@ -3361,7 +3362,7 @@ async function viewRelatorios(v) {
           </div>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+        <div class="pat-linha" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
              background:var(--bg);border-radius:12px;${clicavel}" ${hoverEfect}
              onclick="setView('veiculos')" title="Ver veículos">
           <div style="display:flex;align-items:center;gap:10px">
@@ -3378,7 +3379,7 @@ async function viewRelatorios(v) {
         </div>
 
         ${pat.total_financiamentos > 0 ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+        <div class="pat-linha" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
              background:rgba(180,80,62,.06);border-radius:12px;${clicavel}" ${hoverEfect}
              onclick="setView('veiculos')" title="Ver financiamentos">
           <div style="display:flex;align-items:center;gap:10px">
@@ -3394,13 +3395,13 @@ async function viewRelatorios(v) {
           </div>
         </div>` : ""}
 
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
+        <div class="pat-linha pat-total" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
              background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;margin-top:4px;
              ${clicavel}" ${hoverEfect} onclick="abrirPDF('/api/relatorios/patrimonio.pdf')"
              title="Baixar PDF do patrimônio">
           <span style="font-size:14px;font-weight:700;color:#fff">Patrimônio líquido</span>
           <div style="display:flex;align-items:center;gap:10px">
-            <span class="mono-num" style="font-size:20px;font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
+            <span class="mono-num" style="font-size:clamp(15px,4.6vw,20px);font-weight:800;color:#fff">${money(pat.patrimonio_liquido)}</span>
             <svg viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,.6)' stroke-width='2' width='16' height='16'>${P.download||""}</svg>
           </div>
         </div>
@@ -3901,7 +3902,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
           </select></div>
 
         <div id="fc-parcel-box" class="campo full hidden" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px">
-          <div class="frm" style="grid-template-columns:1fr 1fr">
+          <div class="frm">
             <div class="campo"><label>Cartão usado</label>
               <select id="fc-cartao">
                 ${cartoes.length ? cartoes.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")
@@ -4302,7 +4303,7 @@ async function viewMetas(v) {
         ${ilus("star")}<p>Nenhuma meta ainda.</p>
         <button class="btn btn-primary" style="margin-top:20px" onclick="formMeta(null)">${icon("plus")}Criar primeira meta</button>
       </div>` : `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:16px">
         ${[...ativas,...concluidas].map(m => _cardMeta(m)).join("")}
       </div>`}`;
 }

@@ -906,17 +906,7 @@ html.dark .familia-papel.membro { background: #2F817A22; color: var(--green-2); 
 
 
 
-/* mobile: centralizado sem foto */
-@media(max-width:767px){
-  
-  
-/* dark mode */
-html.dark 
-/* Login form header */
-
-
-
-@media(max-width:767px){  }
+/* (bloco @media sem fechamento removido: prendia 31 regras ao celular) */
 
 
 
@@ -932,8 +922,6 @@ html.dark
 .btn-login { width: 100%; justify-content: center; padding: 12px; font-size: 14.5px; margin-top: 6px; gap: 8px; }
 .btn-login svg { width: 18px; height: 18px; }
 
-
-html.dark 
 
 /* ============================================================
    BUSCA GLOBAL
@@ -1009,8 +997,6 @@ html.dark
 @keyframes ovIn{from{opacity:0}}
 
 /* ── MODAL redesenhado ── */
-  to{transform:none;opacity:1}
-}
 
 
 
@@ -1986,3 +1972,78 @@ html.dark .frm textarea:focus { background: var(--bg-2); }
 /* ícone SVG no meio do texto (substitui emojis da interface) */
 .ic-inline { display:inline-flex; vertical-align:-2px; }
 .ic-inline svg { width:14px; height:14px; }
+
+/* ══════════════════════════════════════════════════════
+   TEXTO JUSTIFICADO + NADA SAINDO DOS QUADROS
+   ══════════════════════════════════════════════════════ */
+
+/* Textos corridos justificados, com hifenização em português.
+   A última linha fica à esquerda para não esticar palavras soltas. */
+p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
+.busca-card span, .auto-vazio span, .ct-end, .obs-txt {
+  text-align: justify; text-justify: inter-word; text-align-last: left;
+  hyphens: auto; -webkit-hyphens: auto;
+}
+/* centralizados continuam centralizados */
+.empty p, .login-app-footer, .login-wrap p, [style*="text-align:center"] p { text-align: center; text-align-last: center; }
+
+/* Nada sai do quadro: palavras longas (e-mails, endereços) quebram dentro da caixa */
+.card, .kpi, .modal, .dica, .busca-card, .lanc, .venc-item, .auto-item, .ct-card {
+  overflow-wrap: break-word; word-break: normal; min-width: 0;
+}
+.grow, .d, .auto-txt, .busca-card > div { min-width: 0; }
+.mono-num, .money, .kpi .val { white-space: nowrap; }
+
+/* Valores grandes diminuem para caber no quadro em vez de partir o número */
+.kpi { container-type: inline-size; }
+.kpi .val { font-size: clamp(13px, 8.5cqi, 27px) !important; }
+.hero-mini { container-type: inline-size; }
+.hero-mini-val { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-size: clamp(10px, 11cqi, 13px); letter-spacing: -.01em; }
+
+.grid-2-igual { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 1024px) {
+  .dash-grid, .grid-2-igual { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 640px) {
+  .so-desktop { display: none; }
+
+  /* botões de filtro (Todos / Pendentes / Atrasados / Pagos) sem sobrepor */
+  .seg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .seg::-webkit-scrollbar { display: none; }
+  .seg button { white-space: nowrap; flex: 1 0 auto; padding: 7px 9px; font-size: 12.5px; }
+
+  /* busca ocupa a linha inteira; categoria e botões descem juntos */
+  .lanc-filtros { flex-wrap: wrap; }
+  .lanc-filtros .search { flex: 1 1 100% !important; }
+  .lanc-filtros select { flex: 1 1 auto !important; max-width: none !important; min-width: 0; }
+  .toolbar input.search-i, .search-i { min-width: 0 !important; width: 100%; }
+
+  /* itens de vencimento: nome inteiro, valor e botão na linha de baixo */
+  .venc-item { flex-wrap: wrap; row-gap: 6px; }
+  .venc-item .d { flex: 1 1 calc(100% - 56px); }
+  .venc-item .d .n { white-space: normal; overflow: visible; }
+  .venc-item .vv { margin-left: auto; }
+
+  /* títulos de cartão não empurram o botão para fora */
+  .card h3 { min-width: 0; overflow-wrap: break-word; }
+}
+
+/* linhas do patrimônio: texto encolhe, valor fica inteiro */
+.pat-linha { gap: 10px; }
+.pat-linha > div:first-child, .pat-linha > span:first-child { min-width: 0; flex: 1; }
+.pat-linha > div:last-child { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .pat-linha .mono-num { font-size: clamp(12.5px, 3.8vw, 15px) !important; }
+  .pat-linha { padding: 11px 12px !important; }
+}
+@media (max-width: 640px) { .pat-total .mono-num { font-size: clamp(15px, 4.6vw, 20px) !important; } }
+
+/* legendas curtas não justificam (abriria buracos entre as palavras) */
+.meta, .sub, .kpi .meta, .campo-erro-msg, label { text-align: left; text-align-last: auto; hyphens: manual; }
+
+/* seletor da barra de filtros com o mesmo visual dos campos */
+.lanc-filtros select { padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 9px;
+  background: var(--card); color: var(--ink-2); font: inherit; font-size: 13px; height: 38px; }
