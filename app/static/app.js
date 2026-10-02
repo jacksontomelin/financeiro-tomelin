@@ -557,7 +557,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.129.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.130.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -5559,6 +5559,7 @@ async function _impConfirmar() {
    código que lê ou grava .value segue funcionando. */
 const DP_MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const DP_DIA = ["dom.","seg.","ter.","qua.","qui.","sex.","sáb."];
+const DP_DIA_LONGO = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 const _VAL = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
 const _dpIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const _dpDeIso = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); if (!m) return null;
@@ -5765,7 +5766,7 @@ function _dpDesenhar() {
     corpo = `<div class="dp-sem">${["D","S","T","Q","Q","S","S"].map(s => `<span>${s}</span>`).join("")}</div><div class="dp-grade">` +
       Array.from({ length: 42 }, (_, i) => {
         const d = _dpSoma(ini, i), iso = _dpIso(d);
-        const cl = ["dp-d", d.getMonth() !== mes.getMonth() && "fora", iso === _dpIso(hoje) && "hoje",
+        const cl = ["dp-d", (d.getDay() === 0 || d.getDay() === 6) && "fds", d.getMonth() !== mes.getMonth() && "fora", iso === _dpIso(hoje) && "hoje",
                     sel && iso === _dpIso(sel) && "sel", iso === _dpIso(foco) && "foco"].filter(Boolean).join(" ");
         return `<button type="button" class="${cl}" data-iso="${iso}" ${_dpPermitido(inp, d) ? "" : "disabled"} aria-label="${_dpExtenso(d)}">${d.getDate()}</button>`;
       }).join("") + `</div>`;
@@ -5773,8 +5774,15 @@ function _dpDesenhar() {
     corpo = `<div class="dp-meses">${DP_MESES.map((m, i) => `<button type="button" data-mes="${i}" class="${sel && sel.getMonth() === i && sel.getFullYear() === mes.getFullYear() ? "sel" : ""}">${m.slice(0, 3)}</button>`).join("")}</div>`;
   }
   const h = hoje, ok = d => _dpPermitido(inp, d) ? "" : "disabled";
+  const rotulo = inp._dpCampo.getAttribute("aria-label").replace(" (dd/mm/aaaa)", "");
   el.innerHTML = `
-    ${el.classList.contains("folha") ? `<div class="dp-folha-cab"><b>${esc(inp._dpCampo.getAttribute("aria-label").replace(" (dd/mm/aaaa)", ""))}</b><button type="button" class="dp-x" data-a="fechar" aria-label="Fechar">${icon("x")}</button></div>` : ""}
+    <div class="dp-topo">
+      <div class="dp-topo-rot">${esc(rotulo)}</div>
+      <div class="dp-topo-data">${sel ? `${DP_DIA_LONGO[sel.getDay()]}, ${sel.getDate()} de ${DP_MESES[sel.getMonth()]}` : "Escolha uma data"}</div>
+      <div class="dp-topo-ano">${sel ? sel.getFullYear() : "Toque em um dia ou digite no campo"}</div>
+      ${el.classList.contains("folha") ? `<button type="button" class="dp-x" data-a="fechar" aria-label="Fechar">${icon("x")}</button>` : ""}
+    </div>
+    <div class="dp-corpo">
     <div class="dp-cab">
       <button type="button" class="dp-nav" data-a="ant" aria-label="${modo === "dias" ? "Mês anterior" : "Ano anterior"}">‹</button>
       <button type="button" class="dp-titulo" data-a="modo" title="${modo === "dias" ? "Escolher mês e ano" : "Voltar aos dias"}">${titulo.charAt(0).toUpperCase() + titulo.slice(1)}<span>▾</span></button>
@@ -5787,6 +5795,7 @@ function _dpDesenhar() {
       <button type="button" data-a="sete" ${ok(_dpSoma(h, 7))}>+7 dias</button>
       <button type="button" data-a="fim" ${ok(new Date(h.getFullYear(), h.getMonth() + 1, 0))}>Fim do mês</button>
       ${inp.required ? "" : `<button type="button" data-a="limpar" class="dp-limpar">Limpar</button>`}
+    </div>
     </div>`;
   _dpPosicionar();
 }
