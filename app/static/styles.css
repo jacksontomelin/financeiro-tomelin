@@ -2473,10 +2473,12 @@ html.dark .dp-titulo { color: var(--ink); }
   --grad-marca: linear-gradient(120deg, #082D51, #2F817A 55%, #C9A94E); }
 
 /* ── Telas entram em cascata ── */
-#view > * { animation: telaEntra .4s var(--suave) backwards; }
-#view > *:nth-child(2) { animation-delay: .05s; } #view > *:nth-child(3) { animation-delay: .1s; }
-#view > *:nth-child(4) { animation-delay: .15s; } #view > *:nth-child(5) { animation-delay: .2s; }
-#view > *:nth-child(n+6) { animation-delay: .25s; }
+/* o espaço de cada tela não muda o layout: os filhos ficam como filhos diretos de #view */
+.view-alvo { display: contents; }
+.view-alvo > * { animation: telaEntra .4s var(--suave) backwards; }
+.view-alvo > *:nth-child(2) { animation-delay: .05s; } .view-alvo > *:nth-child(3) { animation-delay: .1s; }
+.view-alvo > *:nth-child(4) { animation-delay: .15s; } .view-alvo > *:nth-child(5) { animation-delay: .2s; }
+.view-alvo > *:nth-child(n+6) { animation-delay: .25s; }
 @keyframes telaEntra { from { opacity: 0; transform: translateY(12px); } }
 .grid-3 > *, .kpi-grid > *, .familia-grid > *, .dash-col > * { animation: telaEntra .45s var(--suave) backwards; }
 .grid-3 > *:nth-child(2), .kpi-grid > *:nth-child(2), .familia-grid > *:nth-child(2), .dash-col > *:nth-child(2) { animation-delay: .07s; }
@@ -2578,3 +2580,79 @@ html.dark .frm input:focus:not([type=checkbox]):not([type=radio]):not([type=file
   background: linear-gradient(var(--bg-2), var(--bg-2)) padding-box, var(--grad-marca) border-box;
 }
 .frm select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,129,122,.15); }
+
+/* ══════════════════════════════════════════════════════
+   NÚMEROS E CARTÕES
+   ══════════════════════════════════════════════════════ */
+/* Manrope (OFL, servida pelo próprio sistema): números com dígitos de largura igual */
+@font-face { font-family: "Numeros"; src: url("/static/fonts/manrope-latin.woff2") format("woff2");
+  font-weight: 200 800; font-style: normal; font-display: swap; }
+.mono-num, .kpi .val, .hero-saldo, .hero-mini-val, .dash-kpi, .pv-chip b, .tr-val, .imp-val, .orc-pct,
+[style*="font-family:monospace"], .dp-campo, .dp-d, .pv-ev-data, .imp-data {
+  font-family: "Numeros", var(--font) !important;
+  font-feature-settings: "tnum" 1, "lnum" 1; font-variant-numeric: tabular-nums lining-nums;
+}
+.mono-num, .kpi .val, .hero-saldo, .hero-mini-val, .dash-kpi, .pv-chip b, [style*="font-family:monospace"] {
+  font-weight: 800; letter-spacing: -.025em;
+}
+/* "R$" e centavos menores e mais leves; o número inteiro em destaque */
+.rs { font-size: .62em; font-weight: 700; opacity: .72; letter-spacing: 0; margin-right: .06em; vertical-align: .22em; }
+.cent { font-size: .7em; font-weight: 700; opacity: .78; letter-spacing: -.01em; }
+.sn { margin-right: .12em; }
+.hero-saldo { font-size: clamp(28px, 4vw, 42px) !important; letter-spacing: -.035em !important;
+  text-shadow: 0 4px 18px rgba(0,0,0,.25); }
+.hero-saldo .rs { font-size: .5em; vertical-align: .55em; }
+.kpi .val { font-size: 30px; text-shadow: 0 2px 12px rgba(0,0,0,.14); }
+
+/* ── Indicadores coloridos: gradiente mais rico, brilho, sombra da própria cor ── */
+.kpi.navy, .kpi.teal, .kpi.green, .kpi.gold, .kpi.red { border: 1px solid rgba(255,255,255,.12) !important; }
+.kpi.navy  { background: radial-gradient(120% 140% at 100% 0%, rgba(47,129,122,.55), transparent 55%),
+                         linear-gradient(135deg, #061E38 0%, #0B3A63 55%, #1D4C78 100%) !important;
+             box-shadow: 0 18px 36px -18px rgba(8,45,81,.75); }
+.kpi.teal, .kpi.green { background: radial-gradient(120% 140% at 100% 0%, rgba(201,169,78,.45), transparent 55%),
+                         linear-gradient(135deg, #14594C 0%, #2F817A 60%, #3EA88A 100%) !important;
+             box-shadow: 0 18px 36px -18px rgba(47,129,122,.8); }
+.kpi.gold  { background: radial-gradient(120% 140% at 100% 0%, rgba(255,255,255,.35), transparent 55%),
+                         linear-gradient(135deg, #8A6D1E 0%, #C9A94E 55%, #E2C46E 100%) !important;
+             box-shadow: 0 18px 36px -18px rgba(201,169,78,.85); }
+.kpi.red   { background: radial-gradient(120% 140% at 100% 0%, rgba(255,200,170,.35), transparent 55%),
+                         linear-gradient(135deg, #7E2C20 0%, #B4503E 55%, #E07A5F 100%) !important;
+             box-shadow: 0 18px 36px -18px rgba(180,80,62,.8); color: #fff; }
+.kpi.red .lab { color: rgba(255,255,255,.8) !important; } .kpi.red .val { color: #fff !important; } .kpi.red .meta { color: rgba(255,255,255,.7) !important; }
+/* bolha do ícone em vidro */
+.kpi.navy .i, .kpi.teal .i, .kpi.green .i, .kpi.gold .i, .kpi.red .i {
+  background: rgba(255,255,255,.18) !important; color: #fff !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+  backdrop-filter: blur(4px); }
+/* brilho que atravessa ao passar o mouse */
+.kpi { isolation: isolate; }
+.kpi.navy::before, .kpi.teal::before, .kpi.green::before, .kpi.gold::before, .kpi.red::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.18) 45%, transparent 60%);
+  background-size: 250% 100%; background-position: 130% 0; transition: background-position .9s ease; }
+.kpi:hover::before { background-position: -30% 0; }
+.kpi.navy:hover, .kpi.teal:hover, .kpi.green:hover, .kpi.gold:hover, .kpi.red:hover { transform: translateY(-3px); }
+.kpi .kpi-deco { opacity: .16; }
+
+/* ── Ícones dos cartões em gradiente (como nos modais) ── */
+.card .card-ico.i-navy, .card .card-ico.i-green, .card .card-ico.i-gold, .card .card-ico.i-red { color: #fff; border-radius: 12px; }
+.card .card-ico.i-navy  { background: linear-gradient(135deg, #082D51, #305C74); box-shadow: 0 8px 16px -8px rgba(8,45,81,.6); }
+.card .card-ico.i-green { background: linear-gradient(135deg, #1F6F5C, #3EA88A); box-shadow: 0 8px 16px -8px rgba(47,129,122,.65); }
+.card .card-ico.i-gold  { background: linear-gradient(135deg, #A9852F, #E2C46E); box-shadow: 0 8px 16px -8px rgba(201,169,78,.7); }
+.card .card-ico.i-red   { background: linear-gradient(135deg, #A2412F, #E07A5F); box-shadow: 0 8px 16px -8px rgba(180,80,62,.65); }
+.card .card-ico svg { stroke: currentColor; }
+
+/* ── Cartões comuns: mais profundidade e borda em gradiente quando clicáveis ── */
+.card { box-shadow: 0 1px 2px rgba(8,45,81,.04), 0 10px 28px -18px rgba(8,45,81,.28); }
+.card[onclick]:hover, .familia-card:hover, .pv-card:hover {
+  border-color: transparent;
+  background: linear-gradient(var(--card), var(--card)) padding-box, var(--grad-marca) border-box; }
+.card h3 { letter-spacing: -.01em; }
+
+/* modo escuro: títulos dos cartões usavam azul-marinho fixo */
+html.dark .card h3:not([style*="color"]), html.dark .card-h h3:not([style*="color"]) { color: var(--ink); }
+
+/* modo escuro: títulos com azul-marinho escrito direto no elemento */
+html.dark h2[style*="var(--navy)"], html.dark h3[style*="var(--navy)"], html.dark h4[style*="var(--navy)"] { color: var(--ink) !important; }
+/* botões dos cartões de conta: quebram em duas linhas em vez de cortar o texto */
+.conta-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.conta-acoes .btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; }

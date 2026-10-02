@@ -570,7 +570,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.131.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.132.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -741,13 +741,21 @@ function abrirMenuMais() {
     </div>`);
 }
 
+// Cada troca de tela desenha no próprio espaço. Se outra tela for pedida antes
+// desta terminar de carregar, a resposta atrasada cai num espaço que já saiu da
+// tela e não sobrescreve a tela nova (antes o menu marcava uma e mostrava outra).
+let _SEQ_VIEW = 0;
 async function setView(id) {
   State.view = id;
   toggleSidebar(false);
   marcarNav();
-  const v = $("#view");
-  if (!v) return;
+  const raiz = $("#view");
+  if (!raiz) return;
+  const vez = ++_SEQ_VIEW;
+  const v = document.createElement("div");
+  v.className = "view-alvo";
   v.innerHTML = `<div class="empty" style="padding:80px">${ilusCarregando()}<p>Carregando...</p></div>`;
+  raiz.replaceChildren(v);
   try {
     if (id === "dashboard") await viewDashboard(v);
     else if (id === "vencimentos") await viewVencimentos(v);
@@ -765,9 +773,9 @@ async function setView(id) {
     else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
-    _animarNumeros(v);
+    if (vez === _SEQ_VIEW) _animarNumeros(v);
   } catch (e) {
-    v.innerHTML = `<div class="empty" style="padding:60px">${ilusAlerta(80)}<p>${esc(e.message)}</p></div>`;
+    if (vez === _SEQ_VIEW) v.innerHTML = `<div class="empty" style="padding:60px">${ilusAlerta(80)}<p>${esc(e.message)}</p></div>`;
   }
 }
 
@@ -775,20 +783,21 @@ async function setView(id) {
 function _animarNumeros(raiz) {
   if (!raiz || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || !window.requestAnimationFrame) return;
   raiz.querySelectorAll(".hero-saldo, .kpi .val, .hero-mini-val, .dash-kpi").forEach(el => {
-    if (el.children.length) return;
-    const final = el.textContent;
-    const m = /^(-?)R\$\s?([\d.]+),(\d{2})$/.exec(final.trim().replace(/\u00a0/g, " "));
-    if (!m) return;
-    const alvo = (m[1] ? -1 : 1) * parseFloat(m[2].replace(/\./g, "") + "." + m[3]);
+    if (!_soNossos(el)) return;
+    const final = _moedaPartes(el.textContent);
+    if (!final) return;
+    const neg = /[−-]/.test(final.sinal);
+    const alvo = (neg ? -1 : 1) * parseFloat(final.inteiro.replace(/\./g, "") + "." + final.cent);
     if (!alvo) return;
     const ini = performance.now(), dur = 800;
+    const desenha = v => { const p = _moedaPartes(money(v)); if (p) el.innerHTML = _moedaHTML(p); };
     const passo = t => {
       if (!el.isConnected) return;
       const p = Math.min(1, (t - ini) / dur), e = 1 - Math.pow(1 - p, 3);
-      el.textContent = p < 1 ? money(alvo * e) : final;
-      if (p < 1) requestAnimationFrame(passo);
+      if (p < 1) { desenha(alvo * e); requestAnimationFrame(passo); }
+      else el.innerHTML = _moedaHTML(final);
     };
-    el.textContent = money(0); requestAnimationFrame(passo);
+    el.dataset.rs = "1"; desenha(0); requestAnimationFrame(passo);
   });
 }
 
@@ -1770,7 +1779,7 @@ async function viewContas(v) {
           </div>
           <div class="val mono-num" style="font-size:26px;color:${Number(c.saldo_atual) < 0 ? 'var(--red)' : 'var(--navy)'};margin:6px 0 2px">${money(c.saldo_atual)}</div>
           <div class="meta">Saldo inicial ${money(c.saldo_inicial)} · toque para ver os lançamentos</div>
-          <div style="display:flex;gap:8px;margin-top:14px">
+          <div class="conta-acoes">
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarConta(${c.id})">${icon("edit")}Editar</button>
             ${contas.length >= 2 ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formTransferencia(${c.id})">${icon("transfer")}Transferir</button>` : ""}
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formImportar(${c.id})" title="Importar extrato desta conta">${icon("download")}Extrato</button>
@@ -5844,6 +5853,31 @@ new MutationObserver(ms => {
   if (_DP && !document.body.contains(_DP.inp)) _dpFechar();
 }).observe(document.body, { childList: true, subtree: true });
 _dpVarrer(document);
+
+
+/* ── Valores em reais: "R$" e centavos menores, número em destaque ──
+   Aplicado sozinho a todo valor que aparece na tela (o texto continua igual). */
+const _MOEDA_SEL = '.mono-num, .kpi .val, .hero-saldo, .hero-mini-val, .dash-kpi, .pv-chip b, .tr-val, .imp-val, [style*="font-family:monospace"]';
+function _moedaPartes(txt) {
+  const m = /^(\s*[+−-]?\s*)R\$[\s\u00a0]?([\d.]+),(\d{2})\s*$/.exec(txt || "");
+  return m ? { sinal: m[1], inteiro: m[2], cent: m[3] } : null;
+}
+const _moedaHTML = p => `${p.sinal.trim() ? `<span class="sn">${p.sinal}</span>` : ""}<span class="rs">R$\u00a0</span>${p.inteiro}<span class="cent">,${p.cent}</span>`;
+const _soNossos = el => ![...el.children].some(c => !c.matches(".rs, .cent, .sn"));
+function _moedas(raiz) {
+  if (!raiz || raiz.nodeType !== 1) return;
+  const els = raiz.matches(_MOEDA_SEL) ? [raiz] : [];
+  els.push(...raiz.querySelectorAll(_MOEDA_SEL));
+  for (const el of els) {
+    if (el.dataset.rs || !_soNossos(el)) continue;
+    const p = _moedaPartes(el.textContent);
+    if (!p) continue;
+    el.dataset.rs = "1"; el.innerHTML = _moedaHTML(p);
+  }
+}
+new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && !n.matches(".rs, .cent, .sn")) _moedas(n); })
+  .observe(document.body, { childList: true, subtree: true });
+_moedas(document.body);
 
 Object.assign(window, {
   formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,
