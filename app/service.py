@@ -34,7 +34,11 @@ def saldo_conta(db: Session, conta: models.Conta) -> Decimal:
             saldo += Decimal(total)
         else:
             saldo -= Decimal(total)
-    return saldo
+    # transferências entre contas: entram no destino, saem da origem
+    T = models.Transferencia
+    entrou = db.query(func.coalesce(func.sum(T.valor), 0)).filter(T.conta_destino_id == conta.id).scalar()
+    saiu = db.query(func.coalesce(func.sum(T.valor), 0)).filter(T.conta_origem_id == conta.id).scalar()
+    return saldo + Decimal(entrou or 0) - Decimal(saiu or 0)
 
 
 def saldo_total(db: Session) -> Decimal:

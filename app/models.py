@@ -385,3 +385,19 @@ class CepCache(Base):
     estado = Column(String(2), nullable=True)
     fonte = Column(String(40), nullable=True)
     consultado_em = Column(DateTime, default=datetime.utcnow)
+
+
+class Transferencia(Base):
+    """Dinheiro movido entre duas contas da família.
+
+    Muda o saldo das duas contas, mas não é receita nem despesa: por isso fica
+    fora dos lançamentos e não aparece somado nos relatórios.
+    """
+    __tablename__ = "transferencias"
+    id = Column(Integer, primary_key=True)
+    data = Column(Date, default=date.today, nullable=False, index=True)
+    valor = Column(Numeric(14, 2), nullable=False)
+    conta_origem_id = Column(Integer, ForeignKey("contas.id"), nullable=False, index=True)
+    conta_destino_id = Column(Integer, ForeignKey("contas.id"), nullable=False, index=True)
+    descricao = Column(String(200), nullable=True)
+    criado_em = Column(DateTime, default=datetime.utcnow)

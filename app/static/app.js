@@ -49,7 +49,9 @@ function dataBRcurto(iso) {
   const [, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}`;
 }
-function hojeISO() { return new Date().toISOString().slice(0, 10); }
+function hojeISO() {   // data LOCAL (toISOString é UTC: depois das 21h virava o dia seguinte)
+  const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
 function diasEntre(iso) {
   const hoje = new Date(hojeISO());
   const alvo = new Date(iso.split("T")[0]);
@@ -58,6 +60,7 @@ function diasEntre(iso) {
 
 /* ---------- ícones SVG (sem emoji) ---------- */
 const P = {
+  transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/>',
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   wallet: '<path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2Z"/><circle cx="17" cy="13" r="1.3"/>',
   arrowUp: '<path d="M12 19V5"/><path d="m6 11 6-6 6 6"/>',
@@ -275,7 +278,7 @@ function _marcarCampo(campo, msg) {
     telefone: ["tel"], documento: ["doc"], descricao: ["desc"],
     data_vencimento: ["venc"], data_competencia: ["comp"], data_pagamento: ["pago", "data"],
     categoria_id: ["cat"], conta_id: ["conta"], contato_id: ["contato"],
-    saldo_inicial: ["saldo"], estabelecimento: ["estab"], total_parcelas: ["parcelas"],
+    saldo_inicial: ["saldo"], conta_origem_id: ["origem"], conta_destino_id: ["destino"], estabelecimento: ["estab"], total_parcelas: ["parcelas"],
     forma_pagamento: ["forma"], valor_alvo: ["alvo"], valor_atual: ["atual"],
     fipe_codigo: ["fipecod"], fipe_valor: ["fipeval"], valor_parcela: ["vparc"],
     parcelas_total: ["ptot"], parcelas_pagas: ["ppag"], financiado: ["fin"],
@@ -551,7 +554,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.122.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.123.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1662,7 +1665,7 @@ async function viewVencimentos(v) {
    VIEW: CONTAS
    ============================================================ */
 async function viewContas(v) {
-  const contas = await api("/api/contas");
+  const [contas, trs] = await Promise.all([api("/api/contas"), api("/api/transferencias?limite=8").catch(() => [])]);
   contas.forEach(c => _CACHE.contas[c.id] = c);
   const total = contas.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
   v.innerHTML = `
@@ -1673,6 +1676,7 @@ async function viewContas(v) {
         <div class="meta">${contas.length} conta(s) cadastrada(s)</div>
       </div>
       <div class="grow"></div>
+      ${contas.length >= 2 ? `<button class="btn btn-ghost" onclick="formTransferencia()">${icon("transfer")}Transferir</button>` : ""}
       <button class="btn btn-primary" onclick="formConta(null)">${icon("plus")}Nova conta</button>
     </div>
     <div class="grid-3">
@@ -1691,10 +1695,23 @@ async function viewContas(v) {
           <div class="meta">Saldo inicial ${money(c.saldo_inicial)} · toque para ver os lançamentos</div>
           <div style="display:flex;gap:8px;margin-top:14px">
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarConta(${c.id})">${icon("edit")}Editar</button>
+            ${contas.length >= 2 ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formTransferencia(${c.id})">${icon("transfer")}Transferir</button>` : ""}
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();excluirConta(${c.id})">${icon("trash")}Excluir</button>
           </div>
         </div>`).join("") || `<div class="empty">${ilus("wallet")}<p>Nenhuma conta ainda.</p></div>`}
-    </div>`;
+    </div>
+    ${trs.length ? `
+    <div class="card card-pad" style="margin-top:16px">
+      <div class="card-h"><span class="card-ico i-navy">${icon("transfer")}</span>
+        <div class="grow"><h3>Transferências recentes</h3><div class="sub">Movem dinheiro entre contas, sem contar como receita ou despesa</div></div></div>
+      ${trs.map(t => `
+        <div class="tr-item">
+          <div class="tr-rota"><div><b>${esc(t.origem)}</b> <span class="tr-seta">→</span> <b>${esc(t.destino)}</b></div>
+            <div class="sub">${dataBR(t.data)}${t.descricao ? " · " + esc(t.descricao) : ""}</div></div>
+          <div class="mono-num tr-val">${money(t.valor)}</div>
+          <button class="btn btn-ghost btn-sm" title="Desfazer transferência" onclick="excluirTransferencia(${t.id})">${icon("trash")}</button>
+        </div>`).join("")}
+    </div>` : ""}`;
 }
 function formConta(c) {
   const e = c || {};
@@ -1702,7 +1719,7 @@ function formConta(c) {
     <div class="modal">
       <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${c ? "Editar conta" : "Nova conta"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="c-nome" value="${e.nome || ""}" placeholder="Nome da conta"></div>
+        <div class="campo full"><label>Nome</label><input id="c-nome" value="${esc(e.nome || "")}" placeholder="Nome da conta"></div>
         <div class="campo"><label>Tipo</label><select id="c-tipo">
           <option value="banco"${e.tipo === "banco" ? " selected" : ""}>Conta bancária</option>
           <option value="carteira"${e.tipo === "carteira" ? " selected" : ""}>Carteira / dinheiro</option>
@@ -4947,7 +4964,86 @@ const IC_UNDO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const IC_CSV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="15" height="15"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg>`;
 const IC_PLUS_X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
+
+/* ── Transferências entre contas ─────────────────────────────── */
+function formTransferencia(origemId) {
+  const contas = Object.values(_CACHE.contas || {}).filter(c => c.ativo !== false);
+  if (contas.length < 2) return toast("Cadastre pelo menos duas contas para transferir.", "err");
+  const o = origemId || contas[0].id;
+  const d = (contas.find(c => c.id !== o) || {}).id;
+  const opt = sel => contas.map(c => `<option value="${c.id}" ${c.id === sel ? "selected" : ""}>${esc(c.nome)} · ${money(c.saldo_atual)}</option>`).join("");
+  abrirModal(`
+    <div class="modal" style="max-width:480px">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("transfer")}</span><h3>Transferir entre contas</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b"><div class="frm">
+        <div class="campo full"><label>Sai de</label><select id="tr-origem" onchange="_prevTransf()">${opt(o)}</select></div>
+        <div class="campo full tr-troca"><button type="button" class="btn btn-ghost btn-sm" onclick="_trocarTransf()" title="Inverter origem e destino">${icon("transfer")}Inverter</button></div>
+        <div class="campo full"><label>Vai para</label><select id="tr-destino" onchange="_prevTransf()">${opt(d)}</select></div>
+        <div class="campo"><label>Valor (R$)</label><input id="tr-valor" type="number" step="0.01" min="0" placeholder="0,00" oninput="_prevTransf()"></div>
+        <div class="campo"><label>Data</label><input id="tr-data" type="date" value="${hojeISO()}" max="${hojeISO()}"></div>
+        <div class="campo full"><label>Descrição (opcional)</label><input id="tr-desc" maxlength="200" placeholder="Ex.: reserva do mês, saque no caixa"></div>
+        <div class="campo full"><div class="tr-prev" id="tr-prev"></div></div>
+      </div>
+      <div class="dica azul" style="margin-top:4px">${icon("shield")}<div>Transferência só move o dinheiro: não conta como receita nem despesa nos relatórios.</div></div>
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarTransferencia()">${icon("check")}Transferir</button>
+      </div>
+    </div>`);
+  _prevTransf();
+  setTimeout(() => document.getElementById("tr-valor")?.focus(), 50);
+}
+
+function _trocarTransf() {
+  const a = document.getElementById("tr-origem"), b = document.getElementById("tr-destino");
+  if (!a || !b) return;
+  [a.value, b.value] = [b.value, a.value];
+  _prevTransf();
+}
+
+function _prevTransf() {
+  const box = document.getElementById("tr-prev"); if (!box) return;
+  const o = _CACHE.contas[Number(document.getElementById("tr-origem").value)];
+  const d = _CACHE.contas[Number(document.getElementById("tr-destino").value)];
+  const v = Number(document.getElementById("tr-valor").value || 0);
+  if (!o || !d) { box.innerHTML = ""; return; }
+  if (o.id === d.id) { box.innerHTML = `<div class="tr-aviso">Escolha contas diferentes.</div>`; return; }
+  const so = Number(o.saldo_atual || 0), sd = Number(d.saldo_atual || 0);
+  const linha = (c, antes, depois) => `<div class="tr-linha"><span>${esc(c.nome)}</span>
+      <span class="mono-num">${money(antes)} <span class="tr-seta">→</span> <b class="${depois < 0 ? "neg" : ""}">${money(depois)}</b></span></div>`;
+  box.innerHTML = linha(o, so, so - v) + linha(d, sd, sd + v)
+    + (v > 0 && so - v < 0 ? `<div class="tr-aviso">${esc(o.nome)} vai ficar negativa.</div>` : "");
+}
+
+async function salvarTransferencia() {
+  const body = {
+    conta_origem_id: Number($("#tr-origem").value) || null,
+    conta_destino_id: Number($("#tr-destino").value) || null,
+    valor: parseFloat($("#tr-valor").value || "0"),
+    data: $("#tr-data").value || null,
+    descricao: $("#tr-desc").value.trim() || null,
+  };
+  if (body.conta_origem_id === body.conta_destino_id)
+    return erroCampo("conta_destino_id", "Conta de destino: precisa ser diferente da conta de origem.");
+  if (!(body.valor > 0)) return erroCampo("valor", "Valor: precisa ser maior que zero.");
+  try {
+    const t = await api("/api/transferencias", { method: "POST", body: JSON.stringify(body) });
+    fecharModal();
+    toast(`${money(t.valor)} transferidos de ${t.origem} para ${t.destino}`, "ok");
+    setView("contas");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function excluirTransferencia(id) {
+  if (!confirm("Desfazer esta transferência? Os saldos das duas contas voltam ao que eram.")) return;
+  try { await api(`/api/transferencias/${id}`, { method: "DELETE" }); toast("Transferência desfeita", "ok"); setView("contas"); }
+  catch (e) { toast(e.message, "err"); }
+}
+
 Object.assign(window, {
+  formTransferencia, _trocarTransf, _prevTransf, salvarTransferencia, excluirTransferencia,
   _novoContatoRapido,
   esc,
   setView, fazerLogin, logout, toggleSidebar, fecharModal, abrirModal,

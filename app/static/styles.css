@@ -2146,3 +2146,18 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
 #meta-prev-nome { text-align: center; }
 #mt-ic-grid { grid-template-columns: repeat(9, 1fr); }
 @media (max-width: 640px) { #mt-ic-grid { grid-template-columns: repeat(6, 1fr); } }
+
+/* Transferências */
+.tr-troca { display: flex; justify-content: center; margin: -6px 0; }
+.tr-prev { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--bg); }
+.tr-prev:empty { display: none; }
+.tr-linha { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+.tr-linha b { color: var(--ink); }
+.tr-linha b.neg { color: var(--red); }
+.tr-seta { color: var(--ink-3); margin: 0 2px; }
+.tr-aviso { font-size: 12px; font-weight: 600; color: var(--red); }
+.tr-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.tr-item:first-of-type { border-top: none; }
+.tr-rota { flex: 1; min-width: 0; font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+.tr-val { font-weight: 700; color: var(--navy); white-space: nowrap; }
+.tr-troca .btn { width: auto !important; flex: 0 0 auto; }

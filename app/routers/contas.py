@@ -57,6 +57,8 @@ def excluir(cid: int, db: Session = Depends(get_db)):
     bloquear_se_em_uso(db, "a conta", c.nome, [
         (models.Lancamento, "conta_id", cid, "lançamento|lançamentos"),
         (models.Parcelamento, "cartao_id", cid, "compra parcelada|compras parceladas"),
+        (models.Transferencia, "conta_origem_id", cid, "transferência enviada|transferências enviadas"),
+        (models.Transferencia, "conta_destino_id", cid, "transferência recebida|transferências recebidas"),
     ])
     db.delete(c); db.commit()
     return {"ok": True}
