@@ -2276,3 +2276,49 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
   .imp-ck { grid-area: ck; align-self: start; margin-top: 2px; } .imp-desc { grid-area: desc; } .imp-val { grid-area: val; align-self: start; }
   .imp-data { grid-area: data; } .imp-cat { grid-area: cat; }
 }
+
+/* ══════════════════════════════════════════════════════
+   REFINAMENTO VISUAL (mesmo estilo, mais acabamento)
+   ══════════════════════════════════════════════════════ */
+
+/* Modo escuro: textos que usavam azul-marinho fixo sumiam no fundo escuro */
+html.dark .toolbar h2 { color: var(--ink) !important; }
+html.dark .val[style*="var(--navy)"],
+html.dark .mono-num[style*="color:var(--navy)"] { color: var(--ink) !important; }
+html.dark .mes-nome, html.dark .pv-chip b, html.dark .tr-val, html.dark .av-topo-nome { color: var(--ink); }
+html.dark .pv-chip b.neg { color: #E07060; }
+html.dark .pv-chip.dest { background: #2F817A26; }
+html.dark .av-opt.sel { color: var(--ink); border-color: var(--ink-2); }
+html.dark .dica.azul { color: var(--ink-2); }
+html.dark .toast.warn { background: #8A6D1E; }
+/* cartões de lançamento tinham fundo claro fixo: no escuro usam o fundo do tema
+   e mantêm a faixa colorida de status à esquerda */
+html.dark .lanc-card { background: var(--card) !important; }
+
+/* Foco visível para quem navega pelo teclado (o mouse não mostra o contorno) */
+button:focus-visible, a:focus-visible, [onclick]:focus-visible, .av-opt:focus-visible, .cor-opt:focus-visible {
+  outline: 2px solid var(--teal); outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }
+
+/* Campos de valor sem as setinhas de número */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Valores com dígitos de largura igual: alinham em colunas e não "pulam" */
+.mono-num, .orc-pct, .pv-chip b, .imp-val, .tr-val, .kpi .val { font-variant-numeric: tabular-nums; }
+
+/* Seleção de texto na cor da marca */
+::selection { background: #2F817A40; }
+
+/* Botões: transição suave, resposta ao toque e estado desabilitado claro */
+.btn { transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s, transform .08s; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+button, a, [onclick], label { -webkit-tap-highlight-color: transparent; }
+
+/* Quem pediu menos movimento no aparelho não vê animações */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

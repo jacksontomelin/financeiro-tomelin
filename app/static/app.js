@@ -557,7 +557,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.127.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.128.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1216,7 +1216,7 @@ async function recarregarTabela() {
       : l.data_vencimento ? dataBR(l.data_vencimento)
       : "Sem vencimento";
 
-    return `<div style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
+    return `<div class="lanc-card" style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
                 cursor:pointer;transition:all .15s;border-left:4px solid ${st.borda.replace('.3)','1)').replace('.35)','1)')}"
               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(8,45,81,.12)'"
               onmouseout="this.style.transform='';this.style.boxShadow=''"
@@ -5142,7 +5142,7 @@ async function viewOrcamento(v) {
       <div class="kpi ${o.disponivel < 0 ? "red" : "gold"}"><div class="lab"><span class="i">${icon("wallet")}</span>${o.disponivel < 0 ? "Passou do orçado" : "Disponível"}</div>
         <div class="val mono-num">${money(Math.abs(o.disponivel))}</div><div class="meta">${o.corrente ? `faltam ${o.dias_mes - o.dia} dia(s) no mês` : "mês encerrado"}</div></div>
     </div>
-    ${o.estourados || ritmo.length ? `<div class="dica ${o.estourados ? "vermelha" : "amarela"}" style="margin-bottom:14px">${icon("alert")}<div>
+    ${o.estourados || ritmo.length ? `<div class="dica ${o.estourados ? "vermelho" : "ouro"}" style="margin-bottom:14px">${icon("alert")}<div>
       ${o.estourados ? `<b>${o.estourados} categoria(s) passaram do limite.</b> ` : ""}
       ${ritmo.length ? `Pelo padrão dos últimos meses, ${ritmo.map(i => `<b>${esc(i.nome)}</b>`).join(", ")} ${ritmo.length > 1 ? "vão passar" : "vai passar"} do limite até o fim do mês.` : ""}
     </div></div>` : ""}
@@ -5275,7 +5275,7 @@ async function _carregarPrevisao(dias) {
   const box = document.getElementById("prev-slot"); if (!box) return;
   let p;
   try { p = _PREV = await api(`/api/relatorios/previsao?dias=${_PREV_DIAS}`); }
-  catch (e) { box.innerHTML = `<div class="card card-pad"><div class="dica vermelha">${icon("alert")}<div>Previsão: ${esc(e.message)}</div></div></div>`; return; }
+  catch (e) { box.innerHTML = `<div class="card card-pad"><div class="dica vermelho">${icon("alert")}<div>Previsão: ${esc(e.message)}</div></div></div>`; return; }
   if (!document.getElementById("prev-slot")) return;
   const neg = p.primeiro_negativo.lancado || p.primeiro_negativo.estimado;
   const negSoLancado = !!p.primeiro_negativo.lancado;
@@ -5290,8 +5290,8 @@ async function _carregarPrevisao(dias) {
         ${Object.entries(p.marcos).map(([k, m]) => _prevChip(`Em ${k} dias`, m.estimado, Number(k) === _PREV_DIAS)).join("")}
         ${_prevChip(`Menor saldo (${_dm(p.minimo.estimado.data)})`, p.minimo.estimado.valor)}
       </div>
-      ${neg ? `<div class="dica vermelha" style="margin:10px 0 0">${icon("alert")}<div><b>${negSoLancado ? "Só com o que já está lançado" : "Pela estimativa"}, o saldo fica negativo em ${_dm(neg)}.</b> Vale antecipar uma receita ou adiar um pagamento.</div></div>` : ""}
-      ${Math.abs(p.atrasados) >= 0.01 ? `<div class="dica amarela" style="margin:10px 0 0">${icon("clock")}<div>Contas atrasadas entram como se fossem pagas hoje (efeito no saldo: ${p.atrasados > 0 ? "−" : "+"} ${money(Math.abs(p.atrasados))}).</div></div>` : ""}
+      ${neg ? `<div class="dica vermelho" style="margin:10px 0 0">${icon("alert")}<div><b>${negSoLancado ? "Só com o que já está lançado" : "Pela estimativa"}, o saldo fica negativo em ${_dm(neg)}.</b> Vale antecipar uma receita ou adiar um pagamento.</div></div>` : ""}
+      ${Math.abs(p.atrasados) >= 0.01 ? `<div class="dica ouro" style="margin:10px 0 0">${icon("clock")}<div>Contas atrasadas entram como se fossem pagas hoje (efeito no saldo: ${p.atrasados > 0 ? "−" : "+"} ${money(Math.abs(p.atrasados))}).</div></div>` : ""}
       <div class="pv-grafico">${svgPrevisao(p)}</div>
       <div class="pv-legenda">
         <span><i class="pv-l est"></i>Com estimativa: soma o que costuma entrar (${money(p.media_mensal.receitas)}/mês) e sair (${money(p.media_mensal.despesas)}/mês) e ainda não foi lançado</span>
