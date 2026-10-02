@@ -2194,3 +2194,40 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
   .mes-nome { min-width: 0; }
   .orc-cta { flex-wrap: wrap; }
 }
+
+/* Previsão de saldo */
+.pv-seg { flex: 0 0 auto; }
+.pv-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pv-chip { flex: 1 1 130px; padding: 10px 12px; border-radius: 12px; background: var(--bg); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pv-chip span { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.pv-chip b { font-size: 16px; color: var(--navy); white-space: nowrap; }
+.pv-chip.dest { background: #2F817A14; box-shadow: inset 0 0 0 1.5px #2F817A55; }
+.pv-chip b.neg { color: var(--red); }
+.pv-chips.mini .pv-chip { padding: 8px 10px; }
+.pv-chips.mini .pv-chip b { font-size: 13.5px; }
+.pv-grafico { margin: 14px 0 6px; }
+.pv-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.pv-svg .pv-eixo { font-size: 12px; fill: var(--ink-3); font-family: inherit; }
+.pv-svg .pv-min { font-size: 12.5px; font-weight: 700; fill: var(--ink-2); font-family: inherit; }
+.pv-mini { margin: 6px 0 10px; }
+.pv-legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 11.5px; color: var(--ink-3); }
+.pv-legenda span { display: flex; align-items: center; gap: 6px; }
+.pv-l { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--teal); flex-shrink: 0; }
+.pv-l.lan { border-top: 2px dashed var(--navy); opacity: .6; }
+.pv-h4 { margin: 16px 0 4px; font-size: 13px; color: var(--ink-2); font-weight: 700; }
+.pv-ev { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.pv-ev-data { width: 64px; flex-shrink: 0; color: var(--ink-3); font-variant-numeric: tabular-nums; font-size: 12px; }
+.pv-ev-desc { flex: 1; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.pv-ev b { white-space: nowrap; }
+.pv-ev b.neg { color: var(--red); } .pv-ev b.pos { color: var(--green-deep, #256B64); }
+.pv-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); background: var(--bg); padding: 1px 6px; border-radius: 10px; }
+.pv-card { cursor: pointer; margin-top: 16px; transition: box-shadow .15s, transform .15s; }
+.pv-card:hover { box-shadow: 0 6px 20px rgba(8,45,81,.12); transform: translateY(-2px); }
+.pv-alerta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--red); }
+.pv-alerta svg { width: 15px; height: 15px; }
+@media (max-width: 640px) {
+  .pv-seg { width: 100%; margin-top: 8px; }
+  .card-h:has(.pv-seg) { flex-wrap: wrap; }
+  .pv-chip { flex-basis: calc(50% - 4px); }
+  .pv-ev-data { width: 52px; }
+}

@@ -556,7 +556,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.124.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.125.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -861,7 +861,7 @@ function donut(dados) {
    VIEW: DASHBOARD: layout premium
    ============================================================ */
 async function viewDashboard(v) {
-  const [k, fluxo, desp, venc, jur, pat, orc] = await Promise.all([
+  const [k, fluxo, desp, venc, jur, pat, orc, prev] = await Promise.all([
     api("/api/dashboard/kpis"),
     api("/api/dashboard/fluxo?meses=6"),
     api("/api/dashboard/despesas-categoria"),
@@ -869,6 +869,7 @@ async function viewDashboard(v) {
     api("/api/relatorios/juros"),
     api("/api/relatorios/patrimonio"),
     api("/api/orcamento").catch(() => null),
+    api("/api/relatorios/previsao?dias=90").catch(() => null),
   ]);
 
   const hora = new Date().getHours();
@@ -1077,6 +1078,17 @@ async function viewDashboard(v) {
       ${donut(desp)}
     </div>
 
+    ${prev ? `
+    <div class="card card-pad pv-card" onclick="setView('relatorios')" title="Ver a previsão completa em Relatórios">
+      <div class="card-h"><span class="card-ico i-green">${icon("trendUp")}</span>
+        <div class="grow"><h3>Saldo previsto</h3><div class="sub">Próximos 90 dias, com estimativa</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();setView('relatorios')">Detalhes</button></div>
+      <div class="pv-mini">${svgPrevisao(prev, true)}</div>
+      <div class="pv-chips mini">${Object.entries(prev.marcos).map(([d, m]) => _prevChip(`Em ${d} dias`, m.estimado)).join("")}</div>
+      ${(prev.primeiro_negativo.lancado || prev.primeiro_negativo.estimado)
+        ? `<div class="pv-alerta">${icon("alert")}Saldo fica negativo em ${_dm(prev.primeiro_negativo.lancado || prev.primeiro_negativo.estimado)}</div>`
+        : `<div class="sub">Menor saldo: <b>${money(prev.minimo.estimado.valor)}</b> em ${_dm(prev.minimo.estimado.data)}</div>`}
+    </div>` : ""}
     </div>
     </div>`;
 
@@ -3296,6 +3308,7 @@ async function viewRelatorios(v) {
     }).join("");
   };
 
+  setTimeout(() => _carregarPrevisao(), 0);   // monta a previsão depois do HTML
   v.innerHTML = `
     <!-- Filtro de período -->
     <div class="card card-pad" style="margin-bottom:16px">
@@ -3341,6 +3354,7 @@ async function viewRelatorios(v) {
         <div class="meta">a pagar: ${money(jur.juros_a_pagar)}</div>
       </div>
     </div>
+    <div id="prev-slot"></div>
 
     <!-- Receitas clicáveis por categoria -->
     <div class="card card-pad" style="margin-bottom:14px">
@@ -5175,7 +5189,111 @@ async function _avisoOrcamento(categoriaId, competencia) {
   } catch {}
 }
 
+
+/* ── Previsão de saldo ───────────────────────────────────────── */
+let _PREV_DIAS = 90, _PREV = null, _PREV_TODOS = false;
+function _curto(v) {
+  const a = Math.abs(v), s = v < 0 ? "-" : "";
+  if (a >= 1e6) return `${s}R$ ${(a / 1e6).toFixed(1).replace(".", ",")} mi`;
+  if (a >= 1e3) return `${s}R$ ${Math.round(a / 1e3)} mil`;
+  return `${s}R$ ${Math.round(a)}`;
+}
+const _dm = iso => iso.slice(8, 10) + "/" + iso.slice(5, 7);
+
+function svgPrevisao(p, compacto = false) {
+  const S = p.serie, n = S.length - 1;
+  // no celular desenha mais estreito: o texto do gráfico fica legível em vez de encolher
+  const cel = innerWidth < 640;
+  const W = cel ? 420 : 800, H = compacto ? 110 : (cel ? 230 : 260), L = compacto ? 4 : 62, R = compacto ? 4 : 18, T = 14, B = compacto ? 6 : 30;
+  const vals = S.flatMap(x => [x.lancado, x.estimado]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.1 || 100;
+  lo -= pad; hi += pad;
+  const x = i => L + i / n * (W - L - R), y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const linha = k => S.map((s, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(s[k]).toFixed(1)}`).join(" ");
+  const area = `${linha("estimado")} L${x(n).toFixed(1)} ${H - B} L${x(0).toFixed(1)} ${H - B} Z`;
+  const iMin = S.reduce((m, s, i) => s.estimado < S[m].estimado ? i : m, 0);
+  let g = `<defs><linearGradient id="pvg${compacto ? "c" : ""}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--teal)" stop-opacity=".22"/><stop offset="1" stop-color="var(--teal)" stop-opacity="0"/></linearGradient></defs>`;
+  if (!compacto) {
+    for (let t = 0; t <= 3; t++) {
+      const v = lo + (hi - lo) * t / 3;
+      g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>
+            <text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" class="pv-eixo">${_curto(v)}</text>`;
+    }
+    const passo = n / 3;
+    for (let t = 0; t <= 3; t++) {
+      const i = Math.round(t * passo);
+      g += `<text x="${x(i)}" y="${H - 8}" text-anchor="${t === 0 ? "start" : t === 3 ? "end" : "middle"}" class="pv-eixo">${i === 0 ? "Hoje" : _dm(S[i].data)}</text>`;
+    }
+  }
+  if (lo < 0 && hi > 0) g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  g += `<path d="${area}" fill="url(#pvg${compacto ? "c" : ""})"/>
+        <path d="${linha("lancado")}" fill="none" stroke="var(--navy)" stroke-width="${compacto ? 1.5 : 1.8}" stroke-dasharray="6 5" opacity=".55"/>
+        <path d="${linha("estimado")}" fill="none" stroke="var(--teal)" stroke-width="${compacto ? 2.2 : 2.6}" stroke-linejoin="round"/>
+        <circle cx="${x(iMin)}" cy="${y(S[iMin].estimado)}" r="${compacto ? 3.5 : 5}" fill="var(--card)" stroke="${S[iMin].estimado < 0 ? "var(--red)" : "var(--teal)"}" stroke-width="2.5"/>`;
+  if (!compacto) {
+    const ax = Math.min(Math.max(x(iMin), L + (cel ? 80 : 70)), W - R - (cel ? 80 : 70));
+    const yMin = y(S[iMin].estimado);
+    const yRot = yMin + 22 > H - B - 2 ? yMin - 12 : yMin + 22;   // perto do eixo: rótulo vai para cima
+    g += `<text x="${ax}" y="${Math.max(yRot, T + 12)}" text-anchor="middle" class="pv-min">menor: ${money(S[iMin].estimado)} em ${_dm(S[iMin].data)}</text>`;
+    const w = (W - L - R) / n;
+    g += S.map((s, i) => `<rect x="${x(i) - w / 2}" y="${T}" width="${w}" height="${H - T - B}" fill="transparent"><title>${_dm(s.data)}: ${money(s.estimado)} com estimativa · ${money(s.lancado)} só lançado</title></rect>`).join("");
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" class="pv-svg${compacto ? " mini" : ""}" role="img" aria-label="Gráfico da previsão de saldo">${g}</svg>`;
+}
+
+function _prevChip(rot, v, destaque = false) {
+  return `<div class="pv-chip${destaque ? " dest" : ""}"><span>${rot}</span><b class="mono-num ${v < 0 ? "neg" : ""}">${money(v)}</b></div>`;
+}
+
+function _prevEventos() {
+  const p = _PREV, box = document.getElementById("pv-eventos"); if (!p || !box) return;
+  const lista = _PREV_TODOS ? p.eventos : p.eventos.slice(0, 8);
+  box.innerHTML = (lista.map(e => `
+    <div class="pv-ev">
+      <span class="pv-ev-data">${e.atrasado ? "Atrasado" : _dm(e.data)}</span>
+      <span class="pv-ev-desc">${esc(e.descricao)}${e.origem === "parcela" ? ' <span class="pv-tag">cartão</span>' : ""}</span>
+      <b class="mono-num ${e.valor < 0 ? "neg" : "pos"}">${e.valor < 0 ? "−" : "+"} ${money(Math.abs(e.valor))}</b>
+    </div>`).join("") || `<div class="sub" style="padding:8px 0">Nenhuma conta lançada para este período.</div>`)
+    + (p.eventos.length > 8 ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="_PREV_TODOS=!_PREV_TODOS;_prevEventos()">${_PREV_TODOS ? "Mostrar menos" : `Mostrar todos (${p.eventos.length})`}</button>` : "");
+}
+
+async function _carregarPrevisao(dias) {
+  if (dias) _PREV_DIAS = dias;
+  const box = document.getElementById("prev-slot"); if (!box) return;
+  let p;
+  try { p = _PREV = await api(`/api/relatorios/previsao?dias=${_PREV_DIAS}`); }
+  catch (e) { box.innerHTML = `<div class="card card-pad"><div class="dica vermelha">${icon("alert")}<div>Previsão: ${esc(e.message)}</div></div></div>`; return; }
+  if (!document.getElementById("prev-slot")) return;
+  const neg = p.primeiro_negativo.lancado || p.primeiro_negativo.estimado;
+  const negSoLancado = !!p.primeiro_negativo.lancado;
+  box.innerHTML = `
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div class="card-h"><span class="card-ico i-green">${icon("trendUp")}</span>
+        <div class="grow"><h3>Previsão de saldo</h3><div class="sub">Contas lançadas, parcelas do cartão e o que costuma entrar e sair</div></div>
+        <div class="seg pv-seg">${[30, 60, 90].map(d => `<button class="${d === _PREV_DIAS ? "on" : ""}" onclick="_carregarPrevisao(${d})">${d} dias</button>`).join("")}</div>
+      </div>
+      <div class="pv-chips">
+        ${_prevChip("Hoje", p.saldo_hoje)}
+        ${Object.entries(p.marcos).map(([k, m]) => _prevChip(`Em ${k} dias`, m.estimado, Number(k) === _PREV_DIAS)).join("")}
+        ${_prevChip(`Menor saldo (${_dm(p.minimo.estimado.data)})`, p.minimo.estimado.valor)}
+      </div>
+      ${neg ? `<div class="dica vermelha" style="margin:10px 0 0">${icon("alert")}<div><b>${negSoLancado ? "Só com o que já está lançado" : "Pela estimativa"}, o saldo fica negativo em ${_dm(neg)}.</b> Vale antecipar uma receita ou adiar um pagamento.</div></div>` : ""}
+      ${Math.abs(p.atrasados) >= 0.01 ? `<div class="dica amarela" style="margin:10px 0 0">${icon("clock")}<div>Contas atrasadas entram como se fossem pagas hoje (efeito no saldo: ${p.atrasados > 0 ? "−" : "+"} ${money(Math.abs(p.atrasados))}).</div></div>` : ""}
+      <div class="pv-grafico">${svgPrevisao(p)}</div>
+      <div class="pv-legenda">
+        <span><i class="pv-l est"></i>Com estimativa: soma o que costuma entrar (${money(p.media_mensal.receitas)}/mês) e sair (${money(p.media_mensal.despesas)}/mês) e ainda não foi lançado</span>
+        <span><i class="pv-l lan"></i>Só o que já está lançado</span>
+      </div>
+      <h4 class="pv-h4">Próximos movimentos lançados</h4>
+      <div id="pv-eventos"></div>
+    </div>`;
+  _PREV_TODOS = false; _prevEventos();
+}
+
 Object.assign(window, {
+  _carregarPrevisao, _prevEventos,
   _orcMes, _orcSalvar, _orcSugerir,
   formTransferencia, _trocarTransf, _prevTransf, salvarTransferencia, excluirTransferencia,
   _novoContatoRapido,

@@ -555,3 +555,116 @@ def sugestao_orcamento(db: Session, ref: date | None = None, meses: int = 3) -> 
         media = total / meses
         out[cid] = float((media / 10).to_integral_value(rounding="ROUND_CEILING") * 10)
     return {"de": ini.isoformat(), "ate": fim.isoformat(), "meses": meses, "sugestao": out}
+
+
+# ───────────────────────── Previsão de saldo dia a dia ─────────────────────────
+def _total_competencia(db: Session, tipo, ini: date, fim: date) -> Decimal:
+    return Decimal(db.query(func.coalesce(func.sum(models.Lancamento.valor), 0)).filter(
+        models.Lancamento.tipo == tipo,
+        models.Lancamento.data_competencia >= ini,
+        models.Lancamento.data_competencia <= fim).scalar() or 0)
+
+
+def previsao_saldo(db: Session, dias: int = 90, hoje: date | None = None) -> dict:
+    """Saldo previsto para cada dia dos próximos `dias`.
+
+    Duas curvas:
+    - "lançado": só o que já está no sistema (contas pendentes e parcelas de cartão);
+    - "estimado": lançado + o que costuma entrar/sair e ainda não foi lançado
+      (média dos últimos 3 meses, mesmo critério da projeção mensal).
+    Atrasados entram hoje (ainda precisam ser pagos). Compra parcelada pendente sai
+    nas datas das parcelas, não pelo valor total, para não contar duas vezes.
+    """
+    hoje = hoje or date.today()
+    fim_janela = hoje + timedelta(days=dias)
+    saldo0 = saldo_total(db)
+
+    # lançamentos pendentes que viraram parcelamento: o dinheiro sai pelas parcelas
+    parcelados = {lid for (lid,) in db.query(models.Compra.lancamento_id)
+                  .join(models.Parcelamento, models.Parcelamento.compra_id == models.Compra.id).all()}
+
+    eventos = []
+    pend = (db.query(models.Lancamento)
+            .filter(models.Lancamento.data_pagamento.is_(None)).all())
+    for l in pend:
+        quando = l.data_vencimento or l.data_competencia or hoje
+        if quando > fim_janela or l.id in parcelados:
+            continue
+        atrasado = quando < hoje
+        sinal = 1 if l.tipo == TipoMov.receita else -1
+        eventos.append({"data": max(quando, hoje), "valor": sinal * Decimal(l.valor_total),
+                        "descricao": l.descricao, "tipo": l.tipo.value, "atrasado": atrasado, "origem": "lancamento"})
+
+    # parcelas de cartão em aberto, só de compras cujo lançamento ainda não foi pago
+    q = (db.query(models.ParcelaCartao, models.Lancamento)
+         .join(models.Parcelamento, models.Parcelamento.id == models.ParcelaCartao.parcelamento_id)
+         .join(models.Compra, models.Compra.id == models.Parcelamento.compra_id)
+         .join(models.Lancamento, models.Lancamento.id == models.Compra.lancamento_id)
+         .filter(models.ParcelaCartao.paga.is_(False),
+                 models.Lancamento.data_pagamento.is_(None),
+                 models.ParcelaCartao.data_vencimento <= fim_janela))
+    for p, l in q.all():
+        eventos.append({"data": max(p.data_vencimento, hoje), "valor": -Decimal(p.valor),
+                        "descricao": f"{l.descricao} (parcela {p.numero}/{p.parcelamento.total_parcelas})",
+                        "tipo": "despesa", "atrasado": p.data_vencimento < hoje, "origem": "parcela"})
+
+    # média mensal dos últimos 3 meses fechados
+    ini_atual, _ = _range_mes(hoje)
+    ini_hist = ini_atual - relativedelta(months=3)
+    fim_hist = ini_atual - timedelta(days=1)
+    media_rec = _total_competencia(db, TipoMov.receita, ini_hist, fim_hist) / 3
+    media_desp = _total_competencia(db, TipoMov.despesa, ini_hist, fim_hist) / 3
+
+    # estimativa diária do que ainda não foi lançado, mês a mês
+    estimativa = {}   # data -> valor (+/-)
+    m_ini = ini_atual
+    while m_ini <= fim_janela:
+        m_fim = m_ini.replace(day=monthrange(m_ini.year, m_ini.month)[1])
+        lanc_rec = _total_competencia(db, TipoMov.receita, m_ini, m_fim)
+        lanc_desp = _total_competencia(db, TipoMov.despesa, m_ini, m_fim)
+        # parcelas de cartão que caem neste mês já são saída agendada
+        lanc_desp += -sum((e["valor"] for e in eventos
+                           if e["origem"] == "parcela" and m_ini <= e["data"] <= m_fim), D0)
+        falta = (max(D0, media_rec - lanc_rec)) - (max(D0, media_desp - lanc_desp))
+        # espalha nos dias do mês que ainda vêm e cabem na janela
+        d_ini = max(m_ini, hoje + timedelta(days=1))
+        d_fim = min(m_fim, fim_janela)
+        restantes_mes = (m_fim - max(m_ini, hoje + timedelta(days=1))).days + 1
+        if d_ini <= d_fim and restantes_mes > 0 and falta:
+            por_dia = falta / restantes_mes
+            d = d_ini
+            while d <= d_fim:
+                estimativa[d] = estimativa.get(d, D0) + por_dia
+                d += timedelta(days=1)
+        m_ini = m_fim + timedelta(days=1)
+
+    por_dia_lanc = {}
+    for e in eventos:
+        por_dia_lanc[e["data"]] = por_dia_lanc.get(e["data"], D0) + e["valor"]
+
+    serie = []
+    s_l = s_e = Decimal(saldo0)
+    for i in range(dias + 1):
+        d = hoje + timedelta(days=i)
+        s_l += por_dia_lanc.get(d, D0)
+        s_e += por_dia_lanc.get(d, D0) + estimativa.get(d, D0)
+        serie.append({"data": d.isoformat(), "lancado": float(round(s_l, 2)), "estimado": float(round(s_e, 2))})
+
+    def minimo(chave):
+        p = min(serie, key=lambda x: x[chave]); return {"valor": p[chave], "data": p["data"]}
+
+    def negativo(chave):
+        p = next((x for x in serie if x[chave] < 0), None); return p["data"] if p else None
+
+    marcos = {str(n): {"lancado": serie[n]["lancado"], "estimado": serie[n]["estimado"], "data": serie[n]["data"]}
+              for n in (30, 60, 90) if n <= dias}
+    eventos.sort(key=lambda e: (e["data"], e["valor"]))
+    return {
+        "hoje": hoje.isoformat(), "dias": dias, "saldo_hoje": float(saldo0),
+        "media_mensal": {"receitas": float(round(media_rec, 2)), "despesas": float(round(media_desp, 2))},
+        "serie": serie, "marcos": marcos,
+        "minimo": {"lancado": minimo("lancado"), "estimado": minimo("estimado")},
+        "primeiro_negativo": {"lancado": negativo("lancado"), "estimado": negativo("estimado")},
+        "atrasados": float(-sum((e["valor"] for e in eventos if e["atrasado"]), D0)),
+        "eventos": [{**e, "data": e["data"].isoformat(), "valor": float(e["valor"])} for e in eventos[:60]],
+    }

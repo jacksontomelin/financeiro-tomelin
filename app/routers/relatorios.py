@@ -34,6 +34,11 @@ def patrimonio(db: Session = Depends(get_db)):
     return service.patrimonio(db)
 
 
+@router.get("/previsao")
+def previsao(dias: int = 90, db: Session = Depends(get_db)):
+    return service.previsao_saldo(db, dias=max(7, min(dias, 365)))
+
+
 @router.get("/projecao")
 def projecao(meses: int = 6, db: Session = Depends(get_db)):
     return service.projecao(db, meses=meses)
