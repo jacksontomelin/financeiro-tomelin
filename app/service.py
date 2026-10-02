@@ -451,3 +451,107 @@ def texto_fechamento_dia(db: Session, ref: date | None = None) -> str | None:
     if tot_juros:
         linhas.append(f"📈 Juros pagos hoje: {brl(tot_juros)}")
     return "\n".join(linhas)
+
+
+# ───────────────────────── Orçamento por categoria ─────────────────────────
+def _gasto_por_categoria(db: Session, ini: date, fim: date) -> dict:
+    """Despesas por categoria no período, pela competência (pagas e pendentes),
+    mesmo critério do painel."""
+    rows = (db.query(models.Lancamento.categoria_id, func.coalesce(func.sum(models.Lancamento.valor), 0))
+            .filter(models.Lancamento.tipo == TipoMov.despesa,
+                    models.Lancamento.data_competencia >= ini,
+                    models.Lancamento.data_competencia <= fim)
+            .group_by(models.Lancamento.categoria_id).all())
+    return {cid: Decimal(v or 0) for cid, v in rows}
+
+
+def _resto_do_mes_historico(db: Session, ini_atual: date, dia: int, meses: int = 3) -> dict:
+    """Quanto cada categoria costuma gastar DEPOIS do dia `dia`, na média dos últimos meses.
+
+    Conta fixa paga no começo do mês (escola, aluguel) dá ~0; gasto espalhado
+    (mercado) dá o que normalmente ainda vem. Melhor que projetar em linha reta.
+    """
+    soma = {}
+    for k in range(1, meses + 1):
+        mi = ini_atual - relativedelta(months=k)
+        mf = mi.replace(day=monthrange(mi.year, mi.month)[1])
+        if dia >= mf.day:
+            continue
+        for cid, v in _gasto_por_categoria(db, mi.replace(day=dia + 1), mf).items():
+            soma[cid] = soma.get(cid, D0) + v
+    return {cid: v / meses for cid, v in soma.items()}
+
+
+def orcamento(db: Session, ref: date | None = None, hoje: date | None = None) -> dict:
+    ref = ref or date.today()
+    hoje = hoje or date.today()
+    ini, fim = _range_mes(ref)
+    gastos = _gasto_por_categoria(db, ini, fim)
+    dias_mes = fim.day
+    # ritmo: só faz sentido no mês corrente
+    corrente = ini <= hoje <= fim
+    dia = hoje.day if corrente else dias_mes
+
+    # Previsão de fechamento: o maior entre (a) o que já está lançado para o mês,
+    # inclusive pendentes, e (b) o gasto até hoje + o que costuma vir depois deste dia.
+    # Sem o "maior", uma conta já lançada seria contada de novo pelo histórico.
+    resto = _resto_do_mes_historico(db, ini, dia) if corrente else {}
+    ate_hoje = _gasto_por_categoria(db, ini, hoje) if corrente else {}
+
+    itens = []
+    for c in db.query(models.Categoria).filter(models.Categoria.tipo == TipoMov.despesa).order_by(models.Categoria.nome):
+        limite = Decimal(c.orcamento_mensal) if c.orcamento_mensal else None
+        gasto = gastos.get(c.id, D0)
+        previsto = max(gasto, ate_hoje.get(c.id, D0) + resto.get(c.id, D0)).quantize(Decimal("0.01"))
+        pct = float(gasto / limite * 100) if limite else None
+        if limite is None:
+            status = "sem_limite"
+        elif gasto > limite:
+            status = "estourado"
+        elif pct >= 80:
+            status = "atencao"
+        else:
+            status = "ok"
+        itens.append({
+            "categoria_id": c.id, "nome": c.nome, "cor": c.cor, "icone": c.icone,
+            "limite": float(limite) if limite is not None else None,
+            "gasto": float(gasto), "pct": round(pct, 1) if pct is not None else None,
+            "restante": float(limite - gasto) if limite is not None else None,
+            "previsto_fim_mes": float(previsto),
+            "vai_estourar": bool(limite is not None and corrente and gasto <= limite and previsto > limite),
+            "status": status,
+        })
+    ordem = {"estourado": 0, "atencao": 1, "ok": 2, "sem_limite": 3}
+    itens.sort(key=lambda i: (ordem[i["status"]], -(i["pct"] or 0), -i["gasto"]))
+    com = [i for i in itens if i["limite"] is not None]
+    limite_total = sum(i["limite"] for i in com)
+    gasto_orcado = sum(i["gasto"] for i in com)
+    return {
+        "mes": ini.strftime("%Y-%m"), "corrente": corrente, "dia": dia, "dias_mes": dias_mes,
+        "limite_total": limite_total, "gasto_orcado": gasto_orcado,
+        "disponivel": limite_total - gasto_orcado,
+        "gasto_total": float(sum(gastos.values(), D0)),
+        "sem_categoria": float(gastos.get(None, D0)),
+        "estourados": sum(1 for i in itens if i["status"] == "estourado"),
+        "em_atencao": sum(1 for i in itens if i["status"] == "atencao"),
+        "itens": itens,
+    }
+
+
+def sugestao_orcamento(db: Session, ref: date | None = None, meses: int = 3) -> dict:
+    """Média de gasto por categoria nos últimos N meses fechados, arredondada para cima (de 10 em 10)."""
+    ref = ref or date.today()
+    ini_atual, _ = _range_mes(ref)
+    fim = ini_atual - timedelta(days=1)
+    y, m = ini_atual.year, ini_atual.month - meses
+    while m <= 0:
+        m += 12; y -= 1
+    ini = date(y, m, 1)
+    gastos = _gasto_por_categoria(db, ini, fim)
+    out = {}
+    for cid, total in gastos.items():
+        if cid is None or total <= 0:
+            continue
+        media = total / meses
+        out[cid] = float((media / 10).to_integral_value(rounding="ROUND_CEILING") * 10)
+    return {"de": ini.isoformat(), "ate": fim.isoformat(), "meses": meses, "sugestao": out}

@@ -60,6 +60,7 @@ function diasEntre(iso) {
 
 /* ---------- ícones SVG (sem emoji) ---------- */
 const P = {
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/>',
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   wallet: '<path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2Z"/><circle cx="17" cy="13" r="1.3"/>',
@@ -383,11 +384,11 @@ function avatarLogo(logo, nome, size = 34) {
 function toast(msg, tipo = "") {
   const el = document.createElement("div");
   el.className = `toast ${tipo}`;
-  const ic = tipo === "ok" ? "checkCircle" : tipo === "err" ? "alert" : "bell";
+  const ic = tipo === "ok" ? "checkCircle" : (tipo === "err" || tipo === "warn") ? "alert" : "bell";
   el.innerHTML = icon(ic) + `<span>${esc(msg)}</span>`;
   $("#toasts").appendChild(el);
   // erro fica mais tempo (dá pra ler a mensagem inteira); clique fecha
-  const dur = tipo === "err" ? Math.min(12000, 5000 + String(msg).length * 40) : 3200;
+  const dur = (tipo === "err" || tipo === "warn") ? Math.min(12000, 5000 + String(msg).length * 40) : 3200;
   const fechar = () => { el.style.opacity = "0"; el.style.transform = "translateX(20px)"; setTimeout(() => el.remove(), 200); };
   el.addEventListener("click", fechar);
   setTimeout(fechar, dur);
@@ -522,6 +523,7 @@ const NAV = [
   { id: "dashboard",    nome: "Visão geral",          ic: "grid",      sub: "Resumo do mês",                        badge: false },
   { id: "vencimentos",  nome: "Vencimentos",           ic: "clock",     sub: "Contas atrasadas e a vencer",          badge: true  },
   { id: "relatorios",   nome: "Relatórios",            ic: "pie",       sub: "Balancete, patrimônio e projeções",    badge: false },
+  { id: "orcamento",    nome: "Orçamento",             ic: "target",    sub: "Limite de gasto por categoria",        badge: false },
   { sec: "Movimentação" },
   { id: "receber",      nome: "Contas a receber",      ic: "arrowDown", sub: "Receitas previstas e realizadas",      badge: false },
   { id: "pagar",        nome: "Contas a pagar",        ic: "arrowUp",   sub: "Despesas previstas e realizadas",      badge: false },
@@ -554,7 +556,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.123.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.124.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -689,6 +691,7 @@ function abrirFabMenu() {
 function abrirMenuMais() {
   const MAIS_ITENS = [
     { id:"relatorios",    ic:"chart",    nome:"Relatórios",         cor:"i-navy" },
+    { id:"orcamento",     ic:"target",   nome:"Orçamento",          cor:"i-gold" },
     { id:"metas",         ic:"star",     nome:"Metas financeiras",  cor:"i-gold" },
     { id:"compras",       ic:"receipt",  nome:"Compras e cartões",  cor:"i-navy" },
     { id:"veiculos",      ic:"car",      nome:"Veículos",           cor:"i-green" },
@@ -744,6 +747,7 @@ async function setView(id) {
     else if (id === "contatos") await viewContatos(v);
     else if (id === "veiculos") await viewVeiculos(v);
     else if (id === "relatorios") await viewRelatorios(v);
+    else if (id === "orcamento") await viewOrcamento(v);
     else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
@@ -857,13 +861,14 @@ function donut(dados) {
    VIEW: DASHBOARD: layout premium
    ============================================================ */
 async function viewDashboard(v) {
-  const [k, fluxo, desp, venc, jur, pat] = await Promise.all([
+  const [k, fluxo, desp, venc, jur, pat, orc] = await Promise.all([
     api("/api/dashboard/kpis"),
     api("/api/dashboard/fluxo?meses=6"),
     api("/api/dashboard/despesas-categoria"),
     api("/api/dashboard/vencimentos?dias=7"),
     api("/api/relatorios/juros"),
     api("/api/relatorios/patrimonio"),
+    api("/api/orcamento").catch(() => null),
   ]);
 
   const hora = new Date().getHours();
@@ -1012,6 +1017,20 @@ async function viewDashboard(v) {
       </div>
       ${todasVenc.slice(0,5).map(itemVenc).join("")}
     </div>` : ""}
+
+    <!-- ── ORÇAMENTO DO MÊS ── -->
+    ${orc ? (orc.limite_total ? `
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div class="card-h"><span class="card-ico i-gold">${icon("target")}</span>
+        <div class="grow"><h3>Orçamento do mês</h3><div class="sub">${money(orc.gasto_orcado)} de ${money(orc.limite_total)} · ${orc.disponivel < 0 ? "passou " + money(-orc.disponivel) : "disponível " + money(orc.disponivel)}</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="setView('orcamento')">Ver tudo</button></div>
+      ${orc.itens.filter(i => i.limite != null).slice(0, 4).map(i => _orcLinha(i, true)).join("")}
+    </div>` : `
+    <div class="card card-pad orc-cta" style="margin-bottom:16px">
+      <span class="card-ico i-gold">${icon("target")}</span>
+      <div class="grow"><b>Defina quanto quer gastar por categoria</b><div class="sub">O sistema avisa quando chegar perto do limite.</div></div>
+      <button class="btn btn-primary btn-sm" onclick="setView('orcamento')">Criar orçamento</button>
+    </div>`) : ""}
 
     <!-- ── PATRIMÔNIO + JUROS ── -->
     <div class="grid-2 grid-2-igual" style="margin-bottom:16px">
@@ -1517,6 +1536,7 @@ async function salvarLanc(id) {
     if (id) await api(`/api/lancamentos/${id}`, { method: "PUT", body: JSON.stringify(body) });
     else await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
     fecharModal(); toast("Lançamento salvo", "ok");
+    if (body.tipo === "despesa") _avisoOrcamento(body.categoria_id, body.data_competencia);
     await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
 }
@@ -5042,7 +5062,121 @@ async function excluirTransferencia(id) {
   catch (e) { toast(e.message, "err"); }
 }
 
+
+/* ── Orçamento por categoria ─────────────────────────────────── */
+let _ORC_MES = null, _ORC = null;
+const _corOk = (c, padrao = "#305C74") => /^#[0-9a-fA-F]{3,8}$/.test(c || "") ? c : padrao;
+const _ORC_COR = { estourado: "var(--red)", atencao: "var(--gold)", ok: "var(--teal)", sem_limite: "var(--ink-3)" };
+
+function _orcLinha(i, compacto = false) {
+  const pct = i.pct ?? 0, cor = _ORC_COR[i.status];
+  const info = i.limite == null ? `${money(i.gasto)} gastos · sem limite`
+    : i.status === "estourado" ? `${money(i.gasto)} de ${money(i.limite)} · passou ${money(-i.restante)}`
+    : `${money(i.gasto)} de ${money(i.limite)} · restam ${money(i.restante)}`;
+  const ritmo = i.vai_estourar && !compacto ? `<div class="orc-ritmo">Pelo padrão dos últimos meses, deve fechar em ${money(i.previsto_fim_mes)}</div>` : "";
+  const c = _corOk(i.cor);
+  return `<div class="orc-item st-${i.status}">
+    <span class="card-ico" style="background:${c}22;color:${c}">${icon(i.icone || "tag")}</span>
+    <div class="orc-meio">
+      <div class="orc-topo"><b>${esc(i.nome)}</b>${i.pct != null ? `<span class="orc-pct" style="color:${cor}">${Math.round(pct)}%</span>` : ""}</div>
+      <div class="orc-barra"><div style="width:${i.limite == null ? 0 : Math.min(100, pct)}%;background:${cor}"></div></div>
+      <div class="orc-info">${info}</div>${ritmo}
+    </div>
+    ${compacto ? "" : `<div class="orc-limite"><label for="orc-${i.categoria_id}">Limite</label>
+      <input id="orc-${i.categoria_id}" type="number" step="0.01" min="0" inputmode="decimal" value="${i.limite ?? ""}" placeholder="Sem limite"
+             data-cat="${i.categoria_id}" data-orig="${i.limite ?? ""}" onkeydown="if(event.key==='Enter')this.blur()" onchange="_orcSalvar(this)"></div>`}
+  </div>`;
+}
+
+async function viewOrcamento(v) {
+  const mes = _ORC_MES || hojeISO().slice(0, 7);
+  const o = _ORC = await api(`/api/orcamento?mes=${mes}`);
+  const [a, m] = mes.split("-").map(Number);
+  const nm = new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const nomeMes = nm.charAt(0).toUpperCase() + nm.slice(1);   // "Outubro de 2026"
+  const comLimite = o.itens.filter(i => i.limite != null).length;
+  const pctOrc = o.limite_total ? Math.round(o.gasto_orcado / o.limite_total * 100) : 0;
+  const ritmo = o.itens.filter(i => i.vai_estourar);
+  v.innerHTML = `
+    <div class="toolbar">
+      <div><h2 style="margin:0;color:var(--navy)">Orçamento</h2>
+        <div class="sub">Quanto a família quer gastar por categoria em cada mês</div></div>
+      <div class="grow"></div>
+      <div class="mes-nav">
+        <button class="btn btn-ghost btn-sm" onclick="_orcMes(-1)" title="Mês anterior" aria-label="Mês anterior">‹</button>
+        <span class="mes-nome">${nomeMes}</span>
+        <button class="btn btn-ghost btn-sm" onclick="_orcMes(1)" title="Próximo mês" aria-label="Próximo mês">›</button>
+      </div>
+      <button class="btn btn-ghost" onclick="_orcSugerir()">${icon("chart")}Sugerir pela média</button>
+    </div>
+    <div class="kpi-grid orc-kpis">
+      <div class="kpi navy"><div class="lab"><span class="i">${icon("target")}</span>Orçado</div>
+        <div class="val mono-num">${money(o.limite_total)}</div><div class="meta">${comLimite} de ${o.itens.length} categorias com limite</div></div>
+      <div class="kpi ${pctOrc > 100 ? "red" : "teal"}"><div class="lab"><span class="i">${icon("arrowUp")}</span>Gasto no orçado</div>
+        <div class="val mono-num">${money(o.gasto_orcado)}</div><div class="meta">${o.limite_total ? pctOrc + "% do orçado" : "defina limites abaixo"}</div></div>
+      <div class="kpi ${o.disponivel < 0 ? "red" : "gold"}"><div class="lab"><span class="i">${icon("wallet")}</span>${o.disponivel < 0 ? "Passou do orçado" : "Disponível"}</div>
+        <div class="val mono-num">${money(Math.abs(o.disponivel))}</div><div class="meta">${o.corrente ? `faltam ${o.dias_mes - o.dia} dia(s) no mês` : "mês encerrado"}</div></div>
+    </div>
+    ${o.estourados || ritmo.length ? `<div class="dica ${o.estourados ? "vermelha" : "amarela"}" style="margin-bottom:14px">${icon("alert")}<div>
+      ${o.estourados ? `<b>${o.estourados} categoria(s) passaram do limite.</b> ` : ""}
+      ${ritmo.length ? `Pelo padrão dos últimos meses, ${ritmo.map(i => `<b>${esc(i.nome)}</b>`).join(", ")} ${ritmo.length > 1 ? "vão passar" : "vai passar"} do limite até o fim do mês.` : ""}
+    </div></div>` : ""}
+    <div class="card card-pad">
+      <div class="card-h"><span class="card-ico i-gold">${icon("target")}</span>
+        <div class="grow"><h3>Categorias de despesa</h3><div class="sub">Digite o limite e tecle Enter. Deixe vazio para tirar o limite.</div></div></div>
+      ${o.itens.map(i => _orcLinha(i)).join("") || `<div class="empty">${ilus("tag")}<p>Nenhuma categoria de despesa ainda.</p></div>`}
+      <div class="orc-rodape">Gasto total do mês: <b>${money(o.gasto_total)}</b>${o.sem_categoria ? ` · sem categoria: ${money(o.sem_categoria)}` : ""}. Conta pela competência, pagos e pendentes.</div>
+    </div>`;
+}
+
+function _orcMes(d) {
+  const [a, m] = (_ORC_MES || hojeISO().slice(0, 7)).split("-").map(Number);
+  const n = new Date(a, m - 1 + d, 1);
+  _ORC_MES = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+  setView("orcamento");
+}
+
+async function _orcSalvar(el) {
+  const novo = el.value === "" ? null : parseFloat(el.value);
+  const orig = el.dataset.orig === "" ? null : parseFloat(el.dataset.orig);
+  if (novo === orig) return;
+  if (novo != null && !(novo >= 0)) return erroCampo("limite", "Limite: informe um valor maior ou igual a zero.");
+  try {
+    const r = await api(`/api/orcamento/${el.dataset.cat}`, { method: "PUT", body: JSON.stringify({ limite: novo }) });
+    toast(r.limite == null ? `Limite de ${r.nome} removido` : `Limite de ${r.nome}: ${money(r.limite)} por mês`, "ok");
+    setView("orcamento");
+  } catch (e) { toast(e.message, "err"); el.value = el.dataset.orig; }
+}
+
+async function _orcSugerir() {
+  try {
+    const sg = await api(`/api/orcamento/sugestao?mes=${_ORC_MES || hojeISO().slice(0, 7)}`);
+    const vazias = (_ORC?.itens || []).filter(i => i.limite == null && sg.sugestao[i.categoria_id] > 0);
+    if (!vazias.length) return toast(Object.keys(sg.sugestao).length
+      ? "Todas as categorias com gasto recente já têm limite." : "Ainda não há gastos nos últimos 3 meses para calcular a média.");
+    const lista = vazias.map(i => `${i.nome}: ${money(sg.sugestao[i.categoria_id])}`).join("\n");
+    if (!confirm(`Preencher ${vazias.length} categoria(s) sem limite com a média dos últimos 3 meses?\n\n${lista}\n\nOs limites que você já definiu não mudam.`)) return;
+    for (const i of vazias)
+      await api(`/api/orcamento/${i.categoria_id}`, { method: "PUT", body: JSON.stringify({ limite: sg.sugestao[i.categoria_id] }) });
+    toast(`${vazias.length} limite(s) definidos pela média`, "ok");
+    setView("orcamento");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// depois de salvar uma despesa: avisa se a categoria chegou perto ou passou do limite
+async function _avisoOrcamento(categoriaId, competencia) {
+  if (!categoriaId) return;
+  try {
+    const o = await api(`/api/orcamento?mes=${(competencia || hojeISO()).slice(0, 7)}`);
+    const i = o.itens.find(x => x.categoria_id === categoriaId);
+    if (!i || i.limite == null) return;
+    if (i.status === "estourado") toast(`${i.nome} passou do orçamento: ${money(i.gasto)} de ${money(i.limite)} (${Math.round(i.pct)}%)`, "warn");
+    else if (i.status === "atencao") toast(`${i.nome} já usou ${Math.round(i.pct)}% do orçamento do mês`, "warn");
+  } catch {}
+}
+
 Object.assign(window, {
+  _orcMes, _orcSalvar, _orcSugerir,
   formTransferencia, _trocarTransf, _prevTransf, salvarTransferencia, excluirTransferencia,
   _novoContatoRapido,
   esc,
