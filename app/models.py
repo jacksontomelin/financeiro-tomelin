@@ -114,6 +114,9 @@ class Lancamento(Base):
     contato_id = Column(Integer, ForeignKey("contatos.id"), nullable=True)
     conta_id = Column(Integer, ForeignKey("contas.id"), nullable=True)
 
+    # identidade da linha do extrato bancário que gerou/baixou este lançamento (evita importar 2x)
+    import_id = Column(String(80), nullable=True, index=True)
+
     criado_em = Column(DateTime, default=datetime.utcnow)
 
     categoria = relationship("Categoria", back_populates="lancamentos")

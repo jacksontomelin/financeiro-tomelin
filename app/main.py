@@ -84,6 +84,8 @@ def _migrar(engine):
         "UPDATE veiculos SET nome = REPLACE(REPLACE(REPLACE(nome, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE nome LIKE '%\u2014%' OR nome LIKE '%\u2013%'",
         "UPDATE compras SET estabelecimento = REPLACE(REPLACE(REPLACE(estabelecimento, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE estabelecimento LIKE '%\u2014%' OR estabelecimento LIKE '%\u2013%'",
         "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS orcamento_mensal NUMERIC(14,2)",
+        "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS import_id VARCHAR(80)",
+        "CREATE INDEX IF NOT EXISTS ix_lancamentos_import_id ON lancamentos(import_id)",
         "ALTER TABLE contatos ALTER COLUMN telefone TYPE VARCHAR(120)",
         "ALTER TABLE contatos ALTER COLUMN numero TYPE VARCHAR(30)",
         "ALTER TABLE contatos ALTER COLUMN complemento TYPE VARCHAR(200)",
@@ -119,7 +121,7 @@ except Exception:
     VERSION, BUILD, BUILD_DATE = '2.0.0', 'dev', ''
 from .database import Base, engine
 from . import seed, whatsapp
-from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos, importacao
 from .routers import whatsapp as whatsapp_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -179,7 +181,7 @@ app.add_middleware(
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
-          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, whatsapp_router.router):
+          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, importacao.router, whatsapp_router.router):
     app.include_router(r)
 
 

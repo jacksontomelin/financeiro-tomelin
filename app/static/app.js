@@ -280,7 +280,7 @@ function _marcarCampo(campo, msg) {
     telefone: ["tel"], documento: ["doc"], descricao: ["desc"],
     data_vencimento: ["venc"], data_competencia: ["comp"], data_pagamento: ["pago", "data"],
     categoria_id: ["cat"], conta_id: ["conta"], contato_id: ["contato"],
-    saldo_inicial: ["saldo"], conta_origem_id: ["origem"], conta_destino_id: ["destino"], estabelecimento: ["estab"], total_parcelas: ["parcelas"],
+    saldo_inicial: ["saldo"], conta_origem_id: ["origem"], conta_destino_id: ["destino"], arquivo: ["imp-arquivo"], estabelecimento: ["estab"], total_parcelas: ["parcelas"],
     forma_pagamento: ["forma"], valor_alvo: ["alvo"], valor_atual: ["atual"],
     fipe_codigo: ["fipecod"], fipe_valor: ["fipeval"], valor_parcela: ["vparc"],
     parcelas_total: ["ptot"], parcelas_pagas: ["ppag"], financiado: ["fin"],
@@ -557,7 +557,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.126.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.127.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1717,6 +1717,7 @@ async function viewContas(v) {
         <div class="meta">${contas.length} conta(s) cadastrada(s)</div>
       </div>
       <div class="grow"></div>
+      ${contas.length ? `<button class="btn btn-ghost" onclick="formImportar()">${icon("download")}Importar extrato</button>` : ""}
       ${contas.length >= 2 ? `<button class="btn btn-ghost" onclick="formTransferencia()">${icon("transfer")}Transferir</button>` : ""}
       <button class="btn btn-primary" onclick="formConta(null)">${icon("plus")}Nova conta</button>
     </div>
@@ -1737,6 +1738,7 @@ async function viewContas(v) {
           <div style="display:flex;gap:8px;margin-top:14px">
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarConta(${c.id})">${icon("edit")}Editar</button>
             ${contas.length >= 2 ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formTransferencia(${c.id})">${icon("transfer")}Transferir</button>` : ""}
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formImportar(${c.id})" title="Importar extrato desta conta">${icon("download")}Extrato</button>
             <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();excluirConta(${c.id})">${icon("trash")}Excluir</button>
           </div>
         </div>`).join("") || `<div class="empty">${ilus("wallet")}<p>Nenhuma conta ainda.</p></div>`}
@@ -5431,7 +5433,127 @@ async function _anxVer(aid) {
 
 async function _anxContagem() { try { _ANX_CONT = await api("/api/anexos/contagem"); } catch { _ANX_CONT = {}; } }
 
+
+/* ── Importar extrato (OFX/CSV) ──────────────────────────────── */
+let _IMP = null;
+
+async function formImportar(contaId) {
+  if (!State.contas?.length || !State.cats?.length) { try { await carregarRefs(); } catch {} }
+  const contas = (State.contas || []).filter(c => c.ativo !== false);
+  if (!contas.length) return toast("Cadastre uma conta antes de importar o extrato.", "err");
+  abrirModal(`
+    <div class="modal" style="max-width:500px">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("download")}</span><h3>Importar extrato do banco</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b"><div class="frm">
+        <div class="campo full"><label>Conta do extrato</label>
+          <select id="imp-conta">${contas.map(c => `<option value="${c.id}" ${c.id === contaId ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}</select></div>
+        <div class="campo full"><label>Arquivo (OFX ou CSV)</label>
+          <input type="file" id="imp-arquivo" accept=".ofx,.csv,.txt,application/x-ofx,text/csv">
+          <div class="campo-dica">No app ou site do banco: Extrato, Exportar, formato OFX (recomendado). CSV também funciona.</div></div>
+        <div class="campo full"><label class="sw-card">
+          <input type="checkbox" id="imp-inverter"><span class="sw-trilho"></span>
+          <span class="sw-txt"><b>É fatura de cartão de crédito</b><small>Nas faturas as compras vêm com valor positivo. Ligue para virarem despesas.</small></span></label></div>
+      </div>
+      <div class="dica azul" style="margin-top:4px">${icon("shield")}<div>Nada é gravado agora: você revisa cada linha antes. Pagamentos de contas que já estão no sistema viram baixa, sem duplicar.</div></div>
+      </div>
+      <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" id="imp-ler" onclick="_impLer()">${icon("search")}Ler extrato</button></div>
+    </div>`);
+}
+
+async function _impLer() {
+  const arq = document.getElementById("imp-arquivo").files[0];
+  const conta_id = Number(document.getElementById("imp-conta").value) || null;
+  const inverter = document.getElementById("imp-inverter").checked;
+  if (!arq) return erroCampo("arquivo", "Arquivo: escolha o extrato (OFX ou CSV).");
+  if (arq.size > 2 * 1024 * 1024) return erroCampo("arquivo", "Arquivo: grande demais (limite de 2 MB). Exporte um período menor.");
+  const bt = document.getElementById("imp-ler"); bt.disabled = true; bt.innerHTML = `${icon("refresh")}Lendo...`;
+  try {
+    const conteudo = await _paraBase64(arq);
+    const p = await api("/api/importacao/previa", { method: "POST", body: JSON.stringify({ conta_id, nome: arq.name, conteudo, inverter }) });
+    _IMP = { conta_id, previa: p };
+    fecharModal(); _impRevisao();
+  } catch (e) { toast(e.message, "err"); bt.disabled = false; bt.innerHTML = `${icon("search")}Ler extrato`; }
+}
+
+function _impRevisao() {
+  const p = _IMP.previa, it = p.itens;
+  const nNovo = it.filter(i => i.status === "novo" && !i.pendente).length;
+  const nPend = it.filter(i => i.pendente).length;
+  const nImp = it.filter(i => i.status === "importado").length;
+  const nDup = it.filter(i => i.status === "duplicado").length;
+  const optCat = (tipo, sel) => `<option value="">Sem categoria</option>` + (State.cats || []).filter(c => c.tipo === tipo)
+    .map(c => `<option value="${c.id}" ${c.id === sel ? "selected" : ""}>${esc(c.nome)}</option>`).join("");
+  const linha = i => {
+    const trava = i.status === "importado";
+    const marcado = i.status === "novo";
+    const chip = i.status === "importado" ? `<span class="imp-chip cinza">já importado</span>`
+      : i.status === "duplicado" ? `<span class="imp-chip amarelo" title="Já existe: ${esc(i.duplicado_de.descricao)}">possível duplicado</span>`
+      : i.pendente ? `<span class="imp-chip verde">quita conta pendente</span>` : "";
+    return `<div class="imp-linha${trava ? " trava" : ""}" data-idx="${i.idx}">
+      <input type="checkbox" class="imp-ck" ${marcado ? "checked" : ""} ${trava ? "disabled" : ""} onchange="_impConta()" aria-label="Importar esta linha">
+      <div class="imp-data">${_dm(i.data)}</div>
+      <div class="imp-desc"><b>${esc(i.descricao)}</b>${chip}
+        ${i.pendente ? `<select class="imp-acao"><option value="baixar">Dar baixa em: ${esc(i.pendente.descricao)} (venc. ${_dm(i.pendente.vencimento)})</option><option value="criar">Criar lançamento novo</option></select>` : ""}
+        ${i.status === "duplicado" ? `<div class="imp-obs">Parece ser "${esc(i.duplicado_de.descricao)}", já lançado. Marque só se for outro gasto.</div>` : ""}</div>
+      <select class="imp-cat" ${trava ? "disabled" : ""}>${optCat(i.tipo, i.categoria_id)}</select>
+      <div class="imp-val mono-num ${i.tipo === "receita" ? "pos" : "neg"}">${i.tipo === "receita" ? "+" : "−"} ${money(i.valor)}</div>
+    </div>`;
+  };
+  abrirModal(`
+    <div class="modal imp-modal">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("download")}</span>
+        <h3>Revisar extrato: ${esc(p.conta.nome)}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        <div class="imp-resumo">
+          <span>${p.formato} · ${_dm(p.de)} a ${_dm(p.ate)}</span>
+          <span class="pos">Entradas ${money(p.entradas)}</span><span class="neg">Saídas ${money(p.saidas)}</span>
+        </div>
+        <div class="imp-contagem">
+          <b>${nNovo}</b> novos · <b>${nPend}</b> quitam contas pendentes${nDup ? ` · <b>${nDup}</b> possíveis duplicados (desmarcados)` : ""}${nImp ? ` · <b>${nImp}</b> já importados` : ""}
+          <span class="grow"></span>
+          <button class="btn btn-ghost btn-sm" onclick="_impMarcar(true)">Marcar todos</button>
+          <button class="btn btn-ghost btn-sm" onclick="_impMarcar(false)">Nenhum</button>
+        </div>
+        <div class="imp-lista">${it.map(linha).join("")}</div>
+      </div>
+      <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" id="imp-ok" onclick="_impConfirmar()">${icon("check")}Importar</button></div>
+    </div>`, "lg");
+  // contas pendentes também vêm marcadas
+  document.querySelectorAll(".imp-linha").forEach(el => { const i = it[+el.dataset.idx]; if (i.pendente) el.querySelector(".imp-ck").checked = true; });
+  _impConta();
+}
+
+function _impMarcar(v) { document.querySelectorAll(".imp-ck:not(:disabled)").forEach(c => c.checked = v); _impConta(); }
+
+function _impConta() {
+  const n = document.querySelectorAll(".imp-ck:checked").length, b = document.getElementById("imp-ok");
+  if (b) { b.disabled = !n; b.innerHTML = `${icon("check")}${n ? `Importar ${n} ${n === 1 ? "linha" : "linhas"}` : "Nada marcado"}`; }
+}
+
+async function _impConfirmar() {
+  const it = _IMP.previa.itens;
+  const itens = [...document.querySelectorAll(".imp-linha")].filter(el => el.querySelector(".imp-ck:checked")).map(el => {
+    const i = it[+el.dataset.idx];
+    const acao = i.pendente && el.querySelector(".imp-acao")?.value === "baixar" ? "baixar" : "criar";
+    return { import_id: i.import_id, data: i.data, descricao: i.descricao, valor: i.valor, tipo: i.tipo, acao,
+             pendente_id: acao === "baixar" ? i.pendente.id : null, categoria_id: Number(el.querySelector(".imp-cat").value) || null };
+  });
+  if (!itens.length) return;
+  const b = document.getElementById("imp-ok"); b.disabled = true; b.innerHTML = `${icon("refresh")}Importando...`;
+  try {
+    const r = await api("/api/importacao/confirmar", { method: "POST", body: JSON.stringify({ conta_id: _IMP.conta_id, itens }) });
+    fecharModal();
+    const partes = [r.criados && `${r.criados} lançamento(s) criado(s)`, r.baixados && `${r.baixados} conta(s) baixada(s)`, r.pulados && `${r.pulados} já existia(m)`].filter(Boolean);
+    toast(partes.join(", ") || "Nada a importar", "ok");
+    setView(State.view || "contas"); atualizarBadge?.();
+  } catch (e) { toast(e.message, "err"); b.disabled = false; _impConta(); }
+}
+
 Object.assign(window, {
+  formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,
   _anxEscolher, _anxTirar, _anxExcluir, _anxVer,
   _carregarPrevisao, _prevEventos,
   _orcMes, _orcSalvar, _orcSugerir,
