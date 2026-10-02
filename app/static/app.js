@@ -60,6 +60,7 @@ function diasEntre(iso) {
 
 /* ---------- ícones SVG (sem emoji) ---------- */
 const P = {
+  clip: '<path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/>',
   dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
@@ -556,7 +557,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.125.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.126.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1184,7 +1185,7 @@ async function recarregarTabela() {
   if (FILTRO.cat) q += `&categoria_id=${FILTRO.cat}`;
   if (FILTRO.conta) q += `&conta_id=${FILTRO.conta}`;
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
-  const itens = await api("/api/lancamentos" + q);
+  const [itens] = await Promise.all([api("/api/lancamentos" + q), _anxContagem()]);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
 
   const lista = document.getElementById("lanc-lista");
@@ -1232,7 +1233,7 @@ async function recarregarTabela() {
         <!-- info principal -->
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${esc(l.descricao)}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${_ANX_CONT[l.id] ? `<span class="anx-ind" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${esc(l.descricao)}</div>
             <div style="font-family:monospace;font-size:17px;font-weight:900;
                  color:${rec?"#15803D":"#DC2626"};flex-shrink:0;
                  background:${rec?"#F0FDF4":"#FEF2F2"};padding:4px 10px;border-radius:10px">
@@ -1325,6 +1326,7 @@ function _formLancamento(l, tipo, pre) {
   const cats = State.cats.filter(c => c.tipo === tipoFinal);
   const rec = tipoFinal === "receita";
 
+  _ANX = { lid: null, fila: [], salvos: [] };
   abrirModal(`
     <div class="modal">
       <div class="modal-h">
@@ -1402,7 +1404,8 @@ function _formLancamento(l, tipo, pre) {
           <input id="f-multa" type="number" step="0.01" value="${ed && l.multa && +l.multa ? l.multa : ""}" placeholder="0,00"></div>
 
         <div class="campo full"><label>Observação</label>
-          <textarea id="f-obs" placeholder="Anotações opcionais...">${ed && l.obs ? l.obs : ""}</textarea></div>
+          <textarea id="f-obs" placeholder="Anotações opcionais...">${ed && l.obs ? esc(l.obs) : ""}</textarea></div>
+        ${_anxBloco("Foto do recibo, nota ou comprovante do PIX. Até 5 MB por arquivo.")}
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">${icon("x")} Cancelar</button>
@@ -1420,6 +1423,7 @@ function _formLancamento(l, tipo, pre) {
   }
   // foca na descrição com pequeno delay
   setTimeout(() => document.getElementById("f-desc")?.focus(), 120);
+  if (ed) _anxCarregar(l.id); else _anxRender();
 }
 
 // ── AUTOCOMPLETE DE DESCRIÇÃO ──────────────────────────────
@@ -1545,9 +1549,11 @@ async function salvarLanc(id) {
   if (!body.descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório.");
   if (!body.valor) return erroCampo("valor", "Valor: informe um valor maior que zero.");
   try {
-    if (id) await api(`/api/lancamentos/${id}`, { method: "PUT", body: JSON.stringify(body) });
-    else await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
-    fecharModal(); toast("Lançamento salvo", "ok");
+    const salvo = id ? await api(`/api/lancamentos/${id}`, { method: "PUT", body: JSON.stringify(body) })
+                     : await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
+    const lid = id || salvo?.id;
+    const nAnx = lid && _ANX.fila.length ? await _anxEnviarFila(lid) : 0;
+    fecharModal(); toast(nAnx ? `Lançamento salvo com ${nAnx} comprovante(s)` : "Lançamento salvo", "ok");
     if (body.tipo === "despesa") _avisoOrcamento(body.categoria_id, body.data_competencia);
     await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
@@ -1625,11 +1631,13 @@ function formBaixa(l) {
           <div class="campo"><label>Conta</label><select id="b-conta"><option value="">Manter</option>${State.contas.map(c => `<option value="${c.id}" ${l.conta_id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
           <div class="campo"><label>Juros (R$)</label><input id="b-juros" type="number" step="0.01" value="${l.juros && +l.juros ? l.juros : ''}" placeholder="0,00"></div>
           <div class="campo"><label>Multa (R$)</label><input id="b-multa" type="number" step="0.01" value="${l.multa && +l.multa ? l.multa : ''}" placeholder="0,00"></div>
+          ${_anxBloco("Opcional: o comprovante do pagamento fica guardado no lançamento.")}
         </div>
       </div>
       <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
         <button class="btn btn-green" onclick="confirmarBaixa(${l.id})">${icon("check")}Confirmar</button></div>
     </div>`);
+  _ANX = { lid: null, fila: [], salvos: [] }; _anxRender();   // envia só ao confirmar
 }
 async function confirmarBaixa(id) {
   try {
@@ -1637,7 +1645,8 @@ async function confirmarBaixa(id) {
       data_pagamento: $("#b-data").value, conta_id: +$("#b-conta").value || null,
       juros: parseFloat($("#b-juros").value || "0"), multa: parseFloat($("#b-multa").value || "0"),
     }) });
-    fecharModal(); toast("Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
+    const nAnx = _ANX.fila.length ? await _anxEnviarFila(id) : 0;
+    fecharModal(); toast(nAnx ? `Baixa registrada com ${nAnx} comprovante(s)` : "Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
 }
 
@@ -5292,7 +5301,138 @@ async function _carregarPrevisao(dias) {
   _PREV_TODOS = false; _prevEventos();
 }
 
+
+/* ── Comprovantes (foto ou PDF) ──────────────────────────────── */
+let _ANX = { lid: null, fila: [], salvos: [] };
+let _ANX_CONT = {};
+const _ANX_MAX = 5 * 1024 * 1024;
+const _kb = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+
+function _anxBloco(dica) {
+  return `<div class="campo full"><label>Comprovantes</label>
+    <div class="anx-lista" id="anx-lista"></div>
+    <input type="file" id="anx-input" accept="image/*,application/pdf" multiple hidden onchange="_anxEscolher(this)">
+    <button type="button" class="btn btn-ghost btn-sm anx-add" onclick="document.getElementById('anx-input').click()">${icon("clip")}Anexar foto ou PDF</button>
+    <div class="campo-dica">${dica}</div></div>`;
+}
+
+// foto grande vira JPEG de até 1600px: comprovante continua legível e o banco não incha
+function _anxReduzir(file) {
+  return new Promise((ok, falha) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, esc_ = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * esc_); c.height = Math.round(img.height * esc_);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok(b) : falha(new Error("não consegui ler a imagem")), "image/jpeg", 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error("formato de imagem não suportado; envie JPG ou PNG")); };
+    img.src = url;
+  });
+}
+
+const _paraBase64 = blob => new Promise((ok, falha) => {
+  const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => falha(r.error); r.readAsDataURL(blob);
+});
+
+async function _anxEscolher(input) {
+  const arquivos = [...input.files]; input.value = "";
+  for (const f of arquivos) {
+    const pdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+    if (!pdf && !f.type.startsWith("image/")) { toast(`${f.name}: envie uma foto ou um PDF.`, "err"); continue; }
+    let blob = f, nome = f.name || "comprovante";
+    try {
+      if (!pdf) { blob = await _anxReduzir(f); nome = nome.replace(/\.[^.]+$/, "") + ".jpg"; }
+    } catch (e) { toast(`${f.name}: ${e.message}.`, "err"); continue; }
+    if (blob.size > _ANX_MAX) { toast(`${f.name}: ${_kb(blob.size)}, o limite é 5 MB.`, "err"); continue; }
+    _ANX.fila.push({ nome, blob, url: URL.createObjectURL(blob), pdf });
+  }
+  _anxRender();
+  if (_ANX.lid && _ANX.fila.length) await _anxEnviarFila(_ANX.lid);   // lançamento já existe: envia na hora
+}
+
+async function _anxEnviarFila(lid) {
+  let n = 0;
+  while (_ANX.fila.length) {
+    const f = _ANX.fila[0];
+    try {
+      const a = await api(`/api/lancamentos/${lid}/anexos`, { method: "POST", body: JSON.stringify({ nome: f.nome, dados: await _paraBase64(f.blob) }) });
+      _ANX.salvos.push(a); n++;
+    } catch (e) { toast(`${f.nome}: ${e.message}`, "err"); }
+    URL.revokeObjectURL(f.url); _ANX.fila.shift();
+  }
+  _ANX_CONT[lid] = (_ANX_CONT[lid] || 0) + n;
+  _anxRender();
+  return n;
+}
+
+async function _anxCarregar(lid) {
+  _ANX.lid = lid;
+  try { _ANX.salvos = await api(`/api/lancamentos/${lid}/anexos`); } catch { _ANX.salvos = []; }
+  _anxRender();
+}
+
+function _anxRender() {
+  const box = document.getElementById("anx-lista"); if (!box) return;
+  const item = (nome, tam, pdf, thumb, acoes, pend) => `
+    <div class="anx-item${pend ? " pend" : ""}">
+      <div class="anx-th">${pdf ? icon("doc") : (thumb ? `<img src="${thumb}" alt="">` : icon("doc"))}</div>
+      <div class="anx-nome"><b>${esc(nome)}</b><span>${_kb(tam)}${pend ? " · aguardando envio" : ""}</span></div>
+      ${acoes}
+    </div>`;
+  box.innerHTML =
+    _ANX.salvos.map(a => item(a.nome, a.tamanho, a.mime === "application/pdf", null,
+      `<button type="button" class="btn btn-ghost btn-sm" onclick="_anxVer(${a.id})" title="Ver">${icon("eye")}</button>
+       <button type="button" class="btn btn-ghost btn-sm" onclick="_anxExcluir(${a.id})" title="Remover">${icon("trash")}</button>`, false)).join("")
+    + _ANX.fila.map((f, i) => item(f.nome, f.blob.size, f.pdf, f.pdf ? null : f.url,
+      `<button type="button" class="btn btn-ghost btn-sm" onclick="_anxTirar(${i})" title="Tirar">${icon("x")}</button>`, true)).join("");
+  // miniaturas das imagens já salvas
+  _ANX.salvos.filter(a => a.mime !== "application/pdf").forEach(async a => {
+    try {
+      const r = await fetch(`/api/anexos/${a.id}`, { headers: { Authorization: `Bearer ${State.token}` } });
+      if (!r.ok) return;
+      const u = URL.createObjectURL(await r.blob());
+      const th = [...box.querySelectorAll(".anx-item")][_ANX.salvos.indexOf(a)]?.querySelector(".anx-th");
+      if (th) th.innerHTML = `<img src="${u}" alt="">`;
+    } catch {}
+  });
+}
+
+function _anxTirar(i) { const f = _ANX.fila.splice(i, 1)[0]; if (f) URL.revokeObjectURL(f.url); _anxRender(); }
+
+async function _anxExcluir(aid) {
+  if (!confirm("Remover este comprovante?")) return;
+  try {
+    await api(`/api/anexos/${aid}`, { method: "DELETE" });
+    _ANX.salvos = _ANX.salvos.filter(a => a.id !== aid);
+    if (_ANX.lid) _ANX_CONT[_ANX.lid] = Math.max(0, (_ANX_CONT[_ANX.lid] || 1) - 1);
+    _anxRender(); toast("Comprovante removido", "ok");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function _anxVer(aid) {
+  const a = _ANX.salvos.find(x => x.id === aid);
+  const pdf = a && a.mime === "application/pdf";
+  const janela = pdf ? window.open("", "_blank") : null;   // abre já no clique: o navegador não bloqueia
+  try {
+    const r = await fetch(`/api/anexos/${aid}`, { headers: { Authorization: `Bearer ${State.token}` } });
+    if (!r.ok) throw new Error("não consegui abrir o comprovante");
+    const u = URL.createObjectURL(await r.blob());
+    if (pdf) { if (janela) janela.location = u; else window.open(u, "_blank"); return; }
+    const v = document.createElement("div");
+    v.className = "anx-viewer"; v.title = "Toque para fechar";
+    v.innerHTML = `<img src="${u}" alt="Comprovante"><button class="anx-fechar" aria-label="Fechar">${icon("x")}</button>`;
+    v.onclick = () => { v.remove(); URL.revokeObjectURL(u); };
+    document.body.appendChild(v);
+  } catch (e) { if (janela) janela.close(); toast(e.message, "err"); }
+}
+
+async function _anxContagem() { try { _ANX_CONT = await api("/api/anexos/contagem"); } catch { _ANX_CONT = {}; } }
+
 Object.assign(window, {
+  _anxEscolher, _anxTirar, _anxExcluir, _anxVer,
   _carregarPrevisao, _prevEventos,
   _orcMes, _orcSalvar, _orcSugerir,
   formTransferencia, _trocarTransf, _prevTransf, salvarTransferencia, excluirTransferencia,

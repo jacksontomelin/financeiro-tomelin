@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     Column, Integer, String, Numeric, Date, DateTime, Boolean,
-    ForeignKey, Text, Enum, JSON,
+    ForeignKey, Text, Enum, JSON, LargeBinary,
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -401,4 +401,17 @@ class Transferencia(Base):
     conta_origem_id = Column(Integer, ForeignKey("contas.id"), nullable=False, index=True)
     conta_destino_id = Column(Integer, ForeignKey("contas.id"), nullable=False, index=True)
     descricao = Column(String(200), nullable=True)
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+
+class Anexo(Base):
+    """Comprovante (foto ou PDF) de um lançamento. Guardado no banco para
+    sobreviver a redeploys do contêiner (pasta local seria apagada)."""
+    __tablename__ = "anexos"
+    id = Column(Integer, primary_key=True)
+    lancamento_id = Column(Integer, ForeignKey("lancamentos.id", ondelete="CASCADE"), nullable=False, index=True)
+    nome = Column(String(200), nullable=False)
+    mime = Column(String(60), nullable=False)
+    tamanho = Column(Integer, nullable=False)
+    dados = Column(LargeBinary, nullable=False)
     criado_em = Column(DateTime, default=datetime.utcnow)

@@ -131,6 +131,7 @@ def excluir(lid: int, db: Session = Depends(get_db)):
     l = db.get(models.Lancamento, lid)
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
+    db.query(models.Anexo).filter(models.Anexo.lancamento_id == lid).delete()   # comprovantes vão junto
     db.delete(l); db.commit()
     return {"ok": True}
 

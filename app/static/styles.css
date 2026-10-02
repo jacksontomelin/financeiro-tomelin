@@ -2231,3 +2231,21 @@ p, .dica > div, .dica > span, .modal-b p, .tour-texto, .tour-card p,
   .pv-chip { flex-basis: calc(50% - 4px); }
   .pv-ev-data { width: 52px; }
 }
+
+/* Comprovantes */
+.anx-lista { display: flex; flex-direction: column; gap: 6px; }
+.anx-lista:empty { display: none; }
+.anx-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--card); }
+.anx-item.pend { border-style: dashed; }
+.anx-th { width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--ink-3); }
+.anx-th img { width: 100%; height: 100%; object-fit: cover; }
+.anx-th svg { width: 22px; height: 22px; }
+.anx-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.anx-nome b { font-size: 13px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anx-nome span { font-size: 11.5px; color: var(--ink-3); }
+.anx-add { align-self: flex-start; margin-top: 6px; width: auto !important; }
+.anx-ind { display: inline-flex; vertical-align: -2px; margin-right: 5px; color: var(--ink-3); }
+.anx-ind svg { width: 14px; height: 14px; }
+.anx-viewer { position: fixed; inset: 0; z-index: 9999; background: rgba(6,18,32,.86); display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.anx-viewer img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.anx-fechar { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,.15); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
