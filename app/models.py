@@ -336,7 +336,7 @@ class Meta(Base):
     valor_alvo = Column(Numeric(14, 2), nullable=False)
     valor_atual = Column(Numeric(14, 2), default=0)
     cor = Column(String(9), default="#082D51")
-    icone = Column(String(8), default="🎯")
+    icone = Column(String(8), default="alvo")
     prazo = Column(Date, nullable=True)
     concluida = Column(Boolean, default=False)
     criado_em = Column(DateTime, default=datetime.utcnow)

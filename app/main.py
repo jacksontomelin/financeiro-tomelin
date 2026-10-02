@@ -23,6 +23,9 @@ def _ajusta_membros(engine):
             tem_admin = (db.query(models.UsuarioAvatar)
                          .join(models.Usuario, models.Usuario.id == models.UsuarioAvatar.usuario_id)
                          .filter(models.UsuarioAvatar.papel == "admin", models.Usuario.ativo.is_(True)).count())
+            from .avatares import chave_meta
+            for mt in db.query(models.Meta).all():
+                mt.icone = chave_meta(mt.icone)
             if not tem_admin:
                 primeiro = (db.query(models.Usuario).filter(models.Usuario.ativo.is_(True))
                             .order_by(models.Usuario.id).first())

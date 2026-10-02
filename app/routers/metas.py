@@ -8,6 +8,7 @@ from datetime import date
 from ..database import get_db
 from .. import models
 from ..security import usuario_atual
+from ..avatares import META_PADRAO, chave_meta, cor_valida
 
 router = APIRouter(prefix="/api/metas", tags=["metas"],
                    dependencies=[Depends(usuario_atual)])
@@ -19,9 +20,18 @@ class MetaIn(BaseModel):
     valor_alvo: float
     valor_atual: float = 0
     cor: str = "#082D51"
-    icone: str = "🎯"
+    icone: str = META_PADRAO
     prazo: Optional[str] = None
     concluida: bool = False
+
+
+def _limpa(dados: "MetaIn"):
+    """Ícone vira um nome conhecido; cor só no formato #RRGGBB (vai para dentro do HTML)."""
+    dados.icone = chave_meta(dados.icone)
+    if not cor_valida(dados.cor):
+        raise HTTPException(400, "Cor: valor inválido. Escolha uma das cores da lista.")
+    if not (dados.nome or "").strip():
+        raise HTTPException(400, "Nome da meta: preenchimento obrigatório.")
 
 
 class AporteIn(BaseModel):
@@ -32,7 +42,7 @@ def _out(m: models.Meta):
     return {
         "id": m.id, "nome": m.nome, "descricao": m.descricao,
         "valor_alvo": float(m.valor_alvo), "valor_atual": float(m.valor_atual),
-        "cor": m.cor, "icone": m.icone,
+        "cor": m.cor if cor_valida(m.cor) else "#082D51", "icone": chave_meta(m.icone),
         "prazo": m.prazo.isoformat() if m.prazo else None,
         "concluida": m.concluida,
         "progresso_pct": round(m.progresso_pct, 1),
@@ -49,6 +59,7 @@ def listar(db: Session = Depends(get_db)):
 
 @router.post("")
 def criar(dados: MetaIn, db: Session = Depends(get_db)):
+    _limpa(dados)
     prazo = date.fromisoformat(dados.prazo[:10]) if dados.prazo else None
     m = models.Meta(**{**dados.model_dump(), "prazo": prazo, "valor_alvo": dados.valor_alvo,
                        "valor_atual": dados.valor_atual})
@@ -60,6 +71,7 @@ def criar(dados: MetaIn, db: Session = Depends(get_db)):
 def editar(mid: int, dados: MetaIn, db: Session = Depends(get_db)):
     m = db.get(models.Meta, mid)
     if not m: raise HTTPException(404, "Meta não encontrada.")
+    _limpa(dados)
     prazo = date.fromisoformat(dados.prazo[:10]) if dados.prazo else None
     for k, v in dados.model_dump().items():
         if k == "prazo": setattr(m, k, prazo)

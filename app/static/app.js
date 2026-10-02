@@ -551,7 +551,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.121.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.122.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -4378,14 +4378,38 @@ document.addEventListener("keydown", (e) => {
 /* ============================================================
    METAS FINANCEIRAS: funções que precisam ser definidas
    ============================================================ */
-const METAS_ICONES = ["🎯","🏠","🚗","✈️","📱","💻","🎓","💰","🏖️","👶","🏋️","🎸","📚","🩺","💍"];
+// Ícones das metas: o banco guarda o nome, o desenho é SVG (sem emoji).
+const META_ICONES = {
+  alvo:     ["Objetivo",      "<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='5'/><circle cx='12' cy='12' r='1.2'/>"],
+  reserva:  ["Reserva",       "<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>"],
+  investir: ["Investimento",  "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>"],
+  dinheiro: ["Dinheiro",      "<circle cx='8' cy='8' r='6'/><path d='M18.1 10.4A6 6 0 1 1 10.3 18'/><path d='M7 6h1v4'/>"],
+  casa:     ["Casa",          "<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/><path d='M10 20v-6h4v6'/>"],
+  carro:    ["Carro",         "<path d='M4 16v-4l2-5h12l2 5v4'/><path d='M4 12h16'/><circle cx='7.5' cy='16.5' r='1.8'/><circle cx='16.5' cy='16.5' r='1.8'/>"],
+  aviao:    ["Viagem",        "<path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/>"],
+  praia:    ["Férias",        "<path d='M22 12a10 10 0 0 0-20 0z'/><path d='M12 12v7a2 2 0 0 0 4 0'/>"],
+  estudo:   ["Estudos",       "<path d='M22 10L12 5 2 10l10 5 10-5z'/><path d='M6 12v5c3 2 9 2 12 0v-5'/>"],
+  livro:    ["Livros",        "<path d='M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z'/><path d='M4 19V5'/><path d='M8 7h8'/>"],
+  celular:  ["Celular",       "<rect x='7' y='2' width='10' height='20' rx='2'/><path d='M11 18h2'/>"],
+  pc:       ["Computador",    "<rect x='3' y='4' width='18' height='12' rx='2'/><path d='M2 20h20'/>"],
+  bebe:     ["Bebê",          "<circle cx='12' cy='13' r='7'/><path d='M9.5 12h.01M14.5 12h.01'/><path d='M10 16c1 .7 3 .7 4 0'/><path d='M12 6c0-2 2-3 3-2'/>"],
+  saude:    ["Saúde",         "<path d='M3 12h4l2-5 4 10 2-5h6'/>"],
+  academia: ["Academia",      "<path d='M6 5v14M18 5v14M3 8v8M21 8v8M6 12h12'/>"],
+  musica:   ["Música",        "<path d='M9 18V5l12-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='18' cy='16' r='3'/>"],
+  anel:     ["Casamento",     "<circle cx='12' cy='15' r='6'/><path d='M9 4h6l-3 5z'/>"],
+};
+function metaIconeSVG(chave, tam = 24) {
+  const a = META_ICONES[chave] || META_ICONES.alvo;
+  return `<svg viewBox="0 0 24 24" width="${tam}" height="${tam}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${a[1]}</svg>`;
+}
 const METAS_CORES  = ["#082D51","#2F817A","#C9A94E","#B4503E","#6B3FA0","#D9772E","#1E5FA8","#3B6D11","#C74B4B","#305C74"];
 let _metaFormCor = "#082D51";
-let _metaFormIcone = `<svg viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+let _metaFormIcone = "alvo";
 const _CACHE_METAS = {};
 
 async function viewMetas(v) {
   const metas = await api("/api/metas");
+  metas.forEach(m => _CACHE_METAS[m.id] = m);
   const ativas = metas.filter(m => !m.concluida);
   const concluidas = metas.filter(m => m.concluida);
   const totalAlvo = ativas.reduce((s,m) => s + m.valor_alvo, 0);
@@ -4424,9 +4448,9 @@ function _cardMeta(m) {
   return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative;cursor:pointer;transition:all .15s" onclick="_editarMeta(${m.id})" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
     ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída <span class="ic-inline">${icon("check")}</span></span></div>` : ""}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-      <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${m.icone}</div>
+      <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;color:${m.cor};flex-shrink:0">${metaIconeSVG(m.icone, 26)}</div>
       <div><div style="font-weight:700;color:var(--ink)">${esc(m.nome)}</div>
-        ${m.descricao ? `<div class="sub">${m.descricao}</div>` : ""}</div>
+        ${m.descricao ? `<div class="sub">${esc(m.descricao)}</div>` : ""}</div>
     </div>
     <div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:6px">
@@ -4442,7 +4466,7 @@ function _cardMeta(m) {
       </div>
     </div>
     <div style="display:flex;gap:6px;margin-top:8px">
-      ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id},'${m.nome.replace(/'/g,"\\'")}')">${icon("plus")}Aportar</button>` : ""}
+      ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id})">${icon("plus")}Aportar</button>` : ""}
       <button class="btn btn-ghost btn-sm" onclick="_editarMeta(${m.id})">${icon("edit")}</button>
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
@@ -4451,7 +4475,7 @@ function _cardMeta(m) {
 
 function formMeta(m) {
   _metaFormCor = m?.cor || "#082D51";
-  _metaFormIcone = m?.icone || `<svg viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+  _metaFormIcone = META_ICONES[m?.icone] ? m.icone : "alvo";
   if (m) _CACHE_METAS[m.id] = m;
   abrirModal(`
     <div class="modal" style="max-width:500px">
@@ -4460,20 +4484,21 @@ function formMeta(m) {
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full" style="text-align:center">
-          <div id="meta-prev" style="width:64px;height:64px;border-radius:18px;background:${_metaFormCor}20;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 8px">${_metaFormIcone}</div>
+          <div id="meta-prev" class="meta-prev" style="background:${_metaFormCor}20;color:${_metaFormCor}">${metaIconeSVG(_metaFormIcone, 32)}</div>
+          <div class="sub" id="meta-prev-nome">${META_ICONES[_metaFormIcone][0]}</div>
         </div>
-        <div class="campo full"><label>Ícone</label>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
-            ${METAS_ICONES.map(ic => `<div onclick="_setMetaIcone('${ic}')" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${ic===_metaFormIcone?'var(--navy)':'var(--line)'};background:${ic===_metaFormIcone?'var(--bg)':'transparent'}">${ic}</div>`).join("")}
+        <div class="campo full"><label>Ícone <span class="av-nome" id="mt-ic-nome">${META_ICONES[_metaFormIcone][0]}</span></label>
+          <div class="av-grid" id="mt-ic-grid">
+            ${Object.entries(META_ICONES).map(([k, a]) => `<button type="button" class="av-opt${k === _metaFormIcone ? " sel" : ""}" data-mi="${k}" title="${a[0]}" aria-label="${a[0]}" onclick="_setMetaIcone('${k}')">${metaIconeSVG(k, 22)}</button>`).join("")}
           </div></div>
         <div class="campo full"><label>Cor</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px">
             ${METAS_CORES.map(c => `<div onclick="_setMetaCor('${c}')" style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${c===_metaFormCor?'var(--navy)':'transparent'};outline:2px solid ${c===_metaFormCor?c:'transparent'}"></div>`).join("")}
           </div></div>
         <div class="campo full"><label>Nome da meta</label>
-          <input id="mt-nome" value="${m?.nome||''}" placeholder="Ex.: Reserva de emergência, Viagem..."></div>
+          <input id="mt-nome" value="${esc(m?.nome||'')}" placeholder="Ex.: Reserva de emergência, Viagem..."></div>
         <div class="campo full"><label>Descrição (opcional)</label>
-          <input id="mt-desc" value="${m?.descricao||''}" placeholder="Detalhes adicionais"></div>
+          <input id="mt-desc" value="${esc(m?.descricao||'')}" placeholder="Detalhes adicionais"></div>
         <div class="campo"><label>Valor alvo (R$)</label>
           <input id="mt-alvo" type="number" step="0.01" value="${m?.valor_alvo||''}"></div>
         <div class="campo"><label>Já guardado (R$)</label>
@@ -4495,13 +4520,11 @@ function _editarMeta(id) {
 }
 
 function _setMetaIcone(ic) {
-  _metaFormIcone = ic;
-  document.querySelectorAll("[onclick^='_setMetaIcone']").forEach(el => {
-    const isThis = el.textContent.trim() === ic;
-    el.style.border = `2px solid ${isThis ? "var(--navy)" : "var(--line)"}`;
-    el.style.background = isThis ? "var(--bg)" : "transparent";
-  });
-  const p = document.getElementById("meta-prev"); if(p) p.textContent = ic;
+  _metaFormIcone = META_ICONES[ic] ? ic : "alvo";
+  document.querySelectorAll("#mt-ic-grid .av-opt").forEach(el => el.classList.toggle("sel", el.dataset.mi === _metaFormIcone));
+  const p = document.getElementById("meta-prev"); if (p) p.innerHTML = metaIconeSVG(_metaFormIcone, 32);
+  const nome = META_ICONES[_metaFormIcone][0];
+  ["mt-ic-nome", "meta-prev-nome"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = nome; });
 }
 
 function _setMetaCor(cor) {
@@ -4510,7 +4533,7 @@ function _setMetaCor(cor) {
     const bg = el.style.backgroundColor || el.style.background;
     el.style.border = `3px solid ${el.getAttribute("onclick")?.includes(cor) ? "var(--navy)" : "transparent"}`;
   });
-  const p = document.getElementById("meta-prev"); if(p) p.style.background = cor + "20";
+  const p = document.getElementById("meta-prev"); if (p) { p.style.background = cor + "20"; p.style.color = cor; }
 }
 
 async function salvarMeta(id) {
@@ -4532,13 +4555,14 @@ async function salvarMeta(id) {
 }
 
 function formAporte(id, nome) {
+  nome = nome ?? _CACHE_METAS[id]?.nome ?? "";
   abrirModal(`
     <div class="modal" style="max-width:360px">
       <div class="modal-h"><span class="card-ico i-green">${icon("plus")}</span>
         <h3>Aportar na meta</h3>
         <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b">
-        <p style="color:var(--ink-2);margin-bottom:16px">Quanto você guardou para <b>${nome}</b>?</p>
+        <p style="color:var(--ink-2);margin-bottom:16px">Quanto você guardou para <b>${esc(nome)}</b>?</p>
         <div class="campo full"><label>Valor do aporte (R$)</label>
           <input id="ap-valor" type="number" step="0.01" min="0.01" placeholder="0,00" autofocus></div>
       </div>

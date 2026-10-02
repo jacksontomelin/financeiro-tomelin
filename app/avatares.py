@@ -35,3 +35,26 @@ def chave_avatar(valor) -> str:
 
 def cor_valida(cor) -> bool:
     return bool(cor and COR_RE.match(cor))
+
+
+# Ícones das metas financeiras (mesma ideia: nome guardado, desenho no navegador).
+META_ICONES = (
+    "alvo", "casa", "carro", "aviao", "celular", "pc", "estudo", "dinheiro", "praia",
+    "bebe", "academia", "musica", "livro", "saude", "anel", "reserva", "investir",
+)
+META_PADRAO = "alvo"
+_META_LEGADO = {
+    "\U0001F3AF": "alvo", "\U0001F3E0": "casa", "\U0001F697": "carro",
+    "\u2708\uFE0F": "aviao", "\u2708": "aviao", "\U0001F4F1": "celular", "\U0001F4BB": "pc",
+    "\U0001F393": "estudo", "\U0001F4B0": "dinheiro", "\U0001F3D6\uFE0F": "praia", "\U0001F3D6": "praia",
+    "\U0001F476": "bebe", "\U0001F3CB\uFE0F": "academia", "\U0001F3CB": "academia",
+    "\U0001F3B8": "musica", "\U0001F4DA": "livro", "\U0001FA7A": "saude", "\U0001F48D": "anel",
+}
+
+
+def chave_meta(valor) -> str:
+    """Nome do ícone da meta para qualquer valor guardado (nome novo, emoji antigo ou lixo)."""
+    v = (valor or "").strip()
+    if v in META_ICONES:
+        return v
+    return _META_LEGADO.get(v, META_PADRAO)
