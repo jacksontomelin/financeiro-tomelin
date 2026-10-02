@@ -390,6 +390,8 @@ function toast(msg, tipo = "") {
   $("#toasts").appendChild(el);
   // erro fica mais tempo (dá pra ler a mensagem inteira); clique fecha
   const dur = (tipo === "err" || tipo === "warn") ? Math.min(12000, 5000 + String(msg).length * 40) : 3200;
+  el.style.setProperty("--dur", dur + "ms");
+  el.insertAdjacentHTML("beforeend", '<i class="toast-barra"></i>');
   const fechar = () => { el.style.opacity = "0"; el.style.transform = "translateX(20px)"; setTimeout(() => el.remove(), 200); };
   el.addEventListener("click", fechar);
   setTimeout(fechar, dur);
@@ -404,15 +406,26 @@ function abrirModal(html, cls = "") {
   modalRoot().appendChild(ov);
   return ov;
 }
+// O modal sai animado, mas some do lugar na hora: quem abre outro modal logo em
+// seguida não esbarra no que está saindo (e os ids dele são retirados).
+function _saiModal(el) {
+  if (!el) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { el.remove(); return; }
+  let g = document.getElementById("modal-saida");
+  if (!g) { g = document.createElement("div"); g.id = "modal-saida"; document.body.appendChild(g); }
+  el.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+  el.classList.add("saindo"); g.appendChild(el);
+  setTimeout(() => el.remove(), 230);
+}
 function fecharModal() {
   const r = modalRoot();
   if (State._contatoRapido && r.children.length > 1) {   // volta ao lançamento
     State._contatoRapido = false;
-    r.lastElementChild.remove();
+    _saiModal(r.lastElementChild);
     return;
   }
   State._contatoRapido = false;
-  r.innerHTML = "";
+  [...r.children].forEach(_saiModal);
 }
 
 /* ---------- auth ---------- */
@@ -557,7 +570,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.130.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.131.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -752,9 +765,31 @@ async function setView(id) {
     else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
+    _animarNumeros(v);
   } catch (e) {
     v.innerHTML = `<div class="empty" style="padding:60px">${ilusAlerta(80)}<p>${esc(e.message)}</p></div>`;
   }
+}
+
+// Valores em destaque contam de 0 até o valor ao abrir a tela (o texto final é o original)
+function _animarNumeros(raiz) {
+  if (!raiz || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || !window.requestAnimationFrame) return;
+  raiz.querySelectorAll(".hero-saldo, .kpi .val, .hero-mini-val, .dash-kpi").forEach(el => {
+    if (el.children.length) return;
+    const final = el.textContent;
+    const m = /^(-?)R\$\s?([\d.]+),(\d{2})$/.exec(final.trim().replace(/\u00a0/g, " "));
+    if (!m) return;
+    const alvo = (m[1] ? -1 : 1) * parseFloat(m[2].replace(/\./g, "") + "." + m[3]);
+    if (!alvo) return;
+    const ini = performance.now(), dur = 800;
+    const passo = t => {
+      if (!el.isConnected) return;
+      const p = Math.min(1, (t - ini) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = p < 1 ? money(alvo * e) : final;
+      if (p < 1) requestAnimationFrame(passo);
+    };
+    el.textContent = money(0); requestAnimationFrame(passo);
+  });
 }
 
 async function carregarRefs() {
@@ -947,7 +982,7 @@ async function viewDashboard(v) {
       <!-- saldo grande -->
       <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45)">Saldo consolidado</div>
-        <div style="font-size:clamp(22px,3.5vw,32px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
+        <div class="hero-saldo" style="font-size:clamp(22px,3.5vw,32px);font-weight:900;color:#fff;font-family:monospace;letter-spacing:-.02em;line-height:1.1">${money(k.saldo)}</div>
         <div style="font-size:12px;color:${saldoPos?"#6FD4AF":"#E07060"};margin-top:2px">
           <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='12' height='12' style='display:inline;vertical-align:middle'>${saldoPos?'<polyline points="5 12 12 5 19 12"/>':'<polyline points="5 12 12 19 19 12"/>'}</svg>
           ${money(Math.abs(resultado))} ${resPos?"resultado positivo":"resultado negativo"} este mês

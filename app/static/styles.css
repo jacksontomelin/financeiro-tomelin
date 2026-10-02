@@ -2464,3 +2464,117 @@ html.dark .dp-titulo { color: var(--ink); }
 .dp-pop.folha .dp-topo { padding: 20px 20px 16px; }
 .dp-pop.folha .dp-topo-data { font-size: 23px; }
 .dp-pop.folha .dp-corpo { padding: 10px 16px 16px; }
+
+/* ══════════════════════════════════════════════════════
+   ACABAMENTO: animações, modais, botões e avisos
+   (mesmo layout; só movimento, cor e profundidade)
+   ══════════════════════════════════════════════════════ */
+:root { --mola: cubic-bezier(.2,.9,.3,1.15); --suave: cubic-bezier(.2,.8,.2,1);
+  --grad-marca: linear-gradient(120deg, #082D51, #2F817A 55%, #C9A94E); }
+
+/* ── Telas entram em cascata ── */
+#view > * { animation: telaEntra .4s var(--suave) backwards; }
+#view > *:nth-child(2) { animation-delay: .05s; } #view > *:nth-child(3) { animation-delay: .1s; }
+#view > *:nth-child(4) { animation-delay: .15s; } #view > *:nth-child(5) { animation-delay: .2s; }
+#view > *:nth-child(n+6) { animation-delay: .25s; }
+@keyframes telaEntra { from { opacity: 0; transform: translateY(12px); } }
+.grid-3 > *, .kpi-grid > *, .familia-grid > *, .dash-col > * { animation: telaEntra .45s var(--suave) backwards; }
+.grid-3 > *:nth-child(2), .kpi-grid > *:nth-child(2), .familia-grid > *:nth-child(2), .dash-col > *:nth-child(2) { animation-delay: .07s; }
+.grid-3 > *:nth-child(3), .kpi-grid > *:nth-child(3), .familia-grid > *:nth-child(3), .dash-col > *:nth-child(3) { animation-delay: .14s; }
+.grid-3 > *:nth-child(n+4), .kpi-grid > *:nth-child(n+4), .familia-grid > *:nth-child(n+4), .dash-col > *:nth-child(n+4) { animation-delay: .2s; }
+#lanc-lista > * { animation: itemEntra .32s ease backwards; }
+#lanc-lista > *:nth-child(2) { animation-delay: .03s; } #lanc-lista > *:nth-child(3) { animation-delay: .06s; }
+#lanc-lista > *:nth-child(4) { animation-delay: .09s; } #lanc-lista > *:nth-child(5) { animation-delay: .12s; }
+#lanc-lista > *:nth-child(n+6) { animation-delay: .15s; }
+@keyframes itemEntra { from { opacity: 0; transform: translateY(8px); } }
+
+/* ── Modal ── */
+.overlay {
+  background: radial-gradient(1100px 600px at 50% -10%, rgba(47,129,122,.30), transparent 60%),
+              radial-gradient(700px 400px at 100% 110%, rgba(201,169,78,.16), transparent 60%),
+              rgba(6,22,42,.56);
+  backdrop-filter: blur(7px) saturate(1.15); -webkit-backdrop-filter: blur(7px) saturate(1.15);
+  animation: ovEntra .24s ease backwards;
+}
+@keyframes ovEntra { from { opacity: 0; } }
+.modal { animation: modalEntra .38s var(--mola) backwards; box-shadow: 0 30px 80px rgba(6,22,42,.35), 0 2px 10px rgba(6,22,42,.1); }
+@keyframes modalEntra { from { opacity: 0; transform: translateY(26px) scale(.94); } }
+.modal::before { height: 5px; background: linear-gradient(90deg, #082D51, #2F817A, #C9A94E, #2F817A, #082D51);
+  background-size: 300% 100%; animation: faixaCorre 9s linear infinite; }
+@keyframes faixaCorre { to { background-position: 300% 0; } }
+.modal-h { background: linear-gradient(180deg, rgba(47,129,122,.09), rgba(47,129,122,0) 90%), var(--card); }
+html.dark .modal-h { background: linear-gradient(180deg, rgba(47,129,122,.16), rgba(47,129,122,0) 90%), var(--bg-2); }
+.modal-h .card-ico { color: #fff; border-radius: 12px; animation: icoPop .55s var(--mola) .08s backwards;
+  background: linear-gradient(135deg, #082D51, #305C74); box-shadow: 0 8px 18px -6px rgba(8,45,81,.55); }
+.modal-h .card-ico svg { stroke: #fff; }
+.modal-h .card-ico.i-red   { background: linear-gradient(135deg, #A2412F, #E07A5F); box-shadow: 0 8px 18px -6px rgba(180,80,62,.6); }
+.modal-h .card-ico.i-green { background: linear-gradient(135deg, #1F6F5C, #3EA88A); box-shadow: 0 8px 18px -6px rgba(47,129,122,.6); }
+.modal-h .card-ico.i-gold  { background: linear-gradient(135deg, #A9852F, #E2C46E); box-shadow: 0 8px 18px -6px rgba(201,169,78,.65); }
+@keyframes icoPop { from { opacity: 0; transform: scale(.4) rotate(-14deg); } }
+.modal-b .campo, .modal-b .dica, .modal-b .av-topo { animation: campoEntra .38s var(--suave) backwards; }
+.modal-b .campo:nth-child(2) { animation-delay: .04s; } .modal-b .campo:nth-child(3) { animation-delay: .07s; }
+.modal-b .campo:nth-child(4) { animation-delay: .1s; }  .modal-b .campo:nth-child(5) { animation-delay: .13s; }
+.modal-b .campo:nth-child(6) { animation-delay: .16s; } .modal-b .campo:nth-child(n+7) { animation-delay: .19s; }
+@keyframes campoEntra { from { opacity: 0; transform: translateY(10px); } }
+.modal-f { box-shadow: 0 -12px 24px -20px rgba(8,45,81,.45); }
+.modal::-webkit-scrollbar { width: 8px; } .modal::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+/* saída */
+.overlay.saindo { animation: ovSai .22s ease forwards; pointer-events: none; }
+.overlay.saindo .modal { animation: modalSai .22s ease forwards; }
+@keyframes ovSai { to { opacity: 0; } }
+@keyframes modalSai { to { opacity: 0; transform: translateY(16px) scale(.96); } }
+@keyframes modalSobe { from { transform: translateY(100%); } }
+@keyframes modalDesce { to { transform: translateY(100%); } }
+@media (max-width: 640px) {
+  .modal { animation: modalSobe .36s cubic-bezier(.2,.9,.3,1) backwards; }
+  .overlay.saindo .modal { animation: modalDesce .24s ease forwards; }
+}
+
+/* ── Botões principais: gradiente e brilho que atravessa ── */
+.btn-primary { background: linear-gradient(135deg, #082D51, #1D4C78 55%, #305C74); border-color: transparent;
+  box-shadow: 0 8px 18px -8px rgba(8,45,81,.6); position: relative; overflow: hidden; }
+.btn-green { background: linear-gradient(135deg, #1F6F5C, #2F817A 55%, #3EA88A); border-color: transparent;
+  box-shadow: 0 8px 18px -8px rgba(47,129,122,.65); position: relative; overflow: hidden; }
+.btn-primary::after, .btn-green::after { content: ""; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: skewX(-18deg);
+  transition: left .6s ease; pointer-events: none; }
+.btn-primary:hover::after, .btn-green:hover::after { left: 135%; }
+.btn-primary:hover:not(:disabled), .btn-green:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 12px 24px -10px rgba(8,45,81,.7); }
+.btn-green:hover:not(:disabled) { box-shadow: 0 12px 24px -10px rgba(47,129,122,.75); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+html.dark .btn-ghost:hover:not(:disabled) { color: #5FC2B6; }
+
+/* ── Avisos (toasts) ── */
+.toast { position: relative; overflow: hidden; background: linear-gradient(135deg, #082D51, #305C74);
+  animation: toastEntra .5s var(--mola) backwards !important; }
+.toast.ok   { background: linear-gradient(135deg, #1F6F5C, #2F9E7E); }
+.toast.err  { background: linear-gradient(135deg, #9E3A2C, #D0624E); }
+.toast.warn { background: linear-gradient(135deg, #8A6D1E, #C9A94E); }
+.toast svg { animation: icoPop .55s var(--mola) .12s backwards; }
+@keyframes toastEntra { from { opacity: 0; transform: translateX(36px) scale(.9); } }
+.toast-barra { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: rgba(255,255,255,.55);
+  transform-origin: left; animation: barraTempo var(--dur, 3200ms) linear forwards; }
+@keyframes barraTempo { to { transform: scaleX(0); } }
+
+/* ── Cartões: profundidade ao passar o mouse ── */
+.card, .kpi, .familia-card { transition: transform .22s var(--suave), box-shadow .22s var(--suave); }
+.card[onclick]:hover, .kpi[onclick]:hover, .familia-card:hover, .pv-card:hover {
+  transform: translateY(-3px); box-shadow: 0 16px 34px -16px rgba(8,45,81,.4); }
+
+/* ── Menu lateral ── */
+.nav-item { transition: background .2s, color .2s, transform .2s var(--suave); }
+.nav-item:hover { transform: translateX(3px); }
+.nav-item.on { background: linear-gradient(90deg, rgba(201,169,78,.24), rgba(47,129,122,.14) 70%, transparent) !important; }
+.nav-badge { animation: pulse-badge 2.4s ease-in-out infinite; }
+
+/* ── Campos de texto: borda em gradiente ao digitar (como o de data) ── */
+.frm input:focus:not([type=checkbox]):not([type=radio]):not([type=file]):not(.dp-campo), .frm textarea:focus {
+  border-color: transparent;
+  background: linear-gradient(var(--card), var(--card)) padding-box, var(--grad-marca) border-box;
+  box-shadow: 0 4px 16px rgba(47,129,122,.14);
+}
+html.dark .frm input:focus:not([type=checkbox]):not([type=radio]):not([type=file]):not(.dp-campo), html.dark .frm textarea:focus {
+  background: linear-gradient(var(--bg-2), var(--bg-2)) padding-box, var(--grad-marca) border-box;
+}
+.frm select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(47,129,122,.15); }
