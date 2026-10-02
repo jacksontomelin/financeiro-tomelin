@@ -557,7 +557,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.128.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.129.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -5551,6 +5551,255 @@ async function _impConfirmar() {
     setView(State.view || "contas"); atualizarBadge?.();
   } catch (e) { toast(e.message, "err"); b.disabled = false; _impConta(); }
 }
+
+
+/* ── Campo de data ───────────────────────────────────────────────
+   Substitui o seletor nativo em todo o sistema, sozinho: o <input type="date">
+   original continua lá (escondido) e guarda o valor em AAAA-MM-DD, então todo
+   código que lê ou grava .value segue funcionando. */
+const DP_MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const DP_DIA = ["dom.","seg.","ter.","qua.","qui.","sex.","sáb."];
+const _VAL = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+const _dpIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const _dpDeIso = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]); return d.getMonth() === +m[2] - 1 ? d : null; };
+const _dpBr = d => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+const _dpHoje = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const _dpSoma = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const _dpExtenso = d => `${d.getDate()} de ${DP_MESES[d.getMonth()]} de ${d.getFullYear()}`;
+let _DP = null;
+
+// "15/11", "15/11/26", "151126", "hoje", "amanhã", "ontem", "+7", "-3"
+function _dpLer(txt) {
+  const t = (txt || "").trim().toLowerCase();
+  if (!t) return "";
+  if (t === "hoje") return _dpHoje();
+  if (/^amanh/.test(t)) return _dpSoma(_dpHoje(), 1);
+  if (t === "ontem") return _dpSoma(_dpHoje(), -1);
+  let m = /^([+-])\s*(\d{1,3})$/.exec(t);
+  if (m) return _dpSoma(_dpHoje(), (m[1] === "-" ? -1 : 1) * +m[2]);
+  m = /^(\d{1,2})[\/.\-]?(\d{1,2})(?:[\/.\-]?(\d{4}|\d{2}))?$/.exec(t.replace(/\s/g, ""));
+  if (!m) return null;
+  let a = m[3] ? +m[3] : _dpHoje().getFullYear(); if (a < 100) a += 2000;
+  const d = new Date(a, +m[2] - 1, +m[1]);
+  return d.getDate() === +m[1] && d.getMonth() === +m[2] - 1 ? d : null;
+}
+
+function _dpLimites(inp) { return { min: _dpDeIso(inp.min), max: _dpDeIso(inp.max) }; }
+function _dpPermitido(inp, d) { const { min, max } = _dpLimites(inp); return !(min && d < min) && !(max && d > max); }
+
+function _dpMostrar(inp) {
+  const c = inp._dpCampo; if (!c) return;
+  const d = _dpDeIso(_VAL.get.call(inp));
+  c.value = d ? _dpBr(d) : "";
+  inp._dpSemana.textContent = d ? DP_DIA[d.getDay()] : "";
+  c.classList.remove("dp-invalido"); c.title = "";
+}
+
+function _dpDefinir(inp, d) {
+  const novo = d ? _dpIso(d) : "";
+  const mudou = _VAL.get.call(inp) !== novo;
+  _VAL.set.call(inp, novo);
+  _dpMostrar(inp);
+  if (mudou) { inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true })); }
+}
+
+function _dpConfirmar(inp) {
+  const c = inp._dpCampo, txt = c.value.trim();
+  if (!txt) { if (_VAL.get.call(inp)) _dpDefinir(inp, null); return true; }
+  const d = _dpLer(txt);
+  if (!d) { _dpErro(inp, "Data inválida. Use dd/mm/aaaa, ex.: 05/10/2026."); return false; }
+  if (!_dpPermitido(inp, d)) {
+    const { min, max } = _dpLimites(inp);
+    _dpErro(inp, max && d > max ? `Data: no máximo ${_dpBr(max)}.` : `Data: no mínimo ${_dpBr(min)}.`); return false;
+  }
+  _dpDefinir(inp, d); return true;
+}
+
+function _dpErro(inp, msg) {
+  _VAL.set.call(inp, "");          // nunca deixa uma data antiga escondida valendo
+  inp._dpCampo.classList.add("dp-invalido"); inp._dpCampo.title = msg; inp._dpSemana.textContent = "";
+  toast(msg, "err");
+}
+
+function _dpMascara(e) {
+  const c = e.target;
+  if (!/^insert/.test(e.inputType || "") || /[a-zà-ú+\-]/i.test(c.value)) return;   // palavras e +7 não levam máscara
+  const n = c.value.replace(/\D/g, "").slice(0, 8);
+  c.value = n.length > 4 ? `${n.slice(0, 2)}/${n.slice(2, 4)}/${n.slice(4)}` : n.length > 2 ? `${n.slice(0, 2)}/${n.slice(2)}` : n;
+  const inp = c._dpOrig, d = n.length === 8 ? _dpLer(c.value) : null;
+  if (d && _DP && _DP.inp === inp) { _DP.mes = new Date(d.getFullYear(), d.getMonth(), 1); _DP.foco = d; _DP.navegou = false; _dpDesenhar(); }
+}
+
+function _dpMelhorar(inp) {
+  if (inp._dpCampo || inp.type !== "date") return;
+  const wrap = document.createElement("div");
+  wrap.className = "dp-wrap" + (inp.closest(".campo, .frm, .fld") ? "" : " dp-inline");
+  inp.parentNode.insertBefore(wrap, inp);
+  const c = document.createElement("input");
+  c.type = "text"; c.className = "dp-campo"; c.autocomplete = "off"; c.placeholder = "dd/mm/aaaa"; c.inputMode = "numeric";
+  c.spellcheck = false; c.disabled = inp.disabled; c._dpOrig = inp;
+  const rot = inp.closest(".campo")?.querySelector("label")?.textContent?.trim();
+  c.setAttribute("aria-label", rot ? `${rot} (dd/mm/aaaa)` : "Data (dd/mm/aaaa)");
+  if (window.matchMedia?.("(pointer: coarse)").matches) c.readOnly = true;   // celular: calendário em vez do teclado
+  const sem = document.createElement("span"); sem.className = "dp-semana";
+  const bt = document.createElement("button"); bt.type = "button"; bt.className = "dp-bt"; bt.tabIndex = -1;
+  bt.title = "Abrir calendário"; bt.innerHTML = icon("calendar");
+  wrap.append(c, sem, bt, inp);                         // original por último: aviso de erro aparece embaixo
+  inp.classList.add("dp-original"); inp.tabIndex = -1; inp.setAttribute("aria-hidden", "true");
+  inp._dpCampo = c; inp._dpSemana = sem;
+  Object.defineProperty(inp, "value", { configurable: true,
+    get() { return _VAL.get.call(this); }, set(v) { _VAL.set.call(this, v); _dpMostrar(this); } });
+  inp.focus = () => c.focus();
+  _dpMostrar(inp);
+  c.addEventListener("input", _dpMascara);
+  c.addEventListener("blur", () => { if (!(_DP && _DP.inp === inp)) _dpConfirmar(inp); });
+  c.addEventListener("click", () => _dpAbrir(inp));
+  c.addEventListener("keydown", e => _dpTecla(e, inp));
+  bt.addEventListener("click", e => { e.preventDefault(); _DP && _DP.inp === inp ? _dpFechar(true) : (c.focus(), _dpAbrir(inp)); });
+}
+
+function _dpTecla(e, inp) {
+  const aberto = _DP && _DP.inp === inp;
+  if (e.key === "Escape" && aberto) { e.preventDefault(); e.stopPropagation(); _dpFechar(); return; }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    // andou pelo calendário com as setas: vale o dia em destaque; senão, vale o que foi digitado
+    if (aberto && _DP.modo === "dias" && _DP.navegou) { _dpEscolher(_DP.foco); return; }
+    if (_dpConfirmar(inp)) _dpFechar(); return;
+  }
+  if (e.key === "Tab") { _dpFechar(); return; }
+  if ((e.altKey && e.key === "ArrowDown") || e.key === "F4") { e.preventDefault(); _dpAbrir(inp); return; }
+  const passo = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+  if (aberto && _DP.modo === "dias" && passo) {
+    e.preventDefault(); _DP.foco = _dpSoma(_DP.foco, passo); _DP.navegou = true;
+    _DP.mes = new Date(_DP.foco.getFullYear(), _DP.foco.getMonth(), 1); _dpDesenhar(); return;
+  }
+  if (aberto && (e.key === "PageUp" || e.key === "PageDown")) { e.preventDefault(); _dpNavegar(e.key === "PageUp" ? -1 : 1); return; }
+  if (!aberto && (e.key === "ArrowUp" || e.key === "ArrowDown")) {   // ↑↓ muda um dia
+    e.preventDefault(); const base = _dpDeIso(_VAL.get.call(inp)) || _dpHoje();
+    const d = _dpSoma(base, e.key === "ArrowUp" ? 1 : -1); if (_dpPermitido(inp, d)) _dpDefinir(inp, d);
+  }
+}
+
+function _dpAbrir(inp) {
+  if (inp._dpCampo.disabled) return;
+  if (_DP && _DP.inp === inp) return;
+  _dpFechar();
+  const sel = _dpDeIso(_VAL.get.call(inp)), base = sel || _dpHoje();
+  const folha = innerWidth < 640;
+  const el = document.createElement("div");
+  el.className = "dp-pop" + (folha ? " folha" : ""); el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Calendário");
+  el.addEventListener("pointerdown", e => { if (e.target.closest("button")) e.preventDefault(); });   // não tira o foco do campo
+  el.addEventListener("click", _dpClique);
+  let fundo = null;
+  if (folha) { fundo = document.createElement("div"); fundo.className = "dp-fundo"; fundo.onclick = () => _dpFechar(); document.body.appendChild(fundo); }
+  document.body.appendChild(el);
+  _DP = { inp, el, fundo, modo: "dias", mes: new Date(base.getFullYear(), base.getMonth(), 1), foco: base };
+  _dpDesenhar(); _dpPosicionar();
+  setTimeout(() => document.addEventListener("pointerdown", _dpFora, true));
+  addEventListener("resize", _dpPosicionar); addEventListener("scroll", _dpPosicionar, true);
+}
+
+function _dpFechar(focar) {
+  if (!_DP) return;
+  const { inp, el, fundo } = _DP; _DP = null;
+  el.remove(); fundo?.remove();
+  document.removeEventListener("pointerdown", _dpFora, true);
+  removeEventListener("resize", _dpPosicionar); removeEventListener("scroll", _dpPosicionar, true);
+  if (focar) inp._dpCampo?.focus();
+}
+
+function _dpFora(e) {
+  if (!_DP) return;
+  if (_DP.el.contains(e.target) || e.target === _DP.inp._dpCampo || _DP.inp._dpCampo.parentNode.contains(e.target)) return;
+  const inp = _DP.inp; _dpFechar(); _dpConfirmar(inp);
+}
+
+function _dpPosicionar() {
+  if (!_DP) return;
+  const { inp, el } = _DP;
+  if (!document.body.contains(inp)) return _dpFechar();
+  if (el.classList.contains("folha")) return;
+  const r = inp._dpCampo.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6;
+  el.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px";
+  el.style.top = Math.max(8, top) + "px";
+}
+
+function _dpNavegar(n) {
+  if (_DP.modo === "meses") _DP.mes = new Date(_DP.mes.getFullYear() + n, _DP.mes.getMonth(), 1);
+  else { _DP.mes = new Date(_DP.mes.getFullYear(), _DP.mes.getMonth() + n, 1);
+         _DP.foco = new Date(_DP.mes.getFullYear(), _DP.mes.getMonth(), Math.min(_DP.foco.getDate(), 28)); }
+  _dpDesenhar();
+}
+
+function _dpEscolher(d) {
+  if (!_DP || !_dpPermitido(_DP.inp, d)) return;
+  const inp = _DP.inp; _dpDefinir(inp, d); _dpFechar(innerWidth >= 640);
+}
+
+function _dpClique(e) {
+  const b = e.target.closest("button"); if (!b || b.disabled) return;
+  const a = b.dataset.a;
+  if (b.dataset.iso) return _dpEscolher(_dpDeIso(b.dataset.iso));
+  if (a === "ant") return _dpNavegar(-1);
+  if (a === "prox") return _dpNavegar(1);
+  if (a === "modo") { _DP.modo = _DP.modo === "dias" ? "meses" : "dias"; return _dpDesenhar(); }
+  if (b.dataset.mes) { _DP.mes = new Date(_DP.mes.getFullYear(), +b.dataset.mes, 1); _DP.modo = "dias"; return _dpDesenhar(); }
+  if (a === "limpar") { const inp = _DP.inp; _dpDefinir(inp, null); return _dpFechar(innerWidth >= 640); }
+  if (a === "fechar") return _dpFechar();
+  const h = _dpHoje();
+  const atalho = { hoje: h, amanha: _dpSoma(h, 1), sete: _dpSoma(h, 7), fim: new Date(h.getFullYear(), h.getMonth() + 1, 0) }[a];
+  if (atalho) _dpEscolher(atalho);
+}
+
+function _dpDesenhar() {
+  const { inp, el, mes, foco, modo } = _DP;
+  const sel = _dpDeIso(_VAL.get.call(inp)), hoje = _dpHoje();
+  const titulo = modo === "dias" ? `${DP_MESES[mes.getMonth()]} de ${mes.getFullYear()}` : String(mes.getFullYear());
+  let corpo;
+  if (modo === "dias") {
+    const ini = _dpSoma(mes, -mes.getDay());
+    corpo = `<div class="dp-sem">${["D","S","T","Q","Q","S","S"].map(s => `<span>${s}</span>`).join("")}</div><div class="dp-grade">` +
+      Array.from({ length: 42 }, (_, i) => {
+        const d = _dpSoma(ini, i), iso = _dpIso(d);
+        const cl = ["dp-d", d.getMonth() !== mes.getMonth() && "fora", iso === _dpIso(hoje) && "hoje",
+                    sel && iso === _dpIso(sel) && "sel", iso === _dpIso(foco) && "foco"].filter(Boolean).join(" ");
+        return `<button type="button" class="${cl}" data-iso="${iso}" ${_dpPermitido(inp, d) ? "" : "disabled"} aria-label="${_dpExtenso(d)}">${d.getDate()}</button>`;
+      }).join("") + `</div>`;
+  } else {
+    corpo = `<div class="dp-meses">${DP_MESES.map((m, i) => `<button type="button" data-mes="${i}" class="${sel && sel.getMonth() === i && sel.getFullYear() === mes.getFullYear() ? "sel" : ""}">${m.slice(0, 3)}</button>`).join("")}</div>`;
+  }
+  const h = hoje, ok = d => _dpPermitido(inp, d) ? "" : "disabled";
+  el.innerHTML = `
+    ${el.classList.contains("folha") ? `<div class="dp-folha-cab"><b>${esc(inp._dpCampo.getAttribute("aria-label").replace(" (dd/mm/aaaa)", ""))}</b><button type="button" class="dp-x" data-a="fechar" aria-label="Fechar">${icon("x")}</button></div>` : ""}
+    <div class="dp-cab">
+      <button type="button" class="dp-nav" data-a="ant" aria-label="${modo === "dias" ? "Mês anterior" : "Ano anterior"}">‹</button>
+      <button type="button" class="dp-titulo" data-a="modo" title="${modo === "dias" ? "Escolher mês e ano" : "Voltar aos dias"}">${titulo.charAt(0).toUpperCase() + titulo.slice(1)}<span>▾</span></button>
+      <button type="button" class="dp-nav" data-a="prox" aria-label="${modo === "dias" ? "Próximo mês" : "Próximo ano"}">›</button>
+    </div>
+    ${corpo}
+    <div class="dp-atalhos">
+      <button type="button" data-a="hoje" ${ok(h)}>Hoje</button>
+      <button type="button" data-a="amanha" ${ok(_dpSoma(h, 1))}>Amanhã</button>
+      <button type="button" data-a="sete" ${ok(_dpSoma(h, 7))}>+7 dias</button>
+      <button type="button" data-a="fim" ${ok(new Date(h.getFullYear(), h.getMonth() + 1, 0))}>Fim do mês</button>
+      ${inp.required ? "" : `<button type="button" data-a="limpar" class="dp-limpar">Limpar</button>`}
+    </div>`;
+  _dpPosicionar();
+}
+
+function _dpVarrer(raiz) {
+  if (raiz.matches?.('input[type="date"]')) _dpMelhorar(raiz);
+  raiz.querySelectorAll?.('input[type="date"]').forEach(_dpMelhorar);
+}
+new MutationObserver(ms => {
+  for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) _dpVarrer(n);
+  if (_DP && !document.body.contains(_DP.inp)) _dpFechar();
+}).observe(document.body, { childList: true, subtree: true });
+_dpVarrer(document);
 
 Object.assign(window, {
   formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,
