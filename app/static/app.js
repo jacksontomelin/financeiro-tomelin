@@ -494,7 +494,8 @@ function _statusLogin() {
 function renderLogin() {
   const ua = _ultimoAcesso();
   root().innerHTML = `
-    <div class="login-app">
+    <div class="login-app" onpointermove="_loginParallax(event)">
+      <div class="cena-fin" aria-hidden="true">${_cenaFinanceira()}</div>
       <!-- topo: logo grande centralizada -->
       <div class="login-app-top">
         <div class="login-app-logo-wrap">
@@ -591,7 +592,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.135.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.136.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -6226,7 +6227,89 @@ function _contaPrev() {
     final_cartao: v("c-final_cartao").replace(/\D/g, "").slice(0, 4), logo: typeof LOGO_BUF !== "undefined" ? LOGO_BUF : null }, { semVerso: true });
 }
 
+
+/* ── Cena financeira animada (desenhos originais) para o fundo do login ── */
+function _cenaFinanceira() {
+  const B = "rgba(255,255,255,.6)", O = "#E2C46E", T = "#5FC2B6", F = "rgba(255,255,255,.05)";
+  const item = (cls, x, y, z, w, svg, extra = "") =>
+    `<div class="cf-item ${cls}" style="--x:${x};--y:${y};--z:${z};width:${w}px;${extra}">${svg}</div>`;
+  const caderno = `<svg viewBox="0 0 120 150" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="18" y="8" width="94" height="134" rx="10" fill="${F}" stroke="${B}" stroke-width="2.5"/>
+      ${[24, 44, 64, 84, 104, 124].map(y => `<path d="M10 ${y}a8 8 0 0 1 16 0" stroke="${O}" stroke-width="3"/>`).join("")}
+      ${[38, 52, 66].map(y => `<path d="M34 ${y}h62" stroke="${B}" stroke-width="2" opacity=".5"/>`).join("")}
+      <path class="cf-cad-linha" d="M36 122 L52 104 L66 112 L84 88 L98 94" stroke="${T}" stroke-width="3" pathLength="100"/>
+      <rect class="cf-cad-b b1" x="38" y="112" width="8" height="18" rx="2" fill="${O}" opacity=".7"/>
+      <rect class="cf-cad-b b2" x="52" y="104" width="8" height="26" rx="2" fill="${T}" opacity=".7"/>
+      <rect class="cf-cad-b b3" x="66" y="96" width="8" height="34" rx="2" fill="${O}" opacity=".7"/>
+      <path class="cf-folha" d="M18 8h94a10 10 0 0 1 10 10v114a10 10 0 0 1-10 10H18z" fill="rgba(255,255,255,.08)" stroke="${B}" stroke-width="1.5"/>
+    </svg>`;
+  const moedas = `<svg viewBox="0 0 90 110" fill="none">
+      ${[86, 74, 62, 50].map((y, i) => `<ellipse cx="45" cy="${y + 8}" rx="30" ry="9" fill="#B8923A"/><ellipse cx="45" cy="${y}" rx="30" ry="9" fill="${O}" stroke="#8C6D24" stroke-width="1.5"/>`).join("")}
+      <g class="cf-moeda-cai"><ellipse cx="45" cy="18" rx="30" ry="9" fill="${O}" stroke="#8C6D24" stroke-width="1.5"/><path d="M41 15h8M45 12v7" stroke="#8C6D24" stroke-width="2" stroke-linecap="round"/></g>
+    </svg>`;
+  const grafico = `<svg viewBox="0 0 140 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="136" height="96" rx="14" fill="${F}" stroke="${B}" stroke-width="2"/>
+      <path d="M18 80h106M18 80V18" stroke="${B}" stroke-width="2" opacity=".6"/>
+      <path class="cf-linha" d="M22 72 L44 58 L62 64 L84 38 L104 44 L122 22" stroke="${T}" stroke-width="3.5" pathLength="100"/>
+      ${[[44, 58], [84, 38], [122, 22]].map(([x, y], i) => `<circle class="cf-ponto p${i}" cx="${x}" cy="${y}" r="4.5" fill="${O}"/>`).join("")}
+    </svg>`;
+  const barras = `<svg viewBox="0 0 110 90" fill="none">
+      <path d="M8 82h94" stroke="${B}" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+      ${[[14, "#5FC2B6"], [36, "#E2C46E"], [58, "#5FC2B6"], [80, "#E2C46E"]].map(([x, c], i) => `<rect class="cf-barra c${i}" x="${x}" y="14" width="16" height="66" rx="4" fill="${c}" opacity=".8"/>`).join("")}
+    </svg>`;
+  const calc = `<svg viewBox="0 0 90 120" fill="none">
+      <rect x="4" y="4" width="82" height="112" rx="14" fill="${F}" stroke="${B}" stroke-width="2.5"/>
+      <rect x="14" y="14" width="62" height="24" rx="5" fill="rgba(95,194,182,.22)" stroke="${T}" stroke-width="1.5"/>
+      <g class="cf-visor"><text x="70" y="31" text-anchor="end" font-size="12" font-weight="800" fill="#fff" font-family="Numeros, sans-serif">1.250,90</text></g>
+      ${[0, 1, 2].map(r => [0, 1, 2].map(c => `<rect class="cf-tecla t${(r * 3 + c) % 5}" x="${14 + c * 22}" y="${48 + r * 20}" width="16" height="14" rx="4" fill="rgba(255,255,255,.14)"/>`).join("")).join("")}
+      <rect x="14" y="108" width="0" height="0"/>
+    </svg>`;
+  const recibo = `<svg viewBox="0 0 80 110" fill="none" stroke-linecap="round">
+      <path d="M8 6h64v90l-8-6-8 6-8-6-8 6-8-6-8 6-8-6-8 6z" fill="rgba(255,255,255,.08)" stroke="${B}" stroke-width="2" stroke-linejoin="round"/>
+      ${[24, 36, 48].map(y => `<path d="M18 ${y}h44" stroke="${B}" stroke-width="2" opacity=".5"/>`).join("")}
+      <path d="M18 66h26" stroke="${O}" stroke-width="3"/><path d="M52 66h10" stroke="${O}" stroke-width="3"/>
+    </svg>`;
+  const cofrinho = `<svg viewBox="0 0 120 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="58" cy="56" rx="38" ry="28" fill="rgba(226,196,110,.16)" stroke="${O}" stroke-width="2.5"/>
+      <path d="M30 40l-6-12 14 6" stroke="${O}" stroke-width="2.5"/>
+      <rect x="92" y="48" width="12" height="14" rx="5" stroke="${O}" stroke-width="2.5"/>
+      <circle cx="78" cy="48" r="2.5" fill="${O}"/>
+      <path d="M38 82v8M74 82v8" stroke="${O}" stroke-width="3"/>
+      <path d="M50 30h18" stroke="${O}" stroke-width="3"/>
+      <g class="cf-cofre-moeda"><circle cx="59" cy="12" r="9" fill="${O}" stroke="#8C6D24" stroke-width="1.5"/></g>
+    </svg>`;
+  const cartao = `<svg viewBox="0 0 120 76" fill="none">
+      <rect x="2" y="2" width="116" height="72" rx="10" fill="rgba(95,194,182,.18)" stroke="${T}" stroke-width="2"/>
+      <rect x="14" y="22" width="20" height="15" rx="3" fill="${O}"/>
+      <path d="M14 52h18M38 52h18M62 52h18M86 52h18" stroke="${B}" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+    </svg>`;
+  const simbolo = (t, c) => `<svg viewBox="0 0 40 40"><text x="20" y="29" text-anchor="middle" font-size="28" font-weight="800" fill="${c}" font-family="Numeros, sans-serif">${t}</text></svg>`;
+  const brilho = `<svg viewBox="0 0 20 20"><path d="M10 0l2.2 7.8L20 10l-7.8 2.2L10 20l-2.2-7.8L0 10l7.8-2.2z" fill="${O}"/></svg>`;
+  return [
+    item("cf-caderno", "6%", "12%", 1.6, 120, caderno),
+    item("cf-grafico", "74%", "8%", 1.2, 150, grafico),
+    item("cf-moedas", "82%", "48%", 1.8, 86, moedas),
+    item("cf-barras", "4%", "58%", 1, 104, barras),
+    item("cf-calc", "88%", "74%", 1.4, 74, calc, "--rot:-8deg"),
+    item("cf-recibo", "16%", "80%", .9, 64, recibo, "--rot:10deg"),
+    item("cf-cofrinho", "62%", "70%", 1.1, 110, cofrinho),
+    item("cf-cartao", "30%", "4%", .8, 96, cartao, "--rot:-12deg"),
+    item("cf-simb s1", "48%", "16%", .6, 34, simbolo("R$", "rgba(255,255,255,.35)")),
+    item("cf-simb s2", "92%", "26%", .7, 30, simbolo("%", "rgba(226,196,110,.55)")),
+    item("cf-simb s3", "22%", "40%", .5, 28, simbolo("+", "rgba(95,194,182,.6)")),
+    item("cf-brilho b1", "40%", "30%", .4, 14, brilho),
+    item("cf-brilho b2", "70%", "36%", .5, 12, brilho),
+    item("cf-brilho b3", "12%", "36%", .5, 10, brilho),
+  ].join("");
+}
+function _loginParallax(e) {
+  const el = e.currentTarget; if (e.pointerType === "touch") return;
+  el.style.setProperty("--px", ((e.clientX / innerWidth) - .5).toFixed(3));
+  el.style.setProperty("--py", ((e.clientY / innerHeight) - .5).toFixed(3));
+}
+
 Object.assign(window, {
+  _loginParallax,
   _ccInclina, _ccSolta, _ccVira, _ccEditar, _contaTipo, _contaPrev,
   _saudeFoco, _saudeSai, _pvMover, _pvSair, _temaComTransicao,
   _donutFoco, _donutSai, _donutAbrir, celebrar,
