@@ -129,15 +129,25 @@ function icon(name, cls = "") {
    Desenhos pequenos com as cores do sistema. Usados em estados vazios,
    buscas (CNPJ, CEP), sugestões e carregamento. */
 function ilus(name, cor = "var(--navy)", tam = 112) {
-  return `<svg class="ilus" viewBox="0 0 120 100" width="${tam}" height="${Math.round(tam * 100 / 120)}" fill="none" aria-hidden="true">
-    <ellipse cx="60" cy="91" rx="32" ry="4.5" fill="var(--ink-3)" opacity=".12"/>
-    <circle cx="60" cy="48" r="38" fill="${cor}" opacity=".06"/>
-    <rect x="34" y="22" width="52" height="52" rx="16" fill="var(--card)" stroke="${cor}" stroke-opacity=".22" stroke-width="1.5"/>
-    <g transform="translate(46 34) scale(1.17)" stroke="${cor}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</g>
-    <circle class="ilus-brilho" cx="97" cy="24" r="3.2" fill="var(--gold)"/>
-    <circle cx="21" cy="38" r="2.2" fill="var(--teal)"/>
-    <path class="ilus-brilho b2" d="M101 58l1.8 3.6 3.6 1.8-3.6 1.8-1.8 3.6-1.8-3.6-3.6-1.8 3.6-1.8z" fill="var(--gold)" opacity=".75"/>
-    <path d="M17 66h8M21 62v8" stroke="var(--teal)" stroke-width="1.6" stroke-linecap="round"/>
+  return `<svg class="ilus ilus-cena" viewBox="0 0 120 100" width="${tam}" height="${Math.round(tam * 100 / 120)}" fill="none" aria-hidden="true">
+    <defs>
+      <radialGradient id="ilFundo" cx=".5" cy=".46" r=".55"><stop offset="0" stop-color="#2F817A" stop-opacity=".2"/><stop offset=".6" stop-color="#C9A94E" stop-opacity=".07"/><stop offset="1" stop-color="#C9A94E" stop-opacity="0"/></radialGradient>
+      <linearGradient id="ilBorda" x1="34" y1="22" x2="86" y2="74" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#082D51"/><stop offset=".55" stop-color="#2F817A"/><stop offset="1" stop-color="#C9A94E"/></linearGradient>
+      <linearGradient id="ilIcone" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#082D51"/><stop offset="1" stop-color="#2F817A"/></linearGradient>
+    </defs>
+    <circle cx="60" cy="48" r="47" fill="url(#ilFundo)"/>
+    <circle class="il-orbita" cx="60" cy="48" r="41" stroke="${cor}" stroke-opacity=".2" stroke-width="1.2" stroke-dasharray="2 7" stroke-linecap="round"/>
+    <circle class="il-orbita-ponto" cx="60" cy="7" r="2.6" fill="#2F817A"/>
+    <ellipse class="il-sombra" cx="60" cy="91" rx="27" ry="4" fill="var(--ink-3)" opacity=".16"/>
+    <g class="il-flutua">
+      <rect x="34" y="22" width="52" height="52" rx="16" fill="var(--card)" stroke="url(#ilBorda)" stroke-width="2"/>
+      <path d="M50 22h20a16 16 0 0 1 16 16v0H34v0a16 16 0 0 1 16-16z" fill="url(#ilBorda)" opacity=".09"/>
+      <g transform="translate(46 34) scale(1.17)" stroke="url(#ilIcone)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</g>
+    </g>
+    <g class="il-moeda"><circle cx="95" cy="26" r="7" fill="#E2C46E"/><circle cx="95" cy="26" r="4.6" fill="none" stroke="#B8923A" stroke-width="1.2"/></g>
+    <circle class="ilus-brilho" cx="22" cy="30" r="2.4" fill="var(--gold)"/>
+    <path class="ilus-brilho b2" d="M101 60l1.8 3.6 3.6 1.8-3.6 1.8-1.8 3.6-1.8-3.6-3.6-1.8 3.6-1.8z" fill="var(--gold)" opacity=".8"/>
+    <path class="ilus-brilho b3" d="M15 66h8M19 62v8" stroke="var(--teal)" stroke-width="1.7" stroke-linecap="round"/>
   </svg>`;
 }
 
@@ -198,14 +208,24 @@ function ilusMapa(buscando = false, tam = 52) {
 }
 
 // Barras subindo (carregando telas)
-function ilusCarregando(tam = 88) {
-  return `<svg class="ilus ilus-bars" viewBox="0 0 88 72" width="${tam}" height="${Math.round(tam * 72 / 88)}" fill="none" aria-hidden="true">
-    <ellipse cx="44" cy="66" rx="30" ry="4" fill="var(--ink-3)" opacity=".12"/>
-    <rect x="16" y="20" width="56" height="42" rx="10" fill="var(--card)" stroke="var(--navy)" stroke-opacity=".2" stroke-width="1.5"/>
-    <rect class="b b1" x="26" y="36" width="7" height="18" rx="2" fill="var(--navy)"/>
-    <rect class="b b2" x="37" y="30" width="7" height="24" rx="2" fill="var(--gold)"/>
-    <rect class="b b3" x="48" y="40" width="7" height="14" rx="2" fill="var(--teal)"/>
-    <circle class="ilus-brilho" cx="76" cy="16" r="3" fill="var(--gold)"/>
+function ilusCarregando(tam = 96) {
+  return `<svg class="ilus ilus-load" viewBox="0 0 120 92" width="${tam}" height="${Math.round(tam * 92 / 120)}" fill="none" aria-hidden="true">
+    <defs>
+      <radialGradient id="ldFundo" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#2F817A" stop-opacity=".18"/><stop offset="1" stop-color="#2F817A" stop-opacity="0"/></radialGradient>
+      <linearGradient id="ldB1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3EA88A"/><stop offset="1" stop-color="#1F6F5C"/></linearGradient>
+      <linearGradient id="ldB2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2C46E"/><stop offset="1" stop-color="#B8923A"/></linearGradient>
+      <linearGradient id="ldB3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#305C74"/><stop offset="1" stop-color="#082D51"/></linearGradient>
+    </defs>
+    <circle cx="60" cy="46" r="44" fill="url(#ldFundo)"/>
+    <ellipse cx="60" cy="84" rx="32" ry="4" fill="var(--ink-3)" opacity=".14"/>
+    <rect x="22" y="16" width="76" height="60" rx="14" fill="var(--card)" stroke="#2F817A" stroke-opacity=".28" stroke-width="1.5"/>
+    <rect class="ld-b ld-b1" x="34" y="40" width="10" height="26" rx="3" fill="url(#ldB1)"/>
+    <rect class="ld-b ld-b2" x="50" y="32" width="10" height="34" rx="3" fill="url(#ldB2)"/>
+    <rect class="ld-b ld-b3" x="66" y="44" width="10" height="22" rx="3" fill="url(#ldB3)"/>
+    <polyline class="ld-linha" pathLength="100" points="34,46 52,30 70,40 88,24" stroke="#2F817A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g class="ld-moeda"><circle cx="96" cy="16" r="8" fill="#E2C46E"/><circle cx="96" cy="16" r="5.2" stroke="#B8923A" stroke-width="1.3"/></g>
+    <circle class="ilus-brilho" cx="16" cy="28" r="2.5" fill="var(--gold)"/>
+    <path class="ilus-brilho b2" d="M108 50l1.6 3.2 3.2 1.6-3.2 1.6-1.6 3.2-1.6-3.2-3.2-1.6 3.2-1.6z" fill="var(--teal)"/>
   </svg>`;
 }
 
@@ -570,7 +590,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.132.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.133.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -847,15 +867,27 @@ function barChart(dados) {
     const cx = pad.l + bw * i + bw / 2;
     const x1 = cx - barW - 3, x2 = cx + 3;
     const rH = ih - (y(d.receitas) - pad.t), dH = ih - (y(d.despesas) - pad.t);
+    const res = d.receitas - d.despesas;
+    // balão do resumo: acima da coluna, sem sair do gráfico
+    const tw = 168, th = 70, tx = Math.min(Math.max(cx - tw / 2, pad.l), W - pad.r - tw);
+    const ty = Math.max(2, Math.min(y(d.receitas), y(d.despesas)) - th - 8);
     bars += `
-      <rect x="${x1}" y="${y(d.receitas)}" width="${barW}" height="${Math.max(1, rH)}" rx="4" fill="url(#gGreen)">
-        <title>${d.label} · Receitas ${money(d.receitas)}</title></rect>
-      <rect x="${x2}" y="${y(d.despesas)}" width="${barW}" height="${Math.max(1, dH)}" rx="4" fill="url(#gDesp)">
-        <title>${d.label} · Despesas ${money(d.despesas)}</title></rect>
-      <text x="${cx}" y="${H - 12}" text-anchor="middle" font-size="15" fill="${CINK.label}" font-weight="600">${d.label}</text>`;
+      <g class="bc-col" style="--i:${i}">
+        <rect class="bc-hit" x="${pad.l + bw * i}" y="${pad.t}" width="${bw}" height="${ih}" fill="transparent"/>
+        <rect class="bc-barra" x="${x1}" y="${y(d.receitas)}" width="${barW}" height="${Math.max(1, rH)}" rx="4" fill="url(#gGreen)"/>
+        <rect class="bc-barra" x="${x2}" y="${y(d.despesas)}" width="${barW}" height="${Math.max(1, dH)}" rx="4" fill="url(#gDesp)"/>
+        <text x="${cx}" y="${H - 12}" text-anchor="middle" font-size="15" fill="${CINK.label}" font-weight="600">${d.label}</text>
+        <g class="bc-tip" transform="translate(${tx} ${ty})">
+          <rect width="${tw}" height="${th}" rx="10" fill="#0B2540" opacity=".94"/>
+          <text x="12" y="20" font-size="13" font-weight="800" fill="#fff">${d.label}</text>
+          <text x="12" y="38" font-size="12.5" fill="#7FD3C2">Receitas ${money(d.receitas)}</text>
+          <text x="12" y="55" font-size="12.5" fill="#E9CF86">Despesas ${money(d.despesas)}</text>
+          <text x="${tw - 12}" y="20" font-size="12" font-weight="800" text-anchor="end" fill="${res >= 0 ? "#7FD3C2" : "#F2A08F"}">${res >= 0 ? "+" : "−"}${money0(Math.abs(res))}</text>
+        </g>
+      </g>`;
   });
   return `
-  <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" font-family="Inter">
+  <svg class="bc" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" font-family="Numeros, Inter, system-ui, sans-serif">
     <defs>
       <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E9B86"/><stop offset="1" stop-color="#2F817A"/></linearGradient>
       <linearGradient id="gDesp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8C07A"/><stop offset="1" stop-color="#C9A94E"/></linearGradient>
@@ -879,24 +911,25 @@ function donut(dados) {
   const total = dados.reduce((s, d) => s + d.valor, 0);
   const R = 78, r = 48, cx = 100, cy = 100;
   let ang = -Math.PI / 2, segs = "";
-  dados.slice(0, 8).forEach(d => {
+  dados.slice(0, 8).forEach((d, i) => {
     const frac = d.valor / total, a2 = ang + frac * 2 * Math.PI;
     const large = frac > 0.5 ? 1 : 0;
     const p = (a, rad) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
     const [x1, y1] = p(ang, R), [x2, y2] = p(a2, R);
     const [x3, y3] = p(a2, r), [x4, y4] = p(ang, r);
-    segs += `<path d="M${x1} ${y1} A${R} ${R} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r} ${r} 0 ${large} 0 ${x4} ${y4} Z"
-              fill="${d.cor}" stroke="#fff" stroke-width="2"><title>${d.nome} · ${money(d.valor)} (${(frac*100).toFixed(0)}%)</title></path>`;
+    segs += `<path class="dn-seg" data-i="${i}" data-nome="${esc(d.nome)}" data-valor="${money0(d.valor)}" data-pct="${(frac*100).toFixed(0)}" style="--i:${i}"
+              d="M${x1} ${y1} A${R} ${R} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r} ${r} 0 ${large} 0 ${x4} ${y4} Z"
+              fill="${d.cor}" stroke="var(--card)" stroke-width="2" onmouseenter="_donutFoco(this)" onclick="_donutAbrir(${d.id || 0})"><title>${esc(d.nome)} · ${money(d.valor)} (${(frac*100).toFixed(0)}%). Toque para ver os lançamentos</title></path>`;
     ang = a2;
   });
-  const leg = dados.slice(0, 8).map(d =>
-    `<span class="lg"><span class="dot" style="background:${d.cor}"></span>${d.nome} · <b style="color:${chartInk().strong}">${money0(d.valor)}</b></span>`).join("");
+  const leg = dados.slice(0, 8).map((d, i) =>
+    `<span class="lg dn-leg" data-i="${i}" onmouseenter="_donutFoco(this)" onclick="_donutAbrir(${d.id || 0})"><span class="dot" style="background:${d.cor}"></span>${esc(d.nome)} · <b style="color:${chartInk().strong}">${money0(d.valor)}</b></span>`).join("");
   return `
-  <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-    <svg viewBox="0 0 200 200" style="width:180px;height:180px;flex-shrink:0" font-family="Inter">
+  <div class="dn-wrap" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap" onmouseleave="_donutSai(this)">
+    <svg class="dn" data-total="${money0(total)}" viewBox="0 0 200 200" style="width:180px;height:180px;flex-shrink:0" font-family="Numeros, Inter, system-ui, sans-serif">
       ${segs}
-      <text x="100" y="94" text-anchor="middle" font-size="11" fill="${chartInk().axis}">Total mês</text>
-      <text x="100" y="114" text-anchor="middle" font-size="17" font-weight="800" fill="${chartInk().strong}">${money0(total)}</text>
+      <text class="dn-rot" x="100" y="94" text-anchor="middle" font-size="11" fill="${chartInk().axis}">Total mês</text>
+      <text class="dn-val" x="100" y="114" text-anchor="middle" font-size="17" font-weight="800" fill="${chartInk().strong}">${money0(total)}</text>
     </svg>
     <div class="chart-legend" style="flex-direction:column;gap:9px;margin:0;flex:1;min-width:170px">${leg}</div>
   </div>`;
@@ -918,7 +951,7 @@ async function viewDashboard(v) {
   ]);
 
   const hora = new Date().getHours();
-  const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const saudacao = hora < 5 ? "Boa noite" : hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";   // igual ao ícone do período
   const nome = State.nome ? State.nome.split(" ")[0] : "Jackson";
   const saldoPos = k.saldo >= 0;
   const resultado = k.receitas_mes - k.despesas_mes;
@@ -976,13 +1009,14 @@ async function viewDashboard(v) {
       <div class="hero-circle-2"></div>
       <!-- spark line decorativa -->
       <svg viewBox="0 0 60 30" preserveAspectRatio="none"
-           style="position:absolute;right:0;bottom:0;width:55%;height:70%;opacity:.18">
-        <polyline points="${sparkPts}" fill="none" stroke="#C9A94E" stroke-width="1.8" stroke-linejoin="round"/>
+           class="hero-spark" style="position:absolute;right:0;bottom:0;width:55%;height:70%">
+        <defs><linearGradient id="hsG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2C46E" stop-opacity=".14"/><stop offset=".6" stop-color="#E2C46E" stop-opacity="0"/></linearGradient></defs>
+        <polygon class="hs-area" points="${sparkPts} 60,30 0,30" fill="url(#hsG)"/>
+        <polyline class="hs-linha" points="${sparkPts}" fill="none" stroke="#E2C46E" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
       </svg>
       <!-- saudação -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);
-             display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="hero-per">${_iconePeriodo(hora)}</div>
         <div>
           <div style="font-size:14px;font-weight:800;color:#fff">${saudacao}, ${nome}!</div>
           <div style="font-size:11px;color:rgba(255,255,255,.5)">Família Tomelin · ${new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"})}</div>
@@ -1207,6 +1241,9 @@ async function viewLancamentos(v, tipoFixo) {
     </div>
     <div id="lanc-lista" style="display:flex;flex-direction:column;gap:8px"></div>`;
   FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = "";
+  // quem abriu esta tela já filtrada (rosca do painel, Categorias) deixa o filtro aqui
+  if (window._filtroInicial) { Object.assign(FILTRO, window._filtroInicial); window._filtroInicial = null; }
+  const selCat = v.querySelector('select[onchange^="filtroCat"]'); if (selCat && FILTRO.cat) selCat.value = String(FILTRO.cat);
   window._tipoFixo = tipoFixo;
   await recarregarTabela();
 }
@@ -1690,7 +1727,8 @@ async function confirmarBaixa(id) {
       juros: parseFloat($("#b-juros").value || "0"), multa: parseFloat($("#b-multa").value || "0"),
     }) });
     const nAnx = _ANX.fila.length ? await _anxEnviarFila(id) : 0;
-    fecharModal(); toast(nAnx ? `Baixa registrada com ${nAnx} comprovante(s)` : "Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
+    fecharModal(); celebrar(_LANC_CACHE.get(id)?.tipo === "receita" ? "Recebido!" : "Pago!");
+    toast(nAnx ? `Baixa registrada com ${nAnx} comprovante(s)` : "Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
   } catch (e) { toast(e.message, "err"); }
 }
 
@@ -1859,7 +1897,7 @@ async function viewCategorias(v) {
         ${arr.map(c => `
           <div style="display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px;transition:background .15s"
                onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"
-               onclick="FILTRO.cat=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')" title="Ver lançamentos de ${esc(c.nome)}">
+               onclick="window._filtroInicial={cat:${c.id}};window._tipoFixo='';setView('lancamentos')" title="Ver lançamentos de ${esc(c.nome)}">
             <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
             <div class="grow"><div class="nm">${esc(c.nome)}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
             <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
@@ -4683,8 +4721,12 @@ async function confirmarAporte(id) {
   const v = parseFloat(document.getElementById("ap-valor").value || "0");
   if (!v || v <= 0) return erroCampo("valor", "Valor: informe um valor maior que zero.");
   try {
-    await api(`/api/metas/${id}/aporte`, {method:"POST", body:JSON.stringify({valor:v})});
-    fecharModal(); toast("Aporte registrado!", "ok"); setView("metas");
+    const r = await api(`/api/metas/${id}/aporte`, {method:"POST", body:JSON.stringify({valor:v})});
+    fecharModal();
+    const alvo = Number(r?.valor_alvo || 0), atual = Number(r?.valor_atual || 0);
+    if (alvo && atual >= alvo) { celebrar("Meta concluída!"); toast(`Parabéns! A meta ${r.nome || ""} foi alcançada.`, "ok"); }
+    else toast("Aporte registrado!", "ok");
+    setView("metas");
   } catch(e) { toast(e.message, "err"); }
 }
 
@@ -5119,7 +5161,7 @@ async function salvarTransferencia() {
   if (!(body.valor > 0)) return erroCampo("valor", "Valor: precisa ser maior que zero.");
   try {
     const t = await api("/api/transferencias", { method: "POST", body: JSON.stringify(body) });
-    fecharModal();
+    fecharModal(); celebrar("Transferido!");
     toast(`${money(t.valor)} transferidos de ${t.origem} para ${t.destino}`, "ok");
     setView("contas");
   } catch (e) { toast(e.message, "err"); }
@@ -5589,7 +5631,7 @@ async function _impConfirmar() {
   const b = document.getElementById("imp-ok"); b.disabled = true; b.innerHTML = `${icon("refresh")}Importando...`;
   try {
     const r = await api("/api/importacao/confirmar", { method: "POST", body: JSON.stringify({ conta_id: _IMP.conta_id, itens }) });
-    fecharModal();
+    fecharModal(); celebrar("Extrato importado!");
     const partes = [r.criados && `${r.criados} lançamento(s) criado(s)`, r.baixados && `${r.baixados} conta(s) baixada(s)`, r.pulados && `${r.pulados} já existia(m)`].filter(Boolean);
     toast(partes.join(", ") || "Nada a importar", "ok");
     setView(State.view || "contas"); atualizarBadge?.();
@@ -5879,7 +5921,65 @@ new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) i
   .observe(document.body, { childList: true, subtree: true });
 _moedas(document.body);
 
+
+/* ── Gráfico de rosca: tocar/passar numa fatia mostra a categoria no centro ── */
+function _donutFoco(el) {
+  const svg = el.closest(".dn-wrap")?.querySelector("svg"); if (!svg) return;
+  const i = el.dataset.i, seg = svg.querySelector(`.dn-seg[data-i="${i}"]`); if (!seg) return;
+  svg.classList.add("foco"); svg.querySelectorAll(".dn-seg").forEach(s => s.classList.toggle("on", s === seg));
+  el.closest(".dn-wrap").querySelectorAll(".dn-leg").forEach(l => l.classList.toggle("on", l.dataset.i === i));
+  svg.querySelector(".dn-rot").textContent = `${seg.dataset.nome} · ${seg.dataset.pct}%`;
+  svg.querySelector(".dn-val").textContent = seg.dataset.valor;
+}
+function _donutSai(el) {
+  const w = el.closest(".dn-wrap"); if (!w) return;
+  const svg = w.querySelector("svg"); svg.classList.remove("foco");
+  w.querySelectorAll(".on").forEach(x => x.classList.remove("on"));
+  svg.querySelector(".dn-rot").textContent = "Total mês"; svg.querySelector(".dn-val").textContent = svg.dataset.total;
+}
+function _donutAbrir(id) {
+  if (!id) return;
+  window._filtroInicial = { cat: id }; window._tipoFixo = ""; setView("lancamentos");
+}
+
+/* ── Ícone do período do dia ao lado da saudação ── */
+function _iconePeriodo(hora) {
+  if (hora >= 5 && hora < 12) return `<svg viewBox="0 0 32 32" class="per per-manha" aria-hidden="true">
+    <g class="per-raios" stroke="#F4D27A" stroke-width="2" stroke-linecap="round">
+      ${[0,45,90,135,180,225,270,315].map(a => `<line x1="16" y1="3.5" x2="16" y2="6.5" transform="rotate(${a} 16 16)"/>`).join("")}</g>
+    <circle cx="16" cy="16" r="6.5" fill="url(#perSol)"/>
+    <defs><radialGradient id="perSol"><stop offset="0" stop-color="#FFE9A8"/><stop offset="1" stop-color="#E2B84E"/></radialGradient></defs></svg>`;
+  if (hora >= 12 && hora < 18) return `<svg viewBox="0 0 32 32" class="per per-tarde" aria-hidden="true">
+    <defs><radialGradient id="perSol2"><stop offset="0" stop-color="#FFE3A0"/><stop offset="1" stop-color="#E09A4E"/></radialGradient></defs>
+    <g class="per-raios" stroke="#F2C27A" stroke-width="2" stroke-linecap="round">
+      ${[0,60,120,180,240,300].map(a => `<line x1="12" y1="2.5" x2="12" y2="5" transform="rotate(${a} 12 12)"/>`).join("")}</g>
+    <circle cx="12" cy="12" r="5.5" fill="url(#perSol2)"/>
+    <path class="per-nuvem" d="M10 25h13a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4 1.6A3.8 3.8 0 0 0 10 25z" fill="#fff" fill-opacity=".92"/></svg>`;
+  return `<svg viewBox="0 0 32 32" class="per per-noite" aria-hidden="true">
+    <path d="M21 22.5A9 9 0 0 1 13.2 7a9.5 9.5 0 1 0 11.6 13.4A9 9 0 0 1 21 22.5z" fill="#E9EEF7"/>
+    <circle class="per-estrela e1" cx="24" cy="7" r="1.3" fill="#F4D27A"/>
+    <circle class="per-estrela e2" cx="28" cy="13" r="1" fill="#fff"/>
+    <circle class="per-estrela e3" cx="19" cy="4" r=".8" fill="#fff"/></svg>`;
+}
+
+/* ── Comemoração: check desenhado e confetes nas cores da marca ── */
+function celebrar(texto) {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const cores = ["#2F817A", "#C9A94E", "#082D51", "#E07A5F", "#3EA88A", "#E2C46E", "#305C74"];
+  let conf = "";
+  for (let i = 0; i < 38; i++) {
+    const a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 150;
+    conf += `<i style="--x:${(Math.cos(a) * d).toFixed(0)}px;--y:${(Math.sin(a) * d - 50).toFixed(0)}px;--r:${(Math.random() * 900 - 450).toFixed(0)}deg;background:${cores[i % cores.length]};animation-delay:${(Math.random() * 90).toFixed(0)}ms;${i % 3 === 0 ? "border-radius:50%;width:9px;height:9px;" : ""}"></i>`;
+  }
+  const box = document.createElement("div");
+  box.className = "festa";
+  box.innerHTML = `${conf}<div class="festa-centro"><svg viewBox="0 0 52 52" aria-hidden="true"><circle class="fc-fundo" cx="26" cy="26" r="23"/><circle class="fc-circ" cx="26" cy="26" r="23"/><path class="fc-check" d="M15.5 27l7 7 14.5-15"/></svg>${texto ? `<b>${esc(texto)}</b>` : ""}</div>`;
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 1800);
+}
+
 Object.assign(window, {
+  _donutFoco, _donutSai, _donutAbrir, celebrar,
   formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,
   _anxEscolher, _anxTirar, _anxExcluir, _anxVer,
   _carregarPrevisao, _prevEventos,

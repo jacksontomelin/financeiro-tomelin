@@ -2656,3 +2656,93 @@ html.dark h2[style*="var(--navy)"], html.dark h3[style*="var(--navy)"], html.dar
 /* botões dos cartões de conta: quebram em duas linhas em vez de cortar o texto */
 .conta-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .conta-acoes .btn { flex: 1 1 auto; justify-content: center; white-space: nowrap; }
+
+/* ══════════════════════════════════════════════════════
+   INTERATIVIDADE E DESENHOS
+   ══════════════════════════════════════════════════════ */
+/* gráfico de barras: crescem ao abrir; coluna com resumo ao passar/tocar */
+.bc .bc-barra { transform-box: fill-box; transform-origin: 50% 100%; animation: barraCresce .8s cubic-bezier(.2,.9,.3,1.1) backwards;
+  animation-delay: calc(var(--i) * 70ms + .1s); transition: opacity .2s, filter .2s; }
+@keyframes barraCresce { from { transform: scaleY(0); } }
+.bc .bc-tip { opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; }
+.bc .bc-col:hover .bc-tip { opacity: 1; }
+.bc:hover .bc-col:not(:hover) .bc-barra { opacity: .38; }
+.bc .bc-col:hover .bc-barra { filter: brightness(1.12) drop-shadow(0 4px 6px rgba(8,45,81,.25)); }
+.bc .bc-col { cursor: pointer; }
+
+/* rosca: fatias entram girando; fatia em foco cresce e as outras apagam */
+.dn .dn-seg { transform-box: view-box; transform-origin: 100px 100px; cursor: pointer;
+  animation: fatiaEntra .7s cubic-bezier(.2,.9,.3,1.1) backwards; animation-delay: calc(var(--i) * 80ms);
+  transition: transform .25s var(--mola), opacity .2s; }
+@keyframes fatiaEntra { from { transform: rotate(-90deg) scale(.4); opacity: 0; } }
+.dn.foco .dn-seg { opacity: .35; }
+.dn.foco .dn-seg.on { opacity: 1; transform: scale(1.07); filter: drop-shadow(0 4px 8px rgba(8,45,81,.3)); }
+.dn .dn-rot, .dn .dn-val { transition: opacity .15s; }
+.dn-leg { cursor: pointer; border-radius: 8px; padding: 2px 6px; margin: -2px -6px; transition: background .15s; }
+.dn-leg.on, .dn-leg:hover { background: var(--bg); }
+
+/* topo do painel: linha do resultado se desenha e a área aparece */
+.hero-spark { opacity: .7; pointer-events: none; }
+/* espessura fixa na tela (non-scaling-stroke): o traço é medido em pixels, por isso 3000 */
+.hero-spark .hs-linha { stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: desenha 2s .3s cubic-bezier(.4,0,.2,1) forwards;
+  filter: drop-shadow(0 0 3px rgba(226,196,110,.6)); }
+.hero-spark .hs-area { opacity: 0; animation: aparece 1.2s 1.2s ease forwards; }
+@keyframes desenha { to { stroke-dashoffset: 0; } }
+@keyframes aparece { to { opacity: 1; } }
+/* ícone do período do dia */
+.hero-per { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.22), rgba(255,255,255,.06)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.per { width: 30px; height: 30px; overflow: visible; }
+.per-raios { transform-origin: 16px 16px; animation: gira 14s linear infinite; }
+.per-tarde .per-raios { transform-origin: 12px 12px; }
+.per-nuvem { animation: nuvem 4s ease-in-out infinite; }
+.per-estrela { animation: pisca 2.4s ease-in-out infinite; } .per-estrela.e2 { animation-delay: .8s; } .per-estrela.e3 { animation-delay: 1.5s; }
+@keyframes gira { to { transform: rotate(360deg); } }
+@keyframes nuvem { 50% { transform: translateX(2.5px); } }
+@keyframes pisca { 50% { opacity: .2; transform: scale(.7); } }
+.per-estrela { transform-box: fill-box; transform-origin: center; }
+
+/* ilustrações: cartão flutua, órbita gira, moeda balança */
+.ilus-cena .il-flutua { transform-box: fill-box; animation: flutua 3.4s ease-in-out infinite; }
+.ilus-cena .il-sombra { transform-box: fill-box; transform-origin: center; animation: sombraFlutua 3.4s ease-in-out infinite; }
+.ilus-cena .il-orbita, .ilus-cena .il-orbita-ponto { transform-origin: 60px 48px; animation: gira 16s linear infinite; }
+.ilus-cena .il-moeda { transform-box: fill-box; transform-origin: center; animation: moeda 2.8s ease-in-out infinite; }
+@keyframes flutua { 50% { transform: translateY(-5px); } }
+@keyframes sombraFlutua { 50% { transform: scaleX(.82); opacity: .08; } }
+@keyframes moeda { 0%,100% { transform: translateY(0) rotateY(0); } 50% { transform: translateY(-4px) rotateY(180deg); } }
+.ilus-load .ld-b { transform-box: fill-box; transform-origin: 50% 100%; animation: ldBarra 1.3s ease-in-out infinite; }
+.ilus-load .ld-b2 { animation-delay: .15s; } .ilus-load .ld-b3 { animation-delay: .3s; }
+@keyframes ldBarra { 0%,100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
+.ilus-load .ld-linha { stroke-dasharray: 100; animation: ldLinha 1.8s ease-in-out infinite; }
+@keyframes ldLinha { 0% { stroke-dashoffset: 100; } 60%,100% { stroke-dashoffset: 0; opacity: 1; } 100% { opacity: 0; } }
+.ilus-load .ld-moeda { transform-box: fill-box; transform-origin: center; animation: moedaPula 1.3s ease-in-out infinite; }
+@keyframes moedaPula { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-6px) rotate(15deg); } }
+
+/* barras de progresso enchem ao aparecer */
+.orc-barra > div, .meta-progress-fill { transform-origin: left center; animation: encher 1s cubic-bezier(.2,.8,.2,1) .15s backwards; }
+@keyframes encher { from { transform: scaleX(0); } }
+
+/* comemoração */
+.festa { position: fixed; inset: 0; z-index: 10070; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.festa i { position: absolute; left: 50%; top: 50%; width: 8px; height: 14px; border-radius: 2px; opacity: 0;
+  animation: confete 1.4s cubic-bezier(.15,.7,.3,1) forwards; }
+@keyframes confete {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0) scale(.6); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 140px)) rotate(var(--r)) scale(1); } }
+.festa-centro { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 30px; border-radius: 26px;
+  background: var(--card); box-shadow: 0 30px 70px rgba(6,22,42,.35); animation: festaPop 1.7s var(--mola) forwards; }
+.festa-centro svg { width: 64px; height: 64px; }
+.festa-centro b { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.fc-fundo { fill: #2F817A; opacity: 0; animation: fcFundo .3s .5s forwards; }
+.fc-circ { fill: none; stroke: #2F817A; stroke-width: 3; stroke-dasharray: 145; stroke-dashoffset: 145; transform-origin: center; transform: rotate(-90deg);
+  animation: desenha .5s ease forwards; }
+.fc-check { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 34; stroke-dashoffset: 34;
+  animation: desenha .35s .55s ease forwards; }
+@keyframes fcFundo { to { opacity: 1; } }
+@keyframes festaPop { 0% { opacity: 0; transform: scale(.5); } 14% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.92); } }
+
+/* ilustrações no modo escuro: ícone e borda mais claros para contrastar */
+html.dark .ilus-cena .il-flutua g { stroke: #7FD3C2; }
+html.dark .ilus-cena .il-flutua rect:first-child { stroke: #3E9C8C; }
+html.dark .ilus-load .ld-linha { stroke: #5FC2B6; }

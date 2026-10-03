@@ -126,16 +126,16 @@ def despesas_por_categoria(db: Session, ref: date | None = None) -> list[dict]:
     ref = ref or date.today()
     ini, fim = _range_mes(ref)
     q = (
-        db.query(models.Categoria.nome, models.Categoria.cor,
+        db.query(models.Categoria.id, models.Categoria.nome, models.Categoria.cor,
                  func.coalesce(func.sum(models.Lancamento.valor), 0))
         .join(models.Lancamento, models.Lancamento.categoria_id == models.Categoria.id)
         .filter(models.Lancamento.tipo == TipoMov.despesa,
                 models.Lancamento.data_competencia >= ini,
                 models.Lancamento.data_competencia <= fim)
-        .group_by(models.Categoria.nome, models.Categoria.cor)
+        .group_by(models.Categoria.id, models.Categoria.nome, models.Categoria.cor)
         .order_by(func.sum(models.Lancamento.valor).desc())
     )
-    return [{"nome": n, "cor": c, "valor": float(v or 0)} for n, c, v in q if v]
+    return [{"id": i, "nome": n, "cor": c, "valor": float(v or 0)} for i, n, c, v in q if v]
 
 
 def vencimentos(db: Session, dias_antes: int = 3, incluir_atrasados: bool = True) -> dict:
