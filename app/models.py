@@ -38,6 +38,12 @@ class Conta(Base):
     saldo_inicial = Column(Numeric(14, 2), default=0)
     cor = Column(String(9), default="#12395f")
     logo = Column(Text, nullable=True)  # data URI ou URL do logo do banco/cartão
+    # só para cartão de crédito (nunca o número completo: só o final de 4 dígitos)
+    bandeira = Column(String(20), nullable=True)
+    final_cartao = Column(String(4), nullable=True)
+    limite = Column(Numeric(14, 2), nullable=True)
+    dia_fechamento = Column(Integer, nullable=True)
+    dia_vencimento = Column(Integer, nullable=True)
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
 

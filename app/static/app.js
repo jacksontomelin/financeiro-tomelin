@@ -367,6 +367,7 @@ function initLogo(val) {
 function pintarLogo() {
   const b = document.getElementById("logo-prev");
   if (b) b.innerHTML = LOGO_BUF ? `<img src="${LOGO_BUF}" alt="">` : `<span class="lg-ph">logo</span>`;
+  if (typeof _contaPrev === "function") _contaPrev();
 }
 async function escolherLogo(input) {
   const f = input.files && input.files[0]; if (!f) return;
@@ -590,7 +591,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.134.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.135.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1795,7 +1796,10 @@ async function viewVencimentos(v) {
    VIEW: CONTAS
    ============================================================ */
 async function viewContas(v) {
-  const [contas, trs] = await Promise.all([api("/api/contas"), api("/api/transferencias?limite=8").catch(() => [])]);
+  const [todas, trs] = await Promise.all([api("/api/contas"), api("/api/transferencias?limite=8").catch(() => [])]);
+  todas.forEach(c => _CACHE.contas[c.id] = c);
+  const contas = todas.filter(c => c.tipo !== "cartao");   // cartões aparecem como cartão, no banner
+  setTimeout(() => _ccFaixa("cc-contas", true), 0);
   contas.forEach(c => _CACHE.contas[c.id] = c);
   const total = contas.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
   v.innerHTML = `
@@ -1810,6 +1814,7 @@ async function viewContas(v) {
       ${contas.length >= 2 ? `<button class="btn btn-ghost" onclick="formTransferencia()">${icon("transfer")}Transferir</button>` : ""}
       <button class="btn btn-primary" onclick="formConta(null)">${icon("plus")}Nova conta</button>
     </div>
+    <div id="cc-contas" class="cc-secao"></div>
     <div class="grid-3">
       ${contas.map(c => `
         <div class="card card-pad" style="cursor:pointer;transition:all .15s"
@@ -1849,24 +1854,41 @@ function formConta(c) {
   const e = c || {};
   abrirModal(`
     <div class="modal">
-      <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${c ? "Editar conta" : "Nova conta"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-h"><span class="card-ico i-navy">${icon("wallet")}</span><h3>${e.id ? (e.tipo === "cartao" ? "Editar cartão" : "Editar conta") : (e.tipo === "cartao" ? "Novo cartão de crédito" : "Nova conta")}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
         <div class="campo full"><label>Nome</label><input id="c-nome" value="${esc(e.nome || "")}" placeholder="Nome da conta"></div>
-        <div class="campo"><label>Tipo</label><select id="c-tipo">
+        <div class="campo"><label>Tipo</label><select id="c-tipo" onchange="_contaTipo()">
           <option value="banco"${e.tipo === "banco" ? " selected" : ""}>Conta bancária</option>
           <option value="carteira"${e.tipo === "carteira" ? " selected" : ""}>Carteira / dinheiro</option>
+          <option value="cartao"${e.tipo === "cartao" ? " selected" : ""}>Cartão de crédito</option>
         </select></div>
         <div class="campo"><label>Banco (opcional)</label><input id="c-banco" value="${e.banco || ""}" placeholder="Nome do banco"></div>
-        <div class="campo"><label>Saldo inicial</label><input id="c-saldo" type="number" step="0.01" value="${e.saldo_inicial ?? 0}"></div>
-        <div class="campo"><label>Cor</label><input id="c-cor" type="color" value="${e.cor || "#305C74"}"></div>
-        ${campoLogo("Logo do banco ou cartão. PNG ou JPG.")}
+        <div class="campo" id="c-saldo-campo"><label>Saldo inicial</label><input id="c-saldo" type="number" step="0.01" value="${e.saldo_inicial ?? 0}"></div>
+        <div class="campo"><label>Cor</label><input id="c-cor" type="color" value="${e.cor || "#305C74"}" oninput="_contaPrev()"></div>
+        <div id="c-cartao-campos" style="display:none">
+          <div class="campo full"><div id="c-prev-cartao" class="c-prev-cartao"></div></div>
+          <div class="campo"><label>Bandeira</label><select id="c-bandeira" onchange="_contaPrev()">
+            <option value="">Selecione</option>
+            ${Object.entries(CC_BANDEIRAS).map(([k, n]) => `<option value="${k}"${e.bandeira === k ? " selected" : ""}>${n || "Outra"}</option>`).join("")}
+          </select></div>
+          <div class="campo"><label>Final do cartão</label><input id="c-final_cartao" inputmode="numeric" maxlength="24" placeholder="4 últimos dígitos"
+               value="${esc(e.final_cartao || "")}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(-4);_contaPrev()">
+            <div class="campo-dica">Só os 4 últimos. O número completo nunca é guardado.</div></div>
+          <div class="campo"><label>Limite (R$)</label><input id="c-limite" type="number" step="0.01" min="0" placeholder="0,00" value="${e.limite ?? ""}"></div>
+          <div class="campo"><label>Dia de fechamento</label><input id="c-dia_fechamento" type="number" min="1" max="31" placeholder="Ex.: 3" value="${e.dia_fechamento ?? ""}"></div>
+          <div class="campo"><label>Dia de vencimento</label><input id="c-dia_vencimento" type="number" min="1" max="31" placeholder="Ex.: 10" value="${e.dia_vencimento ?? ""}"></div>
+        </div>
+        ${campoLogo("Logo do banco, do cartão ou da bandeira (você escolhe a imagem). PNG ou JPG.")}
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="salvarConta(${c ? e.id : "null"})">${icon("check")}Salvar</button>
+        <button class="btn btn-primary" onclick="salvarConta(${e.id || "null"})">${icon("check")}Salvar</button>
       </div>
     </div>`, "lg");
   initLogo(e.logo);
+  _contaTipo();
+  document.querySelector("#c-nome")?.addEventListener("input", _contaPrev);
+  document.querySelector("#c-banco")?.addEventListener("input", _contaPrev);
 }
 async function salvarConta(id) {
   const body = {
@@ -1877,6 +1899,12 @@ async function salvarConta(id) {
     cor: $("#c-cor").value,
     logo: LOGO_BUF || null,
   };
+  if (body.tipo === "cartao") {
+    const num = id => { const v = $(id)?.value; return v === "" || v == null ? null : Number(v); };
+    Object.assign(body, { saldo_inicial: 0, bandeira: $("#c-bandeira").value || null, final_cartao: $("#c-final_cartao").value || null,
+      limite: num("#c-limite"), dia_fechamento: num("#c-dia_fechamento"), dia_vencimento: num("#c-dia_vencimento") });
+    if (body.final_cartao && !/^\d{4}$/.test(body.final_cartao)) return erroCampo("final_cartao", "Final do cartão: informe só os 4 últimos dígitos.");
+  }
   if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/contas/${id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -4320,6 +4348,7 @@ async function viewCompras(v) {
   const somaParcelasPend = parcelasPend.reduce((s, p) => s + p.valor, 0);
   const atrasadas = parcelasPend.filter(p => p.status === "atrasada");
 
+  setTimeout(() => _ccFaixa("cc-compras", true), 0);
   v.innerHTML = `
     <div class="toolbar">
       <div><h2 style="margin:0;color:var(--navy)">Compras e cartões</h2>
@@ -4327,6 +4356,7 @@ async function viewCompras(v) {
       <div class="grow"></div>
       <button class="btn btn-ghost" onclick="verParcelasPendentes()">${icon("clock")}Parcelas pendentes${totalParcelasPend ? ` (${totalParcelasPend})` : ''}</button>
     </div>
+    <div id="cc-compras" class="cc-secao"></div>
 
     ${atrasadas.length ? `<div class="dica vermelho" style="margin-bottom:14px">${icon("alert")}<div><b>${atrasadas.length} parcela(s) atrasada(s)</b>: total de ${money(atrasadas.reduce((s,p)=>s+p.valor,0))}.</div></div>` : ""}
 
@@ -6111,7 +6141,93 @@ function _temaComTransicao(ev) {
     { duration: 600, easing: "cubic-bezier(.4,0,.2,1)", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
 }
 
+
+/* ── Cartão de crédito desenhado (original: chip, aproximação, selo com o nome da bandeira) ── */
+const CC_BANDEIRAS = { visa: "Visa", master: "Mastercard", elo: "Elo", amex: "American Express", hiper: "Hipercard", diners: "Diners Club", outra: "" };
+const _CC_CHIP = `<svg class="cc-chip" viewBox="0 0 46 36" aria-hidden="true"><defs><linearGradient id="ccOuro" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#F6E3A1"/><stop offset=".5" stop-color="#D4B25A"/><stop offset="1" stop-color="#A88732"/></linearGradient></defs>
+  <rect x="1" y="1" width="44" height="34" rx="7" fill="url(#ccOuro)" stroke="#8C6D24" stroke-opacity=".5"/>
+  <path d="M1 13h13M1 23h13M32 13h13M32 23h13M14 1v34M32 1v34M14 18h18" stroke="#8C6D24" stroke-opacity=".55" stroke-width="1.2" fill="none"/></svg>`;
+const _CC_APROX = `<svg class="cc-aprox" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+  <path d="M8.5 6.5a8 8 0 0 1 0 11"/><path d="M12 4a12 12 0 0 1 0 16"/><path d="M15.5 1.8a15.5 15.5 0 0 1 0 20.4"/><path d="M5 9a4 4 0 0 1 0 6"/></svg>`;
+
+function cartaoVisual(c, opts = {}) {
+  const cor = _corOk(c.cor, "#305C74");
+  const band = CC_BANDEIRAS[c.bandeira] ?? (c.bandeira_nome || "");
+  const fin = (c.final_cartao || "").padStart(4, "•");
+  const venc = c.proximo_vencimento ? _dm(c.proximo_vencimento) : (c.dia_vencimento ? `dia ${c.dia_vencimento}` : "");
+  const uso = c.uso_pct ?? null;
+  const verso = opts.semVerso ? "" : `
+      <div class="cc-face cc-verso">
+        <div class="cc-tarja"></div>
+        <div class="cc-dados">
+          <div><small>Fatura atual</small><b>${money(c.fatura_atual || 0)}</b><small>${venc ? "vence " + venc : "sem vencimento definido"}</small></div>
+          <div><small>Disponível</small><b>${c.limite != null ? money(c.disponivel ?? c.limite) : "Sem limite"}</b><small>${c.limite != null ? "de " + money(c.limite) : "defina o limite"}</small></div>
+        </div>
+        ${uso != null ? `<div class="cc-uso"><i style="--w:${Math.min(100, uso)}%;${uso >= 90 ? "--uc:#F2A08F" : ""}"></i></div>` : ""}
+        <div class="cc-uso-rot">${uso != null ? `${uso.toFixed(0)}% do limite em uso` : ""}${c.dia_fechamento ? ` · fecha dia ${c.dia_fechamento}` : ""}${c.parcelas_abertas ? ` · ${c.parcelas_abertas} parcela(s) em aberto` : ""}</div>
+      </div>`;
+  return `
+  <div class="cc${opts.mini ? " mini" : ""}" style="--cc:${cor}" ${opts.semVerso ? "" : `tabindex="0" role="button" aria-label="Cartão ${esc(c.nome || "")}: toque para ver fatura e limite"
+       onclick="_ccVira(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_ccVira(this)}"`}
+       onpointermove="_ccInclina(event,this)" onpointerleave="_ccSolta(this)">
+    <div class="cc-giro">
+      <div class="cc-face cc-frente">
+        <div class="cc-topo"><span class="cc-banco">${esc(c.banco || "Cartão de crédito")}</span>
+          ${c.logo ? `<img class="cc-logo" src="${esc(c.logo)}" alt="">` : ""}</div>
+        <div class="cc-meio">${_CC_CHIP}${_CC_APROX}</div>
+        <div class="cc-num">•••• •••• •••• ${esc(fin)}</div>
+        <div class="cc-base"><div class="cc-nome"><small>Cartão</small><b>${esc(c.nome || "Novo cartão")}</b></div>
+          ${band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
+        <div class="cc-brilho"></div>
+      </div>${verso}
+    </div>
+  </div>`;
+}
+function _ccInclina(e, el) {
+  if (e.pointerType === "touch") return;
+  const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  el.style.setProperty("--ry", `${(x - .5) * 16}deg`); el.style.setProperty("--rx", `${(.5 - y) * 12}deg`);
+  el.style.setProperty("--mx", `${x * 100}%`); el.style.setProperty("--my", `${y * 100}%`);
+}
+function _ccSolta(el) { ["--rx", "--ry"].forEach(p => el.style.setProperty(p, "0deg")); }
+function _ccVira(el) { el.classList.toggle("virado"); }
+
+async function _ccFaixa(alvoId, comAcoes) {
+  const box = document.getElementById(alvoId); if (!box) return;
+  let cs = [];
+  try { cs = await api("/api/contas/cartoes"); } catch { box.innerHTML = ""; return; }
+  if (!document.getElementById(alvoId)) return;
+  box.innerHTML = `
+    <div class="cc-faixa-cab"><h3>Cartões de crédito</h3><span class="sub">${cs.length ? "Toque no cartão para ver fatura e limite" : "Cadastre seu cartão para acompanhar fatura e limite"}</span></div>
+    <div class="cc-faixa">
+      ${cs.map(c => `<div class="cc-item">${cartaoVisual(c)}
+        ${comAcoes ? `<div class="cc-acoes">
+          <button class="btn btn-ghost btn-sm" onclick="_ccEditar(${c.id})">${icon("edit")}Editar</button>
+          <button class="btn btn-ghost btn-sm" onclick="window._filtroInicial={conta:${c.id}};window._tipoFixo='';setView('lancamentos')">${icon("receipt")}Lançamentos</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirConta(${c.id})">${icon("trash")}</button></div>` : ""}
+      </div>`).join("")}
+      <button type="button" class="cc-novo" onclick="formConta({tipo:'cartao'})">${icon("plus")}<b>Adicionar cartão</b><small>Bandeira, final, limite e vencimento</small></button>
+    </div>`;
+}
+async function _ccEditar(id) { try { formConta(await api(`/api/contas/${id}`)); } catch (e) { toast(e.message, "err"); } }
+
+function _contaTipo() {
+  const cartao = document.getElementById("c-tipo")?.value === "cartao";
+  const b = document.getElementById("c-cartao-campos"); if (b) b.style.display = cartao ? "contents" : "none";
+  const sd = document.getElementById("c-saldo-campo"); if (sd) sd.style.display = cartao ? "none" : "";
+  _contaPrev();
+}
+function _contaPrev() {
+  const box = document.getElementById("c-prev-cartao"); if (!box) return;
+  if (document.getElementById("c-tipo")?.value !== "cartao") { box.innerHTML = ""; return; }
+  const v = id => document.getElementById(id)?.value || "";
+  box.innerHTML = cartaoVisual({ nome: v("c-nome"), banco: v("c-banco"), cor: v("c-cor"), bandeira: v("c-bandeira"),
+    final_cartao: v("c-final_cartao").replace(/\D/g, "").slice(0, 4), logo: typeof LOGO_BUF !== "undefined" ? LOGO_BUF : null }, { semVerso: true });
+}
+
 Object.assign(window, {
+  _ccInclina, _ccSolta, _ccVira, _ccEditar, _contaTipo, _contaPrev,
   _saudeFoco, _saudeSai, _pvMover, _pvSair, _temaComTransicao,
   _donutFoco, _donutSai, _donutAbrir, celebrar,
   formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,

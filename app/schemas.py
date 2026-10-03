@@ -30,6 +30,11 @@ class ContaIn(BaseModel):
     cor: str = "#12395f"
     logo: Optional[str] = None
     ativo: bool = True
+    bandeira: Optional[str] = None
+    final_cartao: Optional[str] = None
+    limite: Optional[Decimal] = None
+    dia_fechamento: Optional[int] = None
+    dia_vencimento: Optional[int] = None
 
 
 class ContaOut(ContaIn):
