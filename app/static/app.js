@@ -590,7 +590,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.133.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.134.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -627,7 +627,7 @@ function renderApp() {
         </div>
         <div class="grow"></div>
         <button class="btn-icon hide-mob" title="Tour do sistema" onclick="iniciarTour()" style="background:linear-gradient(135deg,#C9A94E,#B8963B);border:none;color:#fff">${icon("alert")}</button>
-        <button class="btn-icon" title="Tema claro/escuro" onclick="toggleTema()">${icon(temaAtual() === "dark" ? "sun" : "moon")}</button>
+        <button class="btn-icon btn-tema" title="Tema claro/escuro" onclick="_temaComTransicao(event)">${icon(temaAtual() === "dark" ? "sun" : "moon")}</button>
         <button class="btn-icon" title="Atualizar" onclick="setView(State.view)">${icon("refresh")}</button>
       </header>
       <main class="content" id="view"></main>
@@ -802,6 +802,12 @@ async function setView(id) {
 // Valores em destaque contam de 0 até o valor ao abrir a tela (o texto final é o original)
 function _animarNumeros(raiz) {
   if (!raiz || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || !window.requestAnimationFrame) return;
+  raiz.querySelectorAll("[data-contar]").forEach(el => {
+    const alvo = Number(el.dataset.contar) || 0, ini = performance.now();
+    const passo = t => { const p = Math.min(1, (t - ini) / 1100), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(alvo * e); if (p < 1 && el.isConnected) requestAnimationFrame(passo); };
+    el.textContent = "0"; requestAnimationFrame(passo);
+  });
   raiz.querySelectorAll(".hero-saldo, .kpi .val, .hero-mini-val, .dash-kpi").forEach(el => {
     if (!_soNossos(el)) return;
     const final = _moedaPartes(el.textContent);
@@ -1088,6 +1094,7 @@ async function viewDashboard(v) {
     <!-- ── CONTEÚDO INFERIOR (2 colunas no desktop) ── -->
     <div class="dash-grid">
     <div class="dash-col">
+    ${_saudeCard(k, orc, prev, venc)}
     <!-- ── PRÓXIMOS VENCIMENTOS ── -->
     ${todasVenc.length ? `
     <div class="card card-pad" style="margin-bottom:16px">
@@ -4592,7 +4599,10 @@ function _cardMeta(m) {
   return `<div class="card card-pad${m.concluida ? " op-6" : ""}" style="position:relative;cursor:pointer;transition:all .15s" onclick="_editarMeta(${m.id})" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
     ${m.concluida ? `<div style="position:absolute;top:10px;right:10px"><span class="tag pago">Concluída <span class="ic-inline">${icon("check")}</span></span></div>` : ""}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-      <div style="width:48px;height:48px;border-radius:14px;background:${m.cor}20;display:flex;align-items:center;justify-content:center;color:${m.cor};flex-shrink:0">${metaIconeSVG(m.icone, 26)}</div>
+      <div class="meta-anel${m.concluida || pct >= 100 ? " cheio" : ""}" style="--cor:${m.cor};--c:169.6;--fim:${(169.6 * (1 - Math.min(100, pct) / 100)).toFixed(1)}">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" class="ma-trilho"/><circle cx="32" cy="32" r="27" class="ma-prog"/></svg>
+        <div class="ma-ic" style="color:${m.cor};background:${m.cor}18">${metaIconeSVG(m.icone, 22)}</div>
+      </div>
       <div><div style="font-weight:700;color:var(--ink)">${esc(m.nome)}</div>
         ${m.descricao ? `<div class="sub">${esc(m.descricao)}</div>` : ""}</div>
     </div>
@@ -4610,9 +4620,9 @@ function _cardMeta(m) {
       </div>
     </div>
     <div style="display:flex;gap:6px;margin-top:8px">
-      ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="formAporte(${m.id})">${icon("plus")}Aportar</button>` : ""}
-      <button class="btn btn-ghost btn-sm" onclick="_editarMeta(${m.id})">${icon("edit")}</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirMeta(${m.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+      ${!m.concluida ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();formAporte(${m.id})">${icon("plus")}Aportar</button>` : ""}
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarMeta(${m.id})">${icon("edit")}</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();excluirMeta(${m.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
   </div>`;
 }
@@ -5335,9 +5345,16 @@ function svgPrevisao(p, compacto = false) {
     const yRot = yMin + 22 > H - B - 2 ? yMin - 12 : yMin + 22;   // perto do eixo: rótulo vai para cima
     g += `<text x="${ax}" y="${Math.max(yRot, T + 12)}" text-anchor="middle" class="pv-min">menor: ${money(S[iMin].estimado)} em ${_dm(S[iMin].data)}</text>`;
     const w = (W - L - R) / n;
-    g += S.map((s, i) => `<rect x="${x(i) - w / 2}" y="${T}" width="${w}" height="${H - T - B}" fill="transparent"><title>${_dm(s.data)}: ${money(s.estimado)} com estimativa · ${money(s.lancado)} só lançado</title></rect>`).join("");
+    g += `<g class="pv-guia" style="display:none">
+        <line class="pv-g-linha" x1="0" x2="0" y1="${T}" y2="${H - B}"/>
+        <circle class="pv-g-lan" r="4"/><circle class="pv-g-est" r="5.5"/>
+        <g class="pv-g-rot"><rect width="172" height="62" rx="10"/><text x="12" y="20" class="t1"></text><text x="12" y="38" class="t2"></text><text x="12" y="54" class="t3"></text></g>
+      </g>
+      <rect class="pv-toque" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"
+            onpointermove="_pvMover(event,this)" onpointerdown="_pvMover(event,this)" onpointerleave="_pvSair(this)"/>`;
   }
-  return `<svg viewBox="0 0 ${W} ${H}" class="pv-svg${compacto ? " mini" : ""}" role="img" aria-label="Gráfico da previsão de saldo">${g}</svg>`;
+  const geo = compacto ? "" : ` data-geo='${JSON.stringify({ L, R, T, B, W, H, lo, hi })}' data-serie='${JSON.stringify(S.map(s => [s.data, s.estimado, s.lancado]))}'`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="pv-svg${compacto ? " mini" : ""}"${geo} role="img" aria-label="Gráfico da previsão de saldo">${g}</svg>`;
 }
 
 function _prevChip(rot, v, destaque = false) {
@@ -5978,7 +5995,124 @@ function celebrar(texto) {
   setTimeout(() => box.remove(), 1800);
 }
 
+
+/* ── Saúde financeira: medidor com 4 fatores, cada um vale 25 pontos ── */
+function _saudeFatores(k, orc, prev, venc) {
+  const res = (k.receitas_mes || 0) - (k.despesas_mes || 0);
+  const atras = (venc?.atrasados || []).filter(l => l.tipo === "despesa").length;
+  const negData = prev?.primeiro_negativo?.lancado || prev?.primeiro_negativo?.estimado;
+  const minimo = prev?.minimo?.estimado?.valor;
+  return [
+    { nome: "Resultado do mês", ir: "relatorios", ic: "trendUp",
+      pts: res >= 0 ? 25 : Math.max(0, Math.round(25 + res / Math.max(1, k.receitas_mes || 1) * 50)),
+      txt: res >= 0 ? `Sobrou ${money0(res)}` : `Faltou ${money0(-res)}` },
+    { nome: "Contas em dia", ir: "vencimentos", ic: "clock",
+      pts: atras ? Math.max(0, 25 - atras * 7) : 25, txt: atras ? `${atras} conta(s) vencida(s)` : "Nenhuma vencida" },
+    { nome: "Orçamento", ir: "orcamento", ic: "target",
+      pts: !orc?.limite_total ? 15 : orc.estourados ? Math.max(0, 25 - orc.estourados * 8) : 25,
+      txt: !orc?.limite_total ? "Defina limites" : orc.estourados ? `${orc.estourados} estourado(s)` : "Dentro do limite" },
+    { nome: "Próximos 90 dias", ir: "relatorios", ic: "chart",
+      pts: !prev ? 15 : negData ? 0 : (minimo < (k.despesas_mes || 0) * 0.5 ? 15 : 25),
+      txt: !prev ? "Sem previsão" : negData ? `Negativo em ${_dm(negData)}` : `Menor saldo ${money0(minimo)}` },
+  ];
+}
+
+function _saudeCard(k, orc, prev, venc) {
+  const F = _saudeFatores(k, orc, prev, venc);
+  const nota = F.reduce((s, f) => s + f.pts, 0);
+  const faixa = nota >= 85 ? ["Excelente", "#2F9E7E"] : nota >= 65 ? ["Boa", "#2F817A"] : nota >= 40 ? ["Atenção", "#C9A94E"] : ["Crítica", "#B4503E"];
+  const corF = p => p >= 20 ? "url(#sdVerde)" : p >= 10 ? "url(#sdOuro)" : "url(#sdVerm)";
+  const cx = 110, cy = 112, R = 88;
+  const pt = a => [cx + R * Math.cos(a * Math.PI / 180), cy + R * Math.sin(a * Math.PI / 180)];
+  const arcos = F.map((f, i) => {
+    const a0 = 180 + i * 45 + 2, a1 = 180 + (i + 1) * 45 - 2, [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+    const d = `M${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+    return `<path class="sd-trilho" d="${d}"/>
+      <path class="sd-arco" data-i="${i}" d="${d}" pathLength="100" stroke="${corF(f.pts)}" style="--fim:${100 - f.pts * 4};--i:${i}"
+            onmouseenter="_saudeFoco(${i})" onclick="setView('${f.ir}')"><title>${f.nome}: ${f.pts} de 25</title></path>`;
+  }).join("");
+  const marcas = [0, 25, 50, 75, 100].map(v => { const a = 180 + v * 1.8, [x0, y0] = [cx + 70 * Math.cos(a * Math.PI / 180), cy + 70 * Math.sin(a * Math.PI / 180)];
+    return `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="1.6" class="sd-marca"/>`; }).join("");
+  return `
+    <div class="card card-pad sd-card" style="margin-bottom:16px" onmouseleave="_saudeSai()">
+      <div class="card-h"><span class="card-ico i-green">${icon("heart")}</span>
+        <div class="grow"><h3>Saúde financeira</h3><div class="sub">Toque num fator para ver os detalhes</div></div></div>
+      <div class="sd-corpo">
+        <svg class="sd" viewBox="0 0 220 128" role="img" aria-label="Saúde financeira: ${nota} de 100, ${faixa[0]}">
+          <defs>
+            <linearGradient id="sdVerde" x1="0" x2="1"><stop offset="0" stop-color="#2F817A"/><stop offset="1" stop-color="#3EC28F"/></linearGradient>
+            <linearGradient id="sdOuro" x1="0" x2="1"><stop offset="0" stop-color="#C9A94E"/><stop offset="1" stop-color="#E9C863"/></linearGradient>
+            <linearGradient id="sdVerm" x1="0" x2="1"><stop offset="0" stop-color="#B4503E"/><stop offset="1" stop-color="#E07A5F"/></linearGradient>
+            <radialGradient id="sdBrilho"><stop offset="0" stop-color="${faixa[1]}" stop-opacity=".22"/><stop offset="1" stop-color="${faixa[1]}" stop-opacity="0"/></radialGradient>
+          </defs>
+          <circle cx="${cx}" cy="${cy}" r="60" fill="url(#sdBrilho)" class="sd-pulso"/>
+          ${arcos}${marcas}
+          <g class="sd-ponteiro" style="--ang:${(nota * 1.8).toFixed(1)}deg">
+            <path d="M${cx} ${cy - 4} L${cx - 66} ${cy} L${cx} ${cy + 4} Z" fill="var(--ink)"/>
+          </g>
+          <circle cx="${cx}" cy="${cy}" r="9" fill="var(--card)" stroke="var(--ink)" stroke-width="3"/>
+          <text x="${cx}" y="${cy - 30}" text-anchor="middle" class="sd-nota" data-contar="${nota}">${nota}</text>
+          <text x="${cx}" y="${cy - 14}" text-anchor="middle" class="sd-faixa" fill="${faixa[1]}">${faixa[0]}</text>
+        </svg>
+        <div class="sd-fatores">
+          ${F.map((f, i) => `<button type="button" class="sd-fator" data-i="${i}" onmouseenter="_saudeFoco(${i})" onfocus="_saudeFoco(${i})" onclick="setView('${f.ir}')">
+              <span class="sd-f-ic" style="--c:${f.pts >= 20 ? "#2F9E7E" : f.pts >= 10 ? "#C9A94E" : "#B4503E"}">${icon(f.ic)}</span>
+              <span class="sd-f-txt"><b>${f.nome}</b><small>${esc(f.txt)}</small></span>
+              <span class="sd-f-pts"><i style="--w:${f.pts * 4}%;--c:${f.pts >= 20 ? "#2F9E7E" : f.pts >= 10 ? "#C9A94E" : "#B4503E"}"></i>${f.pts}/25</span>
+            </button>`).join("")}
+        </div>
+      </div>
+    </div>`;
+}
+function _saudeFoco(i) {
+  document.querySelectorAll(".sd-card").forEach(c => {
+    c.classList.add("foco");
+    c.querySelectorAll("[data-i]").forEach(e => e.classList.toggle("on", e.dataset.i === String(i)));
+  });
+}
+function _saudeSai() { document.querySelectorAll(".sd-card").forEach(c => { c.classList.remove("foco"); c.querySelectorAll(".on").forEach(e => e.classList.remove("on")); }); }
+
+/* ── Previsão: linha guia acompanha o dedo/mouse e mostra o saldo do dia ── */
+function _pvMover(ev, alvo) {
+  const svg = alvo.ownerSVGElement || alvo.closest("svg");
+  const g = svg._geo || (svg._geo = JSON.parse(svg.dataset.geo));
+  const S = svg._serie || (svg._serie = JSON.parse(svg.dataset.serie));
+  const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+  const loc = p.matrixTransform(svg.getScreenCTM().inverse());
+  const n = S.length - 1, i = Math.max(0, Math.min(n, Math.round((loc.x - g.L) / (g.W - g.L - g.R) * n)));
+  const x = g.L + i / n * (g.W - g.L - g.R), y = v => g.T + (g.hi - v) / (g.hi - g.lo) * (g.H - g.T - g.B);
+  const [data, est, lan] = S[i];
+  const guia = svg.querySelector(".pv-guia"); guia.style.display = "";
+  guia.querySelector(".pv-g-linha").setAttribute("x1", x); guia.querySelector(".pv-g-linha").setAttribute("x2", x);
+  const ce = guia.querySelector(".pv-g-est"), cl = guia.querySelector(".pv-g-lan");
+  ce.setAttribute("cx", x); ce.setAttribute("cy", y(est)); cl.setAttribute("cx", x); cl.setAttribute("cy", y(lan));
+  const rot = guia.querySelector(".pv-g-rot"), bw = 172;
+  const bx = x + 12 + bw > g.W - g.R ? x - 12 - bw : x + 12, by = Math.max(g.T, Math.min(y(est) - 30, g.H - g.B - 62));
+  rot.setAttribute("transform", `translate(${bx} ${by})`);
+  const [t1, t2, t3] = rot.querySelectorAll("text");
+  t1.textContent = i === 0 ? "Hoje" : `${data.slice(8, 10)}/${data.slice(5, 7)} · em ${i} dia(s)`;
+  t2.textContent = `Previsto ${money(est)}`; t3.textContent = `Só lançado ${money(lan)}`;
+  t2.setAttribute("fill", est < 0 ? "#F2A08F" : "#7FD3C2");
+}
+function _pvSair(alvo) { const g = (alvo.ownerSVGElement || alvo.closest("svg")).querySelector(".pv-guia"); if (g) g.style.display = "none"; }
+
+/* ── Tema: troca espalhando em círculo a partir do botão (navegadores atuais) ── */
+function _temaComTransicao(ev) {
+  const trocar = async () => {
+    aplicarTema(temaAtual() === "dark" ? "light" : "dark");
+    if (State.token) { renderApp(); marcarNav(); await setView(State.view); atualizarBadge(); } else renderLogin();
+  };
+  if (!document.startViewTransition || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return trocar();
+  const x = ev?.clientX ?? innerWidth - 60, y = ev?.clientY ?? 28;
+  const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  const t = document.startViewTransition(trocar);
+  t.ready.then(() => document.documentElement.animate(
+    { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+    { duration: 600, easing: "cubic-bezier(.4,0,.2,1)", pseudoElement: "::view-transition-new(root)" })).catch(() => {});
+}
+
 Object.assign(window, {
+  _saudeFoco, _saudeSai, _pvMover, _pvSair, _temaComTransicao,
   _donutFoco, _donutSai, _donutAbrir, celebrar,
   formImportar, _impLer, _impMarcar, _impConta, _impConfirmar,
   _anxEscolher, _anxTirar, _anxExcluir, _anxVer,

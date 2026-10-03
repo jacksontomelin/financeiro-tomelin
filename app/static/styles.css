@@ -2746,3 +2746,72 @@ html.dark h2[style*="var(--navy)"], html.dark h3[style*="var(--navy)"], html.dar
 html.dark .ilus-cena .il-flutua g { stroke: #7FD3C2; }
 html.dark .ilus-cena .il-flutua rect:first-child { stroke: #3E9C8C; }
 html.dark .ilus-load .ld-linha { stroke: #5FC2B6; }
+
+/* ══ Saúde financeira ══ */
+.sd-corpo { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.sd { width: 230px; max-width: 100%; flex-shrink: 0; overflow: visible; }
+.sd-trilho { fill: none; stroke: var(--line); stroke-width: 14; stroke-linecap: round; }
+.sd-arco { fill: none; stroke-width: 14; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: var(--fim);
+  animation: sdEnche 1s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i) * 120ms + .15s);
+  cursor: pointer; transition: opacity .2s, stroke-width .2s; }
+@keyframes sdEnche { from { stroke-dashoffset: 100; } }
+.sd-card.foco .sd-arco:not(.on) { opacity: .3; }
+.sd-arco.on { stroke-width: 17; }
+.sd-marca { fill: var(--ink-3); opacity: .5; }
+.sd-ponteiro { transform-origin: 110px 112px; transform: rotate(var(--ang)); animation: sdPonteiro 1.6s cubic-bezier(.3,1.5,.5,1) .2s backwards; }
+@keyframes sdPonteiro { from { transform: rotate(0deg); } }
+.sd-nota { font-family: "Numeros", var(--font); font-size: 30px; font-weight: 800; fill: var(--ink); letter-spacing: -.03em; }
+.sd-faixa { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.sd-pulso { transform-origin: 110px 112px; animation: sdPulso 3s ease-in-out infinite; }
+@keyframes sdPulso { 50% { transform: scale(1.12); opacity: .6; } }
+.sd-fatores { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.sd-fator { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 12px; border: 1.5px solid transparent;
+  background: var(--bg); text-align: left; cursor: pointer; transition: border-color .2s, transform .2s var(--mola), opacity .2s; }
+.sd-fator:hover, .sd-fator.on { border-color: var(--line); transform: translateX(3px); background: var(--card); }
+.sd-card.foco .sd-fator:not(.on) { opacity: .55; }
+.sd-f-ic { width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: var(--c); box-shadow: 0 6px 12px -6px var(--c); }
+.sd-f-ic svg { width: 16px; height: 16px; }
+.sd-f-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sd-f-txt b { font-size: 13px; color: var(--ink); font-weight: 700; }
+.sd-f-txt small { font-size: 11.5px; color: var(--ink-3); }
+.sd-f-pts { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-family: "Numeros", var(--font); font-size: 11.5px;
+  font-weight: 800; color: var(--ink-2); flex-shrink: 0; }
+.sd-f-pts i { display: block; width: 46px; height: 5px; border-radius: 4px; background: linear-gradient(90deg, var(--c) var(--w), var(--line) var(--w)); }
+
+/* ══ Previsão: linha guia ══ */
+.pv-toque { cursor: crosshair; touch-action: pan-y; }
+.pv-guia .pv-g-linha { stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.pv-guia .pv-g-est { fill: var(--card); stroke: var(--teal); stroke-width: 3; }
+.pv-guia .pv-g-lan { fill: var(--card); stroke: var(--navy); stroke-width: 2; opacity: .7; }
+html.dark .pv-guia .pv-g-lan { stroke: #8FB4CF; }
+.pv-guia .pv-g-rot rect { fill: #0B2540; opacity: .94; }
+.pv-guia .pv-g-rot text { font-family: "Numeros", var(--font); font-size: 12.5px; fill: #fff; }
+.pv-guia .pv-g-rot .t1 { font-weight: 800; font-size: 12px; fill: #E9CF86; }
+.pv-guia .pv-g-rot .t2 { font-weight: 800; }
+.pv-guia .pv-g-rot .t3 { fill: #AFC2D6; font-size: 11.5px; }
+
+/* ══ Metas: anel de progresso ══ */
+.meta-anel { position: relative; width: 60px; height: 60px; flex-shrink: 0; transition: transform .35s var(--mola); }
+.card:hover .meta-anel { transform: scale(1.08) rotate(-6deg); }
+.meta-anel > svg { width: 100%; height: 100%; transform: rotate(-90deg); }   /* só o anel, não o ícone de dentro */
+.ma-ic svg { width: 22px; height: 22px; }
+.ma-trilho { fill: none; stroke: var(--line); stroke-width: 5; }
+.ma-prog { fill: none; stroke: var(--cor); stroke-width: 5; stroke-linecap: round; stroke-dasharray: var(--c); stroke-dashoffset: var(--fim);
+  animation: anelEnche 1.3s cubic-bezier(.2,.8,.2,1) .2s backwards; filter: drop-shadow(0 2px 4px rgba(8,45,81,.15)); }
+@keyframes anelEnche { from { stroke-dashoffset: var(--c); } }
+.ma-ic { position: absolute; inset: 9px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.meta-anel.cheio .ma-ic { animation: metaBrilha 2.2s ease-in-out infinite; }
+@keyframes metaBrilha { 50% { box-shadow: 0 0 0 6px rgba(201,169,78,.25); } }
+
+/* ══ Tema: troca em círculo + ícone girando ══ */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { z-index: 9999; }
+.btn-tema svg { animation: temaGira .6s var(--mola); }
+@keyframes temaGira { from { transform: rotate(-120deg) scale(.4); opacity: 0; } }
+.btn-tema:hover svg { transform: rotate(18deg); transition: transform .3s var(--mola); }
+
+@media (max-width: 640px) {
+  .sd-corpo { justify-content: center; }
+  .sd { width: 250px; }
+}
