@@ -596,7 +596,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.137.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.138.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -620,6 +620,7 @@ function renderApp() {
     <div class="main">
       <header class="topbar">
         <button class="menu-btn" onclick="toggleSidebar(true)">${icon("menu")}</button>
+        <div class="tb-cena" id="tb-cena" aria-hidden="true"></div>
         <div class="busca-global-wrap hide-mob">
           <span class="busca-ic">${icon("search")}</span>
           <input class="busca-input" id="busca-input" placeholder="Buscar lançamentos..."
@@ -688,6 +689,7 @@ function marcarNav() {
 
   const m = META[State.view] || {};
   try { const tt = $("#tb-title"); if (tt) tt.textContent = m.nome || ""; } catch {}
+  try { const tc = $("#tb-cena"); if (tc) tc.innerHTML = _cenaTela(State.view) + `<span class="tc-nome">${esc(m.nome || "")}</span>`; } catch {}
   try { const ts = $("#tb-sub"); if (ts) ts.textContent = m.sub || ""; } catch {}
 }
 
@@ -698,33 +700,6 @@ function _atalhoClick(btn) {
   else if (a === "receita") formLancamento(null,"receita");
   else if (a === "nfe") abrirLeitorNFe();
   else setView(a);
-}
-
-function abrirFabMenu() {
-  abrirModal(`
-    <div class="modal" style="max-width:340px">
-      <div class="modal-h">
-        <span class="card-ico i-navy">${icon("plus")}</span>
-        <h3>Novo lançamento</h3>
-        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
-      </div>
-      <div class="modal-b" style="padding:12px 16px">
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button class="btn btn-green btn-full btn-lg" onclick="fecharModal();formLancamento(null,'receita')">
-            ${icon("arrowDown")} <span>Registrar recebimento</span>
-          </button>
-          <button class="btn btn-primary btn-full btn-lg" onclick="fecharModal();formLancamento(null,'despesa')">
-            ${icon("arrowUp")} <span>Registrar pagamento</span>
-          </button>
-          <button class="btn btn-gold btn-full btn-lg" onclick="fecharModal();abrirLeitorNFe()">
-            ${icon("receipt")} <span>Ler nota fiscal</span>
-          </button>
-          <button class="btn btn-ghost btn-full" onclick="fecharModal();setView('compras');setTimeout(()=>abrirFormCompra(null,null),100)">
-            ${icon("wallet")} <span>Registrar compra</span>
-          </button>
-        </div>
-      </div>
-    </div>`);
 }
 
 /* Menu "Mais": todas as outras seções */
@@ -1282,6 +1257,7 @@ async function recarregarTabela() {
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
   const [itens] = await Promise.all([api("/api/lancamentos" + q), _anxContagem()]);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
+  setTimeout(() => { const ls = document.getElementById("lanc-lista"); _swipeIniciar(ls); _swipeDica(ls); }, 0);
 
   const lista = document.getElementById("lanc-lista");
   if (!lista) return;
@@ -1311,7 +1287,7 @@ async function recarregarTabela() {
       : l.data_vencimento ? dataBR(l.data_vencimento)
       : "Sem vencimento";
 
-    return `<div class="lanc-card" style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
+    return `<div class="lanc-card" data-id="${l.id}" style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
                 cursor:pointer;transition:all .15s;border-left:4px solid ${st.borda.replace('.3)','1)').replace('.35)','1)')}"
               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(8,45,81,.12)'"
               onmouseout="this.style.transform='';this.style.boxShadow=''"
@@ -6428,7 +6404,130 @@ async function baixarBackup() {
   finally { if (bt) { bt.disabled = false; bt.innerHTML = `${icon("download")}Baixar backup`; } }
 }
 
+
+/* ── Botão "+" em leque ──────────────────────────────────────── */
+function abrirFabMenu() {
+  if (document.getElementById("leque")) return fecharLeque();
+  const itens = [
+    { rot: "Receita", ic: "arrowDown", cor: "#2F9E7E", acao: "formLancamento(null,'receita')" },
+    { rot: "Despesa", ic: "arrowUp", cor: "#C9573F", acao: "formLancamento(null,'despesa')" },
+    { rot: "Transferir", ic: "transfer", cor: "#305C74", acao: "_leqTransferir()" },
+    { rot: "Nota fiscal", ic: "receipt", cor: "#C9A94E", acao: "abrirLeitorNFe()" },
+    { rot: "Compra", ic: "wallet", cor: "#7F3F98", acao: "setView('compras');setTimeout(()=>abrirFormCompra(null,null),150)" },
+  ];
+  const n = itens.length, raio = Math.min(150, innerWidth * .36);
+  const el = document.createElement("div");
+  el.id = "leque"; el.className = "leque";
+  el.innerHTML = `<div class="leque-fundo" onclick="fecharLeque()"></div>` + itens.map((it, i) => {
+    const ang = Math.PI * (0.92 - (i / (n - 1)) * 0.84);          // arco de 165° a 15°
+    return `<button class="leque-bt" style="--dx:${(Math.cos(ang) * raio).toFixed(0)}px;--dy:${(-Math.sin(ang) * raio).toFixed(0)}px;--i:${i};--c:${it.cor}"
+              onclick="fecharLeque();${it.acao}"><span class="leque-ic">${icon(it.ic)}</span><span class="leque-rot">${it.rot}</span></button>`;
+  }).join("");
+  document.body.appendChild(el);
+  document.querySelector(".btab-fab")?.classList.add("aberto");
+  requestAnimationFrame(() => el.classList.add("aberto"));
+  document.addEventListener("keydown", _lequeEsc);
+}
+function fecharLeque() {
+  const el = document.getElementById("leque"); if (!el) return;
+  el.classList.remove("aberto"); el.classList.add("fechando");
+  document.querySelector(".btab-fab")?.classList.remove("aberto");
+  document.removeEventListener("keydown", _lequeEsc);
+  setTimeout(() => el.remove(), 260);
+}
+function _lequeEsc(e) { if (e.key === "Escape") fecharLeque(); }
+async function _leqTransferir() {
+  try { (await api("/api/contas")).forEach(c => _CACHE.contas[c.id] = c); } catch {}
+  formTransferencia();
+}
+
+/* ── Deslizar o lançamento: direita dá baixa, esquerda edita ── */
+const _SW = { el: null, x0: 0, y0: 0, dx: 0, ativo: false, fundo: null, bloqueiaClique: false };
+function _swipeIniciar(lista) {
+  if (!lista || lista._swipe) return; lista._swipe = true;
+  lista.addEventListener("pointerdown", e => {
+    const card = e.target.closest(".lanc-card"); if (!card || e.target.closest("button, a, input, select")) return;
+    Object.assign(_SW, { el: card, x0: e.clientX, y0: e.clientY, dx: 0, ativo: false });
+  });
+  lista.addEventListener("pointermove", e => {
+    if (!_SW.el) return;
+    const dx = e.clientX - _SW.x0, dy = e.clientY - _SW.y0;
+    if (!_SW.ativo) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { _SW.el = null; return; }   // é rolagem
+      if (Math.abs(dx) < 12) return;
+      _SW.ativo = true; _swipeFundo(_SW.el);
+      try { _SW.el.setPointerCapture(e.pointerId); } catch {}
+    }
+    _SW.dx = dx > 0 ? Math.min(dx, 160) : Math.max(dx, -160);
+    _SW.el.style.transition = "none";
+    _SW.el.style.transform = `translateX(${_SW.dx}px) rotate(${_SW.dx / 90}deg)`;
+    const f = _SW.fundo, perto = Math.min(1, Math.abs(_SW.dx) / 90);
+    f.classList.toggle("dir", _SW.dx > 0); f.classList.toggle("esq", _SW.dx < 0); f.classList.toggle("pronto", perto >= 1);
+    f.style.setProperty("--p", perto.toFixed(2));
+  });
+  const soltar = () => {
+    if (!_SW.el) return;
+    const card = _SW.el, dx = _SW.dx, ativo = _SW.ativo;
+    _SW.el = null;
+    if (!ativo) return;
+    _SW.bloqueiaClique = true; setTimeout(() => _SW.bloqueiaClique = false, 80);
+    card.style.transition = "transform .35s cubic-bezier(.2,.9,.3,1.2)"; card.style.transform = "";
+    setTimeout(() => _SW.fundo?.remove(), 330);
+    const id = Number(card.dataset.id), l = _LANC_CACHE.get(id);
+    if (!l || Math.abs(dx) < 90) return;
+    localStorage.setItem("tom_dica_swipe", "1"); document.querySelector(".swipe-dica")?.remove();
+    if (dx > 0) {
+      if (l.data_pagamento) return toast(`"${l.descricao}" já está ${l.tipo === "receita" ? "recebido" : "pago"}.`);
+      formBaixa(l);
+    } else formLancamentoId(id);
+  };
+  lista.addEventListener("pointerup", soltar); lista.addEventListener("pointercancel", soltar);
+  lista.addEventListener("click", e => { if (_SW.bloqueiaClique) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+function _swipeFundo(card) {
+  _SW.fundo?.remove();
+  const f = document.createElement("div"); f.className = "swipe-fundo";
+  f.style.cssText = `top:${card.offsetTop}px;height:${card.offsetHeight}px`;
+  f.innerHTML = `<span class="sw-a dir">${icon("check")}<b>Dar baixa</b></span><span class="sw-a esq"><b>Editar</b>${icon("edit")}</span>`;
+  card.parentElement.insertBefore(f, card); _SW.fundo = f;
+}
+function _swipeDica(lista) {
+  if (!lista || localStorage.getItem("tom_dica_swipe") || !lista.querySelector(".lanc-card")) return;
+  if (lista.querySelector(".swipe-dica")) return;
+  lista.insertAdjacentHTML("afterbegin", `<div class="swipe-dica">
+    <svg viewBox="0 0 120 44" aria-hidden="true"><rect x="8" y="10" width="78" height="24" rx="7" class="sd-c"/>
+      <rect x="14" y="17" width="34" height="4" rx="2" class="sd-l"/><rect x="14" y="24" width="20" height="3" rx="1.5" class="sd-l"/>
+      <g class="sd-mao"><path d="M64 30v-12a3 3 0 0 1 6 0v8l7 1.5a4 4 0 0 1 3 4.6L78.5 40H66z" fill="#fff" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></g></svg>
+    <span><b>Dica:</b> deslize um lançamento para a <b>direita</b> para dar baixa, ou para a <b>esquerda</b> para editar.</span>
+    <button class="btn-icon" onclick="localStorage.setItem('tom_dica_swipe','1');this.closest('.swipe-dica').remove()" title="Entendi">${icon("x")}</button></div>`);
+}
+
+/* ── Cena animada no topo de cada tela ───────────────────────── */
+function _cenaTela(id) {
+  const C = { t: "#2F817A", o: "#C9A94E", n: "currentColor", r: "#C9573F" };
+  const s = (body, cls) => `<svg viewBox="0 0 32 32" class="tc ${cls}" fill="none" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  const cenas = {
+    dashboard: s(`<path d="M5 27h22" stroke="${C.n}" stroke-width="2"/>${[[7, 16, C.t], [13, 10, C.o], [19, 6, C.t], [25, 12, C.o]].map(([x, h, c], i) => `<rect class="tc-b" style="--i:${i}" x="${x - 2}" y="${26 - h}" width="4" height="${h}" rx="1.5" fill="${c}"/>`).join("")}`, "tc-barras"),
+    vencimentos: s(`<rect x="5" y="7" width="22" height="20" rx="3" stroke="${C.n}" stroke-width="2"/><path d="M5 12h22M11 4v5M21 4v5" stroke="${C.n}" stroke-width="2"/><path class="tc-folha" d="M5 12h22v12a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="${C.o}" opacity=".35"/><circle class="tc-pisca" cx="21" cy="20" r="2.5" fill="${C.r}"/>`, "tc-cal"),
+    relatorios: s(`<circle cx="16" cy="16" r="10" stroke="${C.n}" stroke-width="2"/><path class="tc-fatia" d="M16 16V6a10 10 0 0 1 9.5 13z" fill="${C.t}"/><path class="tc-fatia f2" d="M16 16l9.5 3A10 10 0 0 1 12 25.2z" fill="${C.o}"/>`, "tc-pizza"),
+    orcamento: s(`<circle cx="15" cy="17" r="10" stroke="${C.n}" stroke-width="2"/><circle cx="15" cy="17" r="5.5" stroke="${C.o}" stroke-width="2"/><circle cx="15" cy="17" r="1.8" fill="${C.r}"/><g class="tc-flecha"><path d="M15 17L28 4" stroke="${C.t}" stroke-width="2.2"/><path d="M24 4h4v4" stroke="${C.t}" stroke-width="2.2"/></g>`, "tc-alvo"),
+    metas: s(`<path d="M10 5h12v6a6 6 0 0 1-12 0z" stroke="${C.o}" stroke-width="2" fill="${C.o}" fill-opacity=".25"/><path d="M10 7H6a4 4 0 0 0 4 5M22 7h4a4 4 0 0 1-4 5M16 17v5M11 27h10M13 22h6v5h-6z" stroke="${C.o}" stroke-width="2"/><path class="tc-brilho" d="M26 18l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" fill="${C.t}"/>`, "tc-trofeu"),
+    contas: s(`<path d="M5 11a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" stroke="${C.n}" stroke-width="2"/><path d="M27 15h-5a2.5 2.5 0 0 0 0 5h5" stroke="${C.n}" stroke-width="2"/><circle class="tc-moeda" cx="16" cy="4" r="3.5" fill="${C.o}"/>`, "tc-carteira"),
+    lancamentos: s(`<path d="M6 10h16M18 6l4 4-4 4" stroke="${C.t}" stroke-width="2.2"/><path d="M26 22H10M14 18l-4 4 4 4" stroke="${C.o}" stroke-width="2.2"/>`, "tc-setas"),
+    compras: s(`<path d="M7 11h18l-1.5 14a2 2 0 0 1-2 2H10.5a2 2 0 0 1-2-2z" stroke="${C.n}" stroke-width="2" fill="${C.o}" fill-opacity=".2"/><path d="M12 11V8a4 4 0 0 1 8 0v3" stroke="${C.n}" stroke-width="2"/>`, "tc-sacola"),
+    veiculos: s(`<path d="M5 20v-4l3-6h14l4 6v4z" stroke="${C.n}" stroke-width="2"/><path class="tc-vento" d="M1 13h3M0 17h3" stroke="${C.t}" stroke-width="1.8"/><g class="tc-roda"><circle cx="10" cy="22" r="3" fill="var(--card)" stroke="${C.n}" stroke-width="2"/><path d="M10 19v6" stroke="${C.n}" stroke-width="1.2"/></g><g class="tc-roda r2"><circle cx="22" cy="22" r="3" fill="var(--card)" stroke="${C.n}" stroke-width="2"/><path d="M22 19v6" stroke="${C.n}" stroke-width="1.2"/></g>`, "tc-carro"),
+    categorias: s(`<g class="tc-tag"><path d="M5 6h10l12 12-9 9L6 15z" stroke="${C.n}" stroke-width="2" fill="${C.t}" fill-opacity=".2"/><circle cx="10.5" cy="11" r="2" fill="${C.o}"/></g>`, "tc-etiqueta"),
+    contatos: s(`<circle cx="12" cy="11" r="4" stroke="${C.n}" stroke-width="2"/><path d="M4 26c0-5 3.5-8 8-8s8 3 8 8" stroke="${C.n}" stroke-width="2"/><g class="tc-aceno"><path d="M24 8v8M21 10.5l3-2.5 3 2.5" stroke="${C.o}" stroke-width="2"/></g>`, "tc-pessoas"),
+    usuarios: s(`<path class="tc-coracao" d="M16 26s-10-6-10-13a5.5 5.5 0 0 1 10-3.2A5.5 5.5 0 0 1 26 13c0 7-10 13-10 13z" fill="${C.r}" fill-opacity=".85"/>`, "tc-familia"),
+    configuracoes: s(`<g class="tc-engrenagem"><circle cx="16" cy="16" r="4" stroke="${C.n}" stroke-width="2"/><path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M6.8 25.2l2.8-2.8M22.4 9.6l2.8-2.8" stroke="${C.n}" stroke-width="2.2"/></g>`, "tc-gear"),
+    whatsapp: s(`<path d="M5 8a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H13l-6 5v-5H8a3 3 0 0 1-3-3z" stroke="${C.n}" stroke-width="2" fill="${C.t}" fill-opacity=".15"/>${[11, 16, 21].map((x, i) => `<circle class="tc-ponto" style="--i:${i}" cx="${x}" cy="13.5" r="1.8" fill="${C.t}"/>`).join("")}`, "tc-chat"),
+  };
+  cenas.pagar = cenas.receber = cenas.lancamentos;
+  return cenas[id] || cenas.dashboard;
+}
+
 Object.assign(window, {
+  fecharLeque, _leqTransferir,
   _salvarSenhaFabrica, abrirRecorrencias, _recValor, _recAtivo, _recEncerrar, baixarBackup,
   _loginParallax,
   _ccInclina, _ccSolta, _ccVira, _ccEditar, _contaTipo, _contaPrev,
