@@ -141,6 +141,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging as _logging
 _logging.getLogger("apscheduler").setLevel(_logging.WARNING)
@@ -299,6 +300,25 @@ app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(str(STATIC / "manifest.json"), media_type="application/manifest+json")
+
+
+@app.get("/.well-known/assetlinks.json")
+def assetlinks():
+    """Prova para o Android que o APK (TWA) é deste site: abre em tela cheia, sem barra.
+
+    Configure no servidor: ANDROID_PACKAGE (ex.: br.com.tomelin.financeiro) e
+    ANDROID_SHA256 (impressão digital SHA-256 da chave que assina o APK; se
+    houver mais de uma, separe por vírgula). Sem elas, a rota responde 404.
+    """
+    import os
+    pacote = os.environ.get("ANDROID_PACKAGE", "").strip()
+    digitais = [d.strip().upper() for d in os.environ.get("ANDROID_SHA256", "").split(",") if d.strip()]
+    if not pacote or not digitais:
+        return JSONResponse({"erro": "APK ainda não configurado (ANDROID_PACKAGE e ANDROID_SHA256)."}, status_code=404)
+    return JSONResponse([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {"namespace": "android_app", "package_name": pacote, "sha256_cert_fingerprints": digitais},
+    }])
 
 
 @app.get("/sw.js")

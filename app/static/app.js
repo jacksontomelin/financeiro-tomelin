@@ -244,12 +244,18 @@ const LOGO_LOCKUP = '<img class="login-lockup" src="/static/icons/logo-lockup.pn
 const SVG_HOUSE = '<svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 80 L100 20 L180 80 L180 150 L20 150 Z" fill="white" opacity=".6"/><rect x="70" y="100" width="30" height="50" fill="white" opacity=".8"/><rect x="120" y="85" width="35" height="30" fill="white" opacity=".5"/><circle cx="160" cy="35" r="18" fill="white" opacity=".3"/></svg>';
 
 /* ---------- API ---------- */
+// Endereço do servidor. Vazio = o mesmo da página (navegador, app instalado, TWA).
+// Num APK com Capacitor (arquivos dentro do app), defina antes do app.js:
+//   <script>window.TOMELIN_API = "https://financeiro.seudominio.com.br"</script>
+const API_BASE = String(window.TOMELIN_API || "").replace(/\/$/, "");
+const _url = p => (typeof p === "string" && p.startsWith("/") ? API_BASE + p : p);
+
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (State.token) headers.Authorization = `Bearer ${State.token}`;
   let res;
   try {
-    res = await fetch(path, { ...opts, headers });
+    res = await fetch(_url(path), { ...opts, headers });
   } catch {
     throw new Error(navigator.onLine === false
       ? "Sem internet. Verifique a conexão e tente de novo."
@@ -336,7 +342,7 @@ function erroCampo(campo, msg) {
 
 async function abrirPDF(path) {
   try {
-    const res = await fetch(path, { headers: { Authorization: `Bearer ${State.token}` } });
+    const res = await fetch(_url(path), { headers: { Authorization: `Bearer ${State.token}` } });
     if (!res.ok) throw new Error("Falha ao gerar PDF");
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -489,7 +495,7 @@ function toggleSenha() {
 }
 
 function _statusLogin() {
-  fetch("/api/auth/status").then(r => r.json()).then(d => {
+  fetch(_url("/api/auth/status")).then(r => r.json()).then(d => {
     const el = document.getElementById("lp-status");
     if (el) el.innerHTML = '<svg viewBox="0 0 8 8" width="8" height="8" style="margin-right:6px"><circle cx="4" cy="4" r="3.5" fill="#3E9079"/></svg> Sistema online &nbsp;·&nbsp; ' + d.total_lancamentos + ' lançamentos registrados';
   }).catch(() => {});
@@ -547,7 +553,7 @@ function renderLogin() {
     </div>`;
 
   // busca versão
-  fetch("/api/health").then(r=>r.json()).then(d=>{
+  fetch(_url("/api/health")).then(r=>r.json()).then(d=>{
     const el = document.getElementById("sb-version-login");
     if (el && d.version) el.textContent = "v" + d.version;
   }).catch(()=>{});
@@ -596,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.138.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.139.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -747,6 +753,7 @@ function abrirMenuMais() {
 // tela e não sobrescreve a tela nova (antes o menu marcava uma e mostrava outra).
 let _SEQ_VIEW = 0;
 async function setView(id) {
+  if (!_naVolta && State.view && State.view !== id) { _PILHA_TELAS.push(State.view); if (_PILHA_TELAS.length > 30) _PILHA_TELAS.shift(); }
   State.view = id;
   toggleSidebar(false);
   marcarNav();
@@ -4520,9 +4527,12 @@ async function render() {
 
   marcarNav();
   _checarSenhaFabrica();
+  _historicoIniciar();
+  _redeEstado();
   try {
     await setView(State.view || "dashboard");
     atualizarBadge();
+    _acaoInicial();
   } catch (e) {
     if (String(e.message).includes("401")) return;
     toast("Falha ao carregar: " + e.message, "err");
@@ -5526,7 +5536,7 @@ function _anxRender() {
   // miniaturas das imagens já salvas
   _ANX.salvos.filter(a => a.mime !== "application/pdf").forEach(async a => {
     try {
-      const r = await fetch(`/api/anexos/${a.id}`, { headers: { Authorization: `Bearer ${State.token}` } });
+      const r = await fetch(_url(`/api/anexos/${a.id}`), { headers: { Authorization: `Bearer ${State.token}` } });
       if (!r.ok) return;
       const u = URL.createObjectURL(await r.blob());
       const th = [...box.querySelectorAll(".anx-item")][_ANX.salvos.indexOf(a)]?.querySelector(".anx-th");
@@ -5552,7 +5562,7 @@ async function _anxVer(aid) {
   const pdf = a && a.mime === "application/pdf";
   const janela = pdf ? window.open("", "_blank") : null;   // abre já no clique: o navegador não bloqueia
   try {
-    const r = await fetch(`/api/anexos/${aid}`, { headers: { Authorization: `Bearer ${State.token}` } });
+    const r = await fetch(_url(`/api/anexos/${aid}`), { headers: { Authorization: `Bearer ${State.token}` } });
     if (!r.ok) throw new Error("não consegui abrir o comprovante");
     const u = URL.createObjectURL(await r.blob());
     if (pdf) { if (janela) janela.location = u; else window.open(u, "_blank"); return; }
@@ -6394,7 +6404,7 @@ async function baixarBackup() {
   const comp = document.getElementById("bk-comp")?.checked;
   const bt = document.getElementById("bk-bt"); if (bt) { bt.disabled = true; bt.innerHTML = `${icon("refresh")}Gerando...`; }
   try {
-    const r = await fetch(`/api/backup${comp ? "?comprovantes=true" : ""}`, { headers: { Authorization: `Bearer ${State.token}` } });
+    const r = await fetch(_url(`/api/backup${comp ? "?comprovantes=true" : ""}`), { headers: { Authorization: `Bearer ${State.token}` } });
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.erro || d.detail || "Não foi possível gerar o backup."); }
     const blob = await r.blob(), url = URL.createObjectURL(blob), a = document.createElement("a");
     a.href = url; a.download = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || "backup-tomelin.json";
@@ -6525,6 +6535,65 @@ function _cenaTela(id) {
   cenas.pagar = cenas.receber = cenas.lancamentos;
   return cenas[id] || cenas.dashboard;
 }
+
+
+/* ── Botão voltar (Android, gesto de voltar, navegador) ──────────
+   Fecha o que estiver aberto antes de mudar de tela; no Painel, pede
+   um segundo toque para sair. Funciona com um único "degrau" de guarda
+   no histórico, então abrir e fechar janelas pelo código não bagunça nada. */
+const _PILHA_TELAS = [];
+let _naVolta = false, _ultimoVoltar = 0;
+function _historicoIniciar() {
+  if (window._historicoOk) return;
+  window._historicoOk = true;
+  history.replaceState({ tomelin: "raiz" }, "");
+  history.pushState({ tomelin: "guarda" }, "");
+  addEventListener("popstate", _aoVoltar);
+}
+function _aoVoltar() {
+  const repor = () => history.pushState({ tomelin: "guarda" }, "");
+  if (!State.token) return;                                           // tela de login: deixa sair
+  if (document.querySelector(".dp-pop")) { _dpFechar(); return repor(); }
+  if (document.getElementById("leque")) { fecharLeque(); return repor(); }
+  const visor = document.querySelector(".anx-viewer"); if (visor) { visor.click(); return repor(); }
+  if (modalRoot().children.length) { fecharModal(); return repor(); }   // a troca obrigatória de senha não fecha
+  if (State.sidebarOpen) { toggleSidebar(false); return repor(); }
+  const anterior = _PILHA_TELAS.pop() || (State.view !== "dashboard" ? "dashboard" : null);
+  if (anterior) { _naVolta = true; setView(anterior); _naVolta = false; return repor(); }
+  const agora = Date.now();
+  if (agora - _ultimoVoltar < 2200) { history.back(); return; }        // segundo toque: sai do app
+  _ultimoVoltar = agora; toast("Toque em voltar de novo para sair"); repor();
+}
+
+/* ── Atalhos do ícone do app e links diretos: /?acao=despesa, /?tela=vencimentos ── */
+function _acaoInicial() {
+  const q = new URLSearchParams(location.search);
+  const acao = q.get("acao"), tela = q.get("tela");
+  if (!acao && !tela && !q.has("origem")) return;
+  history.replaceState(history.state, "", location.pathname);
+  if (tela && META[tela]) setView(tela);
+  if (acao === "despesa" || acao === "receita") formLancamento(null, acao);
+  else if (acao === "transferir") _leqTransferir();
+  else if (acao === "nfe") abrirLeitorNFe();
+}
+
+/* ── Sem internet: aviso fixo enquanto durar; ao voltar, atualiza a tela ── */
+function _redeEstado(ev) {
+  const off = navigator.onLine === false;
+  let b = document.getElementById("sem-rede");
+  if (off && !b) {
+    b = document.createElement("div"); b.id = "sem-rede"; b.className = "sem-rede"; b.setAttribute("role", "status");
+    b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.5-1.7"/>
+        <path d="M1.5 9a15 15 0 0 1 4.6-2.9M22.5 9A15 15 0 0 0 11 5.1"/><circle cx="12" cy="20" r="1"/></svg>
+      <span>Sem internet. Você vê o que já estava carregado; para salvar, precisa de conexão.</span>`;
+    document.body.appendChild(b);
+  } else if (!off && b) {
+    b.remove();
+    if (ev) { toast("Conexão de volta", "ok"); if (State.token) setView(State.view); }
+  }
+}
+addEventListener("online", _redeEstado); addEventListener("offline", _redeEstado);
 
 Object.assign(window, {
   fecharLeque, _leqTransferir,

@@ -1,16 +1,41 @@
 {
+  "id": "/",
   "name": "Tomelin Gestão Financeira",
   "short_name": "Tomelin",
-  "description": "Gestão financeira completa: contas, vencimentos e alertas no WhatsApp.",
-  "start_url": "/",
+  "description": "Finanças da família: contas, vencimentos, orçamento, metas e cartões, com alertas no WhatsApp.",
+  "start_url": "/?origem=app",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
   "background_color": "#082D51",
   "theme_color": "#082D51",
   "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false,
+  "launch_handler": { "client_mode": "focus-existing" },
   "icons": [
     { "src": "/static/icons/favicon-48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
-    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/icon-mono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
+  ],
+  "shortcuts": [
+    { "name": "Nova despesa", "short_name": "Despesa", "url": "/?acao=despesa",
+      "icons": [{ "src": "/static/icons/atalho-despesa.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Nova receita", "short_name": "Receita", "url": "/?acao=receita",
+      "icons": [{ "src": "/static/icons/atalho-receita.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Vencimentos", "short_name": "Vencer", "url": "/?tela=vencimentos",
+      "icons": [{ "src": "/static/icons/atalho-vencimentos.png", "sizes": "96x96", "type": "image/png" }] },
+    { "name": "Transferir entre contas", "short_name": "Transferir", "url": "/?acao=transferir",
+      "icons": [{ "src": "/static/icons/atalho-transferir.png", "sizes": "96x96", "type": "image/png" }] }
+  ],
+  "screenshots": [
+    { "src": "/static/telas/celular-painel.png", "sizes": "1080x2340", "type": "image/png", "form_factor": "narrow", "label": "Painel com saldo, saúde financeira e vencimentos" },
+    { "src": "/static/telas/celular-cartoes.png", "sizes": "1080x2340", "type": "image/png", "form_factor": "narrow", "label": "Cartões de crédito com fatura e limite" },
+    { "src": "/static/telas/computador-painel.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Painel no computador" }
   ]
 }

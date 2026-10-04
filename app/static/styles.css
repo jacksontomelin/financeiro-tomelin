@@ -1,3 +1,6 @@
+/* Inter (OFL), servida pelo próprio sistema: funciona sem internet e dentro de um APK */
+@font-face { font-family: "Inter"; src: url("/static/fonts/inter-latin.woff2") format("woff2");
+  font-weight: 100 900; font-style: normal; font-display: swap; }
 
 /* ============================================================
    SAFE AREA (PWA em tela cheia no iOS): evita conteúdo colado
@@ -3082,3 +3085,12 @@ html.dark .tc-nome { color: var(--ink); }
 .btab-item.on::before { transform: translateX(-50%) scaleX(1); }
 .btab-item.on svg { animation: tabPulo .5s var(--mola); }
 @keyframes tabPulo { 40% { transform: translateY(-4px) scale(1.12); } }
+
+/* aviso de sem internet */
+.sem-rede { position: fixed; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 9800;
+  display: flex; align-items: center; gap: 10px; max-width: min(520px, calc(100vw - 24px)); padding: 10px 14px; border-radius: 14px;
+  background: linear-gradient(135deg, #3A2A10, #6B4E15); color: #FBE7B0; font-size: 12.5px; font-weight: 600;
+  box-shadow: 0 12px 30px -10px rgba(0,0,0,.5); animation: semRede .45s var(--mola); }
+.sem-rede svg { width: 20px; height: 20px; flex-shrink: 0; animation: pisca 2s ease-in-out infinite; }
+@keyframes semRede { from { transform: translate(-50%, -30px); opacity: 0; } }
+/* barra de status do Android/iOS: já tratada por --safe-top no topo */

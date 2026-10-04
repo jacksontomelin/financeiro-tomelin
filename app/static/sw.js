@@ -1,10 +1,12 @@
 /* Service Worker: Tomelin Gestão Financeira
    Network-first para o shell (sempre busca a versão mais nova primeiro);
    cache só como fallback offline. Nunca faz cache de chamadas /api. */
-const CACHE = "tomelin-v10";
+const CACHE = "tomelin-v11";
 const SHELL = [
-  "/", "/static/styles.css", "/static/app.js",
-  "/static/icons/logo-mark.png", "/static/icons/logo-lockup.png", "/manifest.json"
+  "/", "/static/styles.css", "/static/app.js", "/manifest.json",
+  "/static/icons/logo-mark.png", "/static/icons/logo-lockup.png",
+  "/static/icons/icon-192.png", "/static/icons/icon-maskable-192.png",
+  "/static/fonts/inter-latin.woff2", "/static/fonts/manrope-latin.woff2"
 ];
 
 self.addEventListener("install", (e) => {
@@ -35,7 +37,9 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match(e.request).then((hit) => hit || caches.match("/")))
+      // sem internet: o que estiver guardado; navegação (inclusive /?acao=...) cai no app
+      .catch(() => caches.match(e.request, { ignoreSearch: e.request.mode === "navigate" })
+        .then((hit) => hit || caches.match("/")))
   );
 });
 
