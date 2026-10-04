@@ -602,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.139.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.140.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1748,7 +1748,11 @@ async function estornar(id) {
   catch (e) { toast(e.message, "err"); }
 }
 async function excluirLanc(id) {
-  if (!confirm("Excluir este lançamento?")) return;
+  const lx = _LANC_CACHE.get(id);
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir",
+    titulo: lx ? `Excluir "${lx.descricao}"?` : "Excluir este lançamento?",
+    texto: lx ? `${lx.tipo === "receita" ? "Receita" : "Despesa"} de ${money(Number(lx.valor_total ?? lx.valor ?? 0))}.` : "",
+    detalhe: "Os comprovantes anexados também são apagados. Não dá para desfazer." }))) return;
   try { await api(`/api/lancamentos/${id}`, { method: "DELETE" }); toast("Excluído", "ok"); await recarregarTabela(); atualizarBadge(); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -1910,7 +1914,10 @@ async function salvarConta(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 async function excluirConta(id) {
-  if (!confirm("Excluir esta conta? Lançamentos ligados a ela ficarão sem conta.")) return;
+  const cx = _CACHE.contas?.[id];
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir",
+    titulo: cx ? `Excluir ${cx.tipo === "cartao" ? "o cartão" : "a conta"} "${cx.nome}"?` : "Excluir esta conta?",
+    texto: "Se ela tiver lançamentos, transferências ou parcelas, o sistema avisa e não exclui." }))) return;
   try { await api(`/api/contas/${id}`, { method: "DELETE" }); toast("Conta excluída", "ok"); setView("contas"); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -1981,7 +1988,10 @@ async function salvarCategoria(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 async function excluirCategoria(id) {
-  if (!confirm("Excluir esta categoria?")) return;
+  const ct = (State.cats || []).find(c => c.id === id);
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir",
+    titulo: ct ? `Excluir a categoria "${ct.nome}"?` : "Excluir esta categoria?",
+    texto: "Se ela estiver em uso em algum lançamento, o sistema avisa e não exclui." }))) return;
   try { await api(`/api/categorias/${id}`, { method: "DELETE" }); toast("Categoria excluída", "ok"); setView("categorias"); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -2458,7 +2468,10 @@ async function salvarContato(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 async function excluirContato(id) {
-  if (!confirm("Excluir este contato?")) return;
+  const co = (window._contatos || []).find(c => c.id === id);
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir",
+    titulo: co ? `Excluir o contato "${co.nome}"?` : "Excluir este contato?",
+    texto: "Se ele estiver ligado a lançamentos, o sistema avisa e não exclui." }))) return;
   try { await api(`/api/contatos/${id}`, { method: "DELETE" }); toast("Contato excluído", "ok"); setView("contatos"); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -3157,7 +3170,12 @@ async function escolherGrupoWA(jid) {
 function copiarTexto(t) {
   (navigator.clipboard?.writeText(t) || Promise.reject())
     .then(() => toast("URL copiada!", "ok"))
-    .catch(() => { prompt("Copie a URL:", t); });
+    .catch(async () => {
+      if (await confirmar({ tipo: "info", figura: "copiar", titulo: "Copie o link", texto: "Não consegui copiar sozinho. O link já está selecionado abaixo.",
+                            campo: t, ok: "Copiar", cancelar: "Fechar" })) {
+        try { const i = document.createElement("input"); i.value = t; document.body.appendChild(i); i.select(); document.execCommand("copy"); i.remove(); toast("Link copiado", "ok"); } catch {}
+      }
+    });
 }
 
 function _previewNumeroWA(v) {
@@ -3373,7 +3391,8 @@ async function salvarVeiculo(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 async function excluirVeiculo(id) {
-  if (!confirm("Excluir este veículo?")) return;
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir", titulo: "Excluir este veículo?",
+    texto: "Os dados do veículo e do financiamento saem do patrimônio." }))) return;
   try { await api(`/api/veiculos/${id}`, { method: "DELETE" }); toast("Veículo excluído", "ok"); setView("veiculos"); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -4018,7 +4037,10 @@ async function salvarUsuario(id) {
 }
 
 async function excluirUsuario(id) {
-  if (!confirm("Remover este membro do sistema?")) return;
+  const ux = _CACHE.usuarios?.[id];
+  if (!(await confirmar({ tipo: "perigo", figura: "pessoa", ok: "Remover",
+    titulo: ux ? `Remover ${ux.nome} da família?` : "Remover este membro?",
+    texto: "A pessoa perde o acesso ao sistema. Os lançamentos continuam guardados." }))) return;
   try { await api(`/api/usuarios/${id}`, {method:"DELETE"}); toast("Removido","ok"); setView("usuarios"); }
   catch(e) { toast(e.message,"err"); }
 }
@@ -4781,7 +4803,11 @@ async function confirmarAporte(id) {
 }
 
 async function excluirMeta(id) {
-  if (!confirm("Excluir esta meta permanentemente?")) return;
+  const mx = _CACHE_METAS?.[id];
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Excluir",
+    titulo: mx ? `Excluir a meta "${mx.nome}"?` : "Excluir esta meta?",
+    texto: mx ? `Ela tem ${money(Number(mx.valor_atual || 0))} guardados de ${money(Number(mx.valor_alvo || 0))}.` : "",
+    detalhe: "A meta e o histórico de aportes somem. Não dá para desfazer." }))) return;
   try { await api(`/api/metas/${id}`, {method:"DELETE"}); toast("Meta excluída", "ok"); setView("metas"); }
   catch(e) { toast(e.message, "err"); }
 }
@@ -5218,7 +5244,8 @@ async function salvarTransferencia() {
 }
 
 async function excluirTransferencia(id) {
-  if (!confirm("Desfazer esta transferência? Os saldos das duas contas voltam ao que eram.")) return;
+  if (!(await confirmar({ tipo: "aviso", figura: "desfazer", ok: "Desfazer", titulo: "Desfazer esta transferência?",
+    texto: "Os saldos das duas contas voltam ao que eram antes dela." }))) return;
   try { await api(`/api/transferencias/${id}`, { method: "DELETE" }); toast("Transferência desfeita", "ok"); setView("contas"); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -5315,11 +5342,16 @@ async function _orcSugerir() {
     const vazias = (_ORC?.itens || []).filter(i => i.limite == null && sg.sugestao[i.categoria_id] > 0);
     if (!vazias.length) return toast(Object.keys(sg.sugestao).length
       ? "Todas as categorias com gasto recente já têm limite." : "Ainda não há gastos nos últimos 3 meses para calcular a média.");
-    const lista = vazias.map(i => `${i.nome}: ${money(sg.sugestao[i.categoria_id])}`).join("\n");
-    if (!confirm(`Preencher ${vazias.length} categoria(s) sem limite com a média dos últimos 3 meses?\n\n${lista}\n\nOs limites que você já definiu não mudam.`)) return;
-    for (const i of vazias)
+    const escolha = await confirmar({ tipo: "info", figura: "moedas", titulo: "Sugerir limites pela média",
+      texto: "Média de gasto dos últimos 3 meses em cada categoria sem limite. Desmarque o que não quiser.",
+      itens: vazias.map(i => ({ rot: i.nome, valor: money(sg.sugestao[i.categoria_id]) })),
+      okItens: n => `Aplicar ${n} ${n === 1 ? "limite" : "limites"}`,
+      detalhe: "Os limites que você já definiu não mudam." });
+    if (!escolha || !escolha.length) return;
+    const aplicar = escolha.map(k => vazias[k]);
+    for (const i of aplicar)
       await api(`/api/orcamento/${i.categoria_id}`, { method: "PUT", body: JSON.stringify({ limite: sg.sugestao[i.categoria_id] }) });
-    toast(`${vazias.length} limite(s) definidos pela média`, "ok");
+    toast(`${aplicar.length} ${aplicar.length === 1 ? "limite definido" : "limites definidos"} pela média`, "ok");
     setView("orcamento");
   } catch (e) { toast(e.message, "err"); }
 }
@@ -5548,7 +5580,9 @@ function _anxRender() {
 function _anxTirar(i) { const f = _ANX.fila.splice(i, 1)[0]; if (f) URL.revokeObjectURL(f.url); _anxRender(); }
 
 async function _anxExcluir(aid) {
-  if (!confirm("Remover este comprovante?")) return;
+  const ax = _ANX.salvos.find(a => a.id === aid);
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", ok: "Remover",
+    titulo: "Remover este comprovante?", texto: ax ? `"${ax.nome}" sai do lançamento.` : "" }))) return;
   try {
     await api(`/api/anexos/${aid}`, { method: "DELETE" });
     _ANX.salvos = _ANX.salvos.filter(a => a.id !== aid);
@@ -6394,7 +6428,9 @@ async function _recAtivo(id, ativo) {
   catch (e) { toast(e.message, "err"); }
 }
 async function _recEncerrar(id) {
-  if (!confirm("Parar de repetir? As próximas ocorrências ainda não pagas serão removidas. O histórico e o lançamento original ficam.")) return;
+  if (!(await confirmar({ tipo: "aviso", figura: "repetir", ok: "Parar de repetir", titulo: "Parar de repetir?",
+    texto: "As próximas ocorrências ainda não pagas serão removidas.",
+    detalhe: "O histórico e o lançamento original ficam." }))) return;
   try { const r = await api(`/api/recorrencias/${id}`, { method: "DELETE" }); fecharModal(); abrirRecorrencias(); toast(`Repetição encerrada${r.apagadas ? `, ${r.apagadas} futura(s) removida(s)` : ""}`, "ok"); if (State.view !== "dashboard") recarregarTabela?.(); }
   catch (e) { toast(e.message, "err"); }
 }
@@ -6553,6 +6589,7 @@ function _historicoIniciar() {
 function _aoVoltar() {
   const repor = () => history.pushState({ tomelin: "guarda" }, "");
   if (!State.token) return;                                           // tela de login: deixa sair
+  if (_DLG_ATUAL) { _DLG_ATUAL.cancelar(); return repor(); }
   if (document.querySelector(".dp-pop")) { _dpFechar(); return repor(); }
   if (document.getElementById("leque")) { fecharLeque(); return repor(); }
   const visor = document.querySelector(".anx-viewer"); if (visor) { visor.click(); return repor(); }
@@ -6595,7 +6632,116 @@ function _redeEstado(ev) {
 }
 addEventListener("online", _redeEstado); addEventListener("offline", _redeEstado);
 
+
+/* ── Janelas do sistema no lugar das caixas do navegador ─────────
+   confirmar({ titulo, texto, detalhe, tipo: "perigo"|"aviso"|"info", figura,
+               ok, cancelar, itens: [{rot, valor, marcado}], okItens: n => "...", campo })
+   devolve true/false; com itens, a lista de índices marcados (ou null). */
+const _DLG_FIG = {
+  lixeira: `<svg viewBox="0 0 120 96" class="fg fg-lixeira" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="fg-papel"><rect x="50" y="6" width="20" height="24" rx="3" fill="#fff" stroke="#F2A08F" stroke-width="2"/><path d="M55 14h10M55 20h7" stroke="#F2A08F" stroke-width="2"/></g>
+      <g class="fg-tampa"><path d="M34 34h52" stroke="#fff" stroke-width="5"/><path d="M52 34v-5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v5" stroke="#fff" stroke-width="4"/></g>
+      <path d="M39 40l4 44a5 5 0 0 0 5 4h24a5 5 0 0 0 5-4l4-44z" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4"/>
+      <path d="M52 50v26M60 50v26M68 50v26" stroke="#fff" stroke-width="3" opacity=".8"/></svg>`,
+  alerta: `<svg viewBox="0 0 120 96" class="fg fg-alerta" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="fg-raios" stroke="#fff" stroke-width="3" opacity=".7"><path d="M20 30l8 5M100 30l-8 5M60 4v8M14 60h9M106 60h-9"/></g>
+      <g class="fg-tri"><path d="M60 16L96 82H24z" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="5"/><path d="M60 40v20" stroke="#fff" stroke-width="6"/><circle cx="60" cy="70" r="3.5" fill="#fff"/></g></svg>`,
+  pergunta: `<svg viewBox="0 0 120 96" class="fg fg-pergunta" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="fg-balao"><path d="M28 18h64a8 8 0 0 1 8 8v34a8 8 0 0 1-8 8H58l-16 14V68H28a8 8 0 0 1-8-8V26a8 8 0 0 1 8-8z" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4"/>
+      <path d="M51 36a9 9 0 1 1 13 8c-3 2-4 3-4 7" stroke="#fff" stroke-width="5"/><circle cx="60" cy="58" r="3" fill="#fff"/></g></svg>`,
+  moedas: `<svg viewBox="0 0 120 96" class="fg fg-moedas" fill="none">
+      ${[78, 68, 58].map(y => `<ellipse cx="44" cy="${y + 6}" rx="22" ry="7" fill="#B8923A"/><ellipse cx="44" cy="${y}" rx="22" ry="7" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5"/>`).join("")}
+      <g class="fg-moeda"><ellipse cx="44" cy="22" rx="22" ry="7" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5"/></g>
+      <g class="fg-alvo"><circle cx="86" cy="42" r="20" stroke="#fff" stroke-width="4"/><circle cx="86" cy="42" r="11" stroke="#fff" stroke-width="3.5"/><circle cx="86" cy="42" r="3.5" fill="#fff"/></g></svg>`,
+  desfazer: `<svg viewBox="0 0 120 96" class="fg fg-desfazer" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="fg-giro"><path d="M38 34a28 28 0 1 1-4 26" stroke="#fff" stroke-width="6"/><path d="M28 22v16h16" stroke="#fff" stroke-width="6"/></g>
+      <text x="60" y="58" text-anchor="middle" font-size="18" font-weight="800" fill="#fff" font-family="Numeros, sans-serif">R$</text></svg>`,
+  pessoa: `<svg viewBox="0 0 120 96" class="fg fg-pessoa" fill="none" stroke-linecap="round">
+      <circle cx="52" cy="32" r="14" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="4"/><path d="M24 84c0-17 12-28 28-28s28 11 28 28" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="4"/>
+      <g class="fg-menos"><circle cx="90" cy="34" r="14" fill="#fff"/><path d="M83 34h14" stroke="#C9573F" stroke-width="5"/></g></svg>`,
+  repetir: `<svg viewBox="0 0 120 96" class="fg fg-repetir" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="fg-giro2"><path d="M30 44a30 30 0 0 1 52-18M90 52a30 30 0 0 1-52 18" stroke="#fff" stroke-width="5"/><path d="M80 14l4 13-13 3M40 82l-4-13 13-3" stroke="#fff" stroke-width="5"/></g>
+      <g class="fg-pare"><circle cx="60" cy="48" r="13" fill="#fff"/><rect x="54" y="42" width="12" height="12" rx="2" fill="#C9A94E"/></g></svg>`,
+  copiar: `<svg viewBox="0 0 120 96" class="fg fg-copiar" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="30" y="14" width="40" height="52" rx="6" fill="rgba(255,255,255,.15)" stroke="#fff" stroke-width="4"/>
+      <g class="fg-copia"><rect x="50" y="30" width="40" height="52" rx="6" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="4"/>
+      <path d="M62 52a6 6 0 0 1 0-8l4-4a6 6 0 0 1 8 8l-2 2M78 58a6 6 0 0 1 0 8l-4 4a6 6 0 0 1-8-8l2-2" stroke="#fff" stroke-width="3.5"/></g></svg>`,
+};
+let _DLG_ATUAL = null;
+function confirmar(o = {}) {
+  const tipo = o.tipo || "aviso";
+  const fig = _DLG_FIG[o.figura] || _DLG_FIG[tipo === "perigo" ? "lixeira" : tipo === "info" ? "pergunta" : "alerta"];
+  return new Promise(resolve => {
+    _DLG_ATUAL?.cancelar();                       // nunca empilha duas
+    const el = document.createElement("div");
+    el.className = `dlg dlg-${tipo}`;
+    const itens = Array.isArray(o.itens) ? o.itens : null;
+    el.innerHTML = `
+      <div class="dlg-fundo"></div>
+      <div class="dlg-caixa" role="alertdialog" aria-modal="true" aria-labelledby="dlg-tit">
+        <div class="dlg-topo">${fig}</div>
+        <div class="dlg-corpo">
+          <h3 id="dlg-tit" class="dlg-tit">${esc(o.titulo || "Tem certeza?")}</h3>
+          ${o.texto ? `<p class="dlg-txt">${esc(o.texto)}</p>` : ""}
+          ${itens ? `<div class="dlg-itens">${itens.map((it, i) => `
+              <label class="dlg-item" style="--i:${i}"><input type="checkbox" data-i="${i}" ${it.marcado === false ? "" : "checked"}>
+                <span class="dlg-ck">${icon("check")}</span><span class="dlg-rot">${esc(it.rot)}</span>${it.valor ? `<b class="mono-num">${esc(it.valor)}</b>` : ""}</label>`).join("")}</div>
+            <div class="dlg-todos"><button type="button" data-todos="1">Marcar todas</button><button type="button" data-todos="0">Nenhuma</button></div>` : ""}
+          ${o.campo != null ? `<input class="dlg-campo" readonly value="${esc(o.campo)}" aria-label="Texto para copiar">` : ""}
+          ${o.detalhe ? `<div class="dlg-det">${icon(tipo === "perigo" ? "alert" : "shield")}<span>${esc(o.detalhe)}</span></div>` : ""}
+          <div class="dlg-bts">
+            <button type="button" class="btn btn-ghost dlg-nao">${esc(o.cancelar || "Cancelar")}</button>
+            <button type="button" class="btn dlg-sim">${esc(o.ok || "Confirmar")}</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(el);
+    const sim = el.querySelector(".dlg-sim"), nao = el.querySelector(".dlg-nao");
+    const marcados = () => [...el.querySelectorAll(".dlg-item input:checked")].map(c => Number(c.dataset.i));
+    const rotulo = () => { if (!itens) return; const n = marcados().length; sim.disabled = !n;
+      sim.textContent = n ? (o.okItens ? o.okItens(n) : `${o.ok || "Confirmar"} (${n})`) : "Nada marcado"; };
+    const fim = valor => {
+      if (el.classList.contains("saindo")) return;
+      el.classList.add("saindo"); document.removeEventListener("keydown", tecla, true);
+      _DLG_ATUAL = null; setTimeout(() => el.remove(), 240); resolve(valor);
+    };
+    const tecla = e => {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fim(itens ? null : false); }
+      else if (e.key === "Enter") {
+        const a = document.activeElement;
+        if (a === nao || a === sim || a?.type === "checkbox") return;    // o próprio botão/caixa decide
+        e.preventDefault();
+        // perigo (excluir): Enter só confirma com o foco no botão de confirmar; senão volta ao Cancelar
+        if (tipo === "perigo") nao.focus();
+        else if (!sim.disabled) sim.click();
+      }
+      else if (e.key === "Tab") {                              // o foco não sai da janela
+        const f = [...el.querySelectorAll("button:not(:disabled), input")];
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+      }
+    };
+    sim.onclick = () => fim(itens ? marcados() : true);
+    nao.onclick = () => fim(itens ? null : false);
+    el.querySelector(".dlg-fundo").onclick = () => {
+      const cx = el.querySelector(".dlg-caixa"); cx.classList.remove("tremer"); void cx.offsetWidth; cx.classList.add("tremer");
+      (tipo === "perigo" ? nao : sim).focus();                        // o foco não fica solto fora da janela
+    };
+    el.querySelectorAll(".dlg-item input").forEach(c => c.onchange = rotulo);
+    el.querySelectorAll("[data-todos]").forEach(b => b.onclick = () => { el.querySelectorAll(".dlg-item input").forEach(c => c.checked = b.dataset.todos === "1"); rotulo(); });
+    document.addEventListener("keydown", tecla, true);
+    _DLG_ATUAL = { cancelar: () => fim(itens ? null : false) };
+    rotulo();
+    requestAnimationFrame(() => {
+      const campo = el.querySelector(".dlg-campo");
+      if (campo) { campo.focus(); campo.select(); } else (tipo === "perigo" ? nao : sim).focus();
+    });
+  });
+}
+
 Object.assign(window, {
+  confirmar,
   fecharLeque, _leqTransferir,
   _salvarSenhaFabrica, abrirRecorrencias, _recValor, _recAtivo, _recEncerrar, baixarBackup,
   _loginParallax,
