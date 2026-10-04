@@ -602,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.140.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.141.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -705,6 +705,9 @@ function _atalhoClick(btn) {
   if (a === "despesa") formLancamento(null,"despesa");
   else if (a === "receita") formLancamento(null,"receita");
   else if (a === "nfe") abrirLeitorNFe();
+  else if (a === "transferir") _leqTransferir();
+  else if (a === "repeticoes") abrirRecorrencias();
+  else if (a === "importar") formImportar();
   else setView(a);
 }
 
@@ -1042,27 +1045,21 @@ async function viewDashboard(v) {
     </div>
 
     <!-- ── ATALHOS RÁPIDOS ── -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    <div class="atalhos">
       ${[
-        ["plus",     "Despesa",  "despesa",   "linear-gradient(135deg,#082D51,#1E4D8C)"],
-        ["arrowDown","Receita",  "receita",   "linear-gradient(135deg,#16A34A,#1A7A6E)"],
-        ["receipt",  "NF-e",    "nfe",        "linear-gradient(135deg,#D97706,#B45309)"],
-        ["trendUp",  "Relatório","relatorios","linear-gradient(135deg,#7C3AED,#4F46E5)"],
-      ].map(([ic,lab,acao,grad]) => `
-        <button data-acao="${acao}" onclick="_atalhoClick(this)"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px 12px;
-                 border-radius:16px;border:none;background:${grad};cursor:pointer;
-                 transition:all .18s;box-shadow:0 4px 12px rgba(0,0,0,.15);position:relative;overflow:hidden"
-          onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.22)'"
-          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(0,0,0,.15)'">
-          <div style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.2);
-               display:flex;align-items:center;justify-content:center;position:relative;z-index:1">
-            <svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='20' height='20'>${P[ic]||""}</svg>
-          </div>
-          <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.95);text-align:center;
-                       line-height:1.2;position:relative;z-index:1">${lab}</span>
-          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;border-radius:50%;
-               background:rgba(255,255,255,.08)"></div>
+        ["arrowUp",   "Despesa",      "despesa",     "#A2412F", "#E07A5F"],
+        ["arrowDown", "Receita",      "receita",     "#1F6F5C", "#3EC28F"],
+        ["transfer",  "Transferir",   "transferir",  "#082D51", "#2F817A"],
+        ["receipt",   "Nota fiscal",  "nfe",         "#B35C1E", "#F0A04B"],
+        ["target",    "Orçamento",    "orcamento",   "#8A6D1E", "#E2C46E"],
+        ["star",      "Metas",        "metas",       "#A0285F", "#E35D9A"],
+        ["wallet",    "Cartões",      "compras",     "#4B2A86", "#8B6BD8"],
+        ["repeat",    "Repetições",   "repeticoes",  "#1C6E8C", "#38A3C9"],
+        ["download",  "Extrato",      "importar",    "#24507A", "#4F8BC9"],
+        ["chart",     "Relatório",    "relatorios",  "#3F3D9E", "#7C7AE6"],
+      ].map(([ic, lab, acao, c1, c2], i) => `
+        <button class="atalho" data-acao="${acao}" onclick="vibrar(10);_atalhoClick(this)" style="--c1:${c1};--c2:${c2};--i:${i}">
+          <span class="atalho-ic">${icon(ic)}</span><span class="atalho-rot">${lab}</span>
         </button>`).join("")}
     </div>
 
@@ -1235,8 +1232,12 @@ async function viewLancamentos(v, tipoFixo) {
         <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
       </div>
     </div>
+    <div class="periodos" id="periodos">
+      ${[["", "Tudo"], ["hoje", "Hoje"], ["7d", "7 dias"], ["mes", "Este mês"], ["mesant", "Mês passado"], ["prox", "Próximo mês"]]
+        .map(([k, r]) => `<button class="periodo${k === "" ? " on" : ""}" data-p="${k}" onclick="_periodo('${k}')">${r}</button>`).join("")}
+    </div>
     <div id="lanc-lista" style="display:flex;flex-direction:column;gap:8px"></div>`;
-  FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = "";
+  FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = ""; FILTRO.de = ""; FILTRO.ate = "";
   // quem abriu esta tela já filtrada (rosca do painel, Categorias) deixa o filtro aqui
   if (window._filtroInicial) { Object.assign(FILTRO, window._filtroInicial); window._filtroInicial = null; }
   const selCat = v.querySelector('select[onchange^="filtroCat"]'); if (selCat && FILTRO.cat) selCat.value = String(FILTRO.cat);
@@ -1262,9 +1263,11 @@ async function recarregarTabela() {
   if (FILTRO.cat) q += `&categoria_id=${FILTRO.cat}`;
   if (FILTRO.conta) q += `&conta_id=${FILTRO.conta}`;
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
+  if (FILTRO.de) q += `&de=${FILTRO.de}`;
+  if (FILTRO.ate) q += `&ate=${FILTRO.ate}`;
   const [itens] = await Promise.all([api("/api/lancamentos" + q), _anxContagem()]);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
-  setTimeout(() => { const ls = document.getElementById("lanc-lista"); _swipeIniciar(ls); _swipeDica(ls); }, 0);
+  setTimeout(() => { const ls = document.getElementById("lanc-lista"); _swipeIniciar(ls); _seguraIniciar(ls); _swipeDica(ls); }, 0);
 
   const lista = document.getElementById("lanc-lista");
   if (!lista) return;
@@ -1294,7 +1297,7 @@ async function recarregarTabela() {
       : l.data_vencimento ? dataBR(l.data_vencimento)
       : "Sem vencimento";
 
-    return `<div class="lanc-card" data-id="${l.id}" style="background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
+    return `<div class="lanc-card" data-id="${l.id}" style="--cat:${catCor};background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
                 cursor:pointer;transition:all .15s;border-left:4px solid ${st.borda.replace('.3)','1)').replace('.35)','1)')}"
               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(8,45,81,.12)'"
               onmouseout="this.style.transform='';this.style.boxShadow=''"
@@ -1818,7 +1821,7 @@ async function viewContas(v) {
     <div id="cc-contas" class="cc-secao"></div>
     <div class="grid-3">
       ${contas.map(c => `
-        <div class="card card-pad" style="cursor:pointer;transition:all .15s"
+        <div class="card card-pad conta-card" style="--cor:${_corOk(c.cor)};cursor:pointer;transition:all .15s"
              onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(8,45,81,.12)'"
              onmouseout="this.style.transform='';this.style.boxShadow=''"
              onclick="FILTRO.conta=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')"
@@ -6062,6 +6065,7 @@ function celebrar(texto) {
     const a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 150;
     conf += `<i style="--x:${(Math.cos(a) * d).toFixed(0)}px;--y:${(Math.sin(a) * d - 50).toFixed(0)}px;--r:${(Math.random() * 900 - 450).toFixed(0)}deg;background:${cores[i % cores.length]};animation-delay:${(Math.random() * 90).toFixed(0)}ms;${i % 3 === 0 ? "border-radius:50%;width:9px;height:9px;" : ""}"></i>`;
   }
+  vibrar([20, 40, 30]);
   const box = document.createElement("div");
   box.className = "festa";
   box.innerHTML = `${conf}<div class="festa-centro"><svg viewBox="0 0 52 52" aria-hidden="true"><circle class="fc-fundo" cx="26" cy="26" r="23"/><circle class="fc-circ" cx="26" cy="26" r="23"/><path class="fc-check" d="M15.5 27l7 7 14.5-15"/></svg>${texto ? `<b>${esc(texto)}</b>` : ""}</div>`;
@@ -6508,7 +6512,9 @@ function _swipeIniciar(lista) {
     _SW.el.style.transition = "none";
     _SW.el.style.transform = `translateX(${_SW.dx}px) rotate(${_SW.dx / 90}deg)`;
     const f = _SW.fundo, perto = Math.min(1, Math.abs(_SW.dx) / 90);
-    f.classList.toggle("dir", _SW.dx > 0); f.classList.toggle("esq", _SW.dx < 0); f.classList.toggle("pronto", perto >= 1);
+    f.classList.toggle("dir", _SW.dx > 0); f.classList.toggle("esq", _SW.dx < 0);
+    if (perto >= 1 && !f.classList.contains("pronto")) vibrar(14);
+    f.classList.toggle("pronto", perto >= 1);
     f.style.setProperty("--p", perto.toFixed(2));
   });
   const soltar = () => {
@@ -6590,6 +6596,7 @@ function _aoVoltar() {
   const repor = () => history.pushState({ tomelin: "guarda" }, "");
   if (!State.token) return;                                           // tela de login: deixa sair
   if (_DLG_ATUAL) { _DLG_ATUAL.cancelar(); return repor(); }
+  if (document.getElementById("menu-lanc")) { _folhaFechar(); return repor(); }
   if (document.querySelector(".dp-pop")) { _dpFechar(); return repor(); }
   if (document.getElementById("leque")) { fecharLeque(); return repor(); }
   const visor = document.querySelector(".anx-viewer"); if (visor) { visor.click(); return repor(); }
@@ -6740,7 +6747,164 @@ function confirmar(o = {}) {
   });
 }
 
+
+/* ── Vibração curta (Android); em outros aparelhos não faz nada ── */
+function vibrar(ms = 18) { try { if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(ms); } catch {} }
+
+/* ── Segurar o lançamento: anel enche, vibra e abre o menu de ações ── */
+let _SEGURA = null;
+function _seguraIniciar(lista) {
+  if (!lista || lista._segura) return; lista._segura = true;
+  lista.addEventListener("pointerdown", e => {
+    const card = e.target.closest(".lanc-card"); if (!card || e.target.closest("button, a, input, select")) return;
+    _seguraCancelar();
+    const anel = document.createElement("div"); anel.className = "anel-toque";
+    anel.style.left = e.clientX + "px"; anel.style.top = e.clientY + "px";
+    anel.innerHTML = `<svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/></svg>`;
+    document.body.appendChild(anel);
+    _SEGURA = { card, x: e.clientX, y: e.clientY, anel, t: setTimeout(() => {
+      const id = Number(card.dataset.id); _seguraCancelar(); vibrar(28);
+      _SW.el = null; _SW.bloqueiaClique = true; setTimeout(() => _SW.bloqueiaClique = false, 450);
+      card.classList.add("pulsou"); setTimeout(() => card.classList.remove("pulsou"), 400);
+      _menuLanc(id);
+    }, 480) };
+  });
+  const mexeu = e => { if (_SEGURA && Math.hypot(e.clientX - _SEGURA.x, e.clientY - _SEGURA.y) > 9) _seguraCancelar(); };
+  lista.addEventListener("pointermove", mexeu);
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => lista.addEventListener(ev, _seguraCancelar));
+  lista.addEventListener("contextmenu", e => {                   // botão direito no computador: mesmo menu
+    const card = e.target.closest(".lanc-card"); if (!card) return;
+    e.preventDefault(); _seguraCancelar(); _menuLanc(Number(card.dataset.id));
+  });
+}
+function _seguraCancelar() { if (!_SEGURA) return; clearTimeout(_SEGURA.t); _SEGURA.anel.remove(); _SEGURA = null; }
+
+/* ── Menu de ações do lançamento (folha colorida) ── */
+function _menuLanc(id) {
+  const l = _LANC_CACHE.get(id); if (!l) return;
+  const pago = !!l.data_pagamento, rec = l.tipo === "receita";
+  const cat = (State.cats || []).find(c => c.id === l.categoria_id);
+  const acoes = [
+    pago ? { rot: rec ? "Desfazer recebimento" : "Desfazer pagamento", ic: "refresh", c1: "#8A6D1E", c2: "#C9A94E", f: `estornar(${id})` }
+         : { rot: rec ? "Recebi" : "Paguei", ic: "check", c1: "#1F6F5C", c2: "#3EA88A", f: `formBaixa(_LANC_CACHE.get(${id}))` },
+    { rot: "Editar", ic: "edit", c1: "#082D51", c2: "#305C74", f: `formLancamentoId(${id})` },
+    { rot: "Duplicar", ic: "doc", c1: "#5B3FA0", c2: "#8B6BD8", f: `_lancDuplicar(${id})` },
+    l.recorrencia_id ? { rot: "Repetições", ic: "repeat", c1: "#1C6E8C", c2: "#38A3C9", f: `abrirRecorrencias()` }
+                     : { rot: "Repetir todo mês", ic: "repeat", c1: "#1C6E8C", c2: "#38A3C9", f: `_lancRepetir(${id})` },
+    { rot: "Comprovante", ic: "clip", c1: "#B35C1E", c2: "#E59A4B", f: `_lancComprovante(${id})` },
+    { rot: "Recibo", ic: "doc", c1: "#2F5D50", c2: "#4E9C84", f: `abrirPDF('/api/lancamentos/${id}/recibo.pdf')` },
+    { rot: "Compartilhar", ic: "send", c1: "#1E7A4A", c2: "#25B26A", f: `_lancCompartilhar(${id})` },
+    { rot: "Excluir", ic: "trash", c1: "#8E3326", c2: "#D0624E", f: `excluirLanc(${id})` },
+  ];
+  document.getElementById("menu-lanc")?.remove();
+  const el = document.createElement("div"); el.id = "menu-lanc"; el.className = "folha";
+  el.innerHTML = `
+    <div class="folha-fundo" onclick="_folhaFechar()"></div>
+    <div class="folha-caixa" style="--cat:${_corOk(cat?.cor, "#305C74")}">
+      <div class="folha-alca"></div>
+      <div class="folha-cab">
+        <span class="folha-ic ${rec ? "rec" : "desp"}">${icon(rec ? "arrowDown" : "arrowUp")}</span>
+        <div class="folha-tit"><b>${esc(l.descricao)}</b>
+          <small>${cat ? `<i style="background:${_corOk(cat.cor)}"></i>${esc(cat.nome)} · ` : ""}${pago ? (rec ? "Recebido" : "Pago") : (l.status === "atrasado" ? "Atrasado" : "Pendente")}</small></div>
+        <span class="folha-valor mono-num">${money(Number(l.valor_total ?? l.valor ?? 0))}</span>
+      </div>
+      <div class="folha-grade">
+        ${acoes.map((a, i) => `<button class="folha-bt" style="--c1:${a.c1};--c2:${a.c2};--i:${i}" onclick="_folhaFechar();vibrar(12);${a.f}">
+            <span class="folha-bt-ic">${icon(a.ic)}</span><span>${a.rot}</span></button>`).join("")}
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("aberta"));
+  _DLG_ATUAL_FOLHA = true;
+}
+let _DLG_ATUAL_FOLHA = false;
+function _folhaFechar() {
+  const el = document.getElementById("menu-lanc"); if (!el) return;
+  _DLG_ATUAL_FOLHA = false; el.classList.remove("aberta"); el.classList.add("saindo"); setTimeout(() => el.remove(), 260);
+}
+async function _lancDuplicar(id) {
+  const l = _LANC_CACHE.get(id); if (!l) return;
+  const d = v => v ? String(v).slice(0, 10) : null;
+  const body = { descricao: l.descricao, tipo: l.tipo, valor: Number(l.valor), categoria_id: l.categoria_id, conta_id: l.conta_id,
+    contato_id: l.contato_id, obs: l.obs || null, data_competencia: d(l.data_competencia || l.competencia),
+    data_vencimento: d(l.data_vencimento || l.vencimento), data_pagamento: null };
+  try {
+    const novo = await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
+    toast(`"${l.descricao}" duplicado como pendente`, "ok");
+    await recarregarTabela();
+    const c = document.querySelector(`#lanc-lista .lanc-card[data-id="${novo.id}"]`);
+    if (c) { c.scrollIntoView({ block: "center", behavior: "smooth" }); c.classList.add("destaque"); setTimeout(() => c.classList.remove("destaque"), 1600); }
+  } catch (e) { toast(e.message, "err"); }
+}
+async function _lancRepetir(id) {
+  try {
+    const r = await api("/api/recorrencias", { method: "POST", body: JSON.stringify({ lancamento_id: id, frequencia: "mensal" }) });
+    toast(`Vai se repetir todo dia ${r.dia}${r.criadas ? ` (${r.criadas} próxima(s) criada(s))` : ""}`, "ok"); celebrar("Repetindo todo mês!");
+    recarregarTabela();
+  } catch (e) { toast(e.message, "err"); }
+}
+async function _lancComprovante(id) {
+  await formLancamentoId(id);
+  setTimeout(() => { const b = document.getElementById("anx-lista")?.closest(".campo"); if (b) { b.scrollIntoView({ block: "center", behavior: "smooth" }); b.classList.add("destaque"); setTimeout(() => b.classList.remove("destaque"), 1800); } }, 400);
+}
+async function _lancCompartilhar(id) {
+  const l = _LANC_CACHE.get(id); if (!l) return;
+  const venc = l.data_vencimento || l.vencimento;
+  const texto = `${l.tipo === "receita" ? "Receita" : "Despesa"}: ${l.descricao}\nValor: ${money(Number(l.valor_total ?? l.valor ?? 0))}`
+    + (venc ? `\nVencimento: ${dataBR(String(venc).slice(0, 10))}` : "") + `\nSituação: ${l.data_pagamento ? "pago" : "pendente"}`;
+  if (navigator.share) { try { await navigator.share({ title: l.descricao, text: texto }); return; } catch (e) { if (e?.name === "AbortError") return; } }
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
+}
+
+/* ── Puxar para atualizar (celular) ── */
+(function () {
+  let y0 = null, puxando = false, ind = null, atualizando = false;
+  const LIMITE = 78;
+  const podeComecar = e => !atualizando && window.scrollY <= 0 && State.token && !modalRoot()?.children.length
+    && !document.querySelector(".folha, .dlg, #leque, .dp-pop") && !e.target?.closest?.(".cc-faixa, .imp-lista, .dlg-itens, .atalhos, .periodos");
+  addEventListener("touchstart", e => { if (e.touches.length === 1 && podeComecar(e)) { y0 = e.touches[0].clientY; puxando = false; } }, { passive: true });
+  addEventListener("touchmove", e => {
+    if (y0 == null) return;
+    const dy = e.touches[0].clientY - y0;
+    if (dy <= 0 || window.scrollY > 0) { if (ind) ind.style.transform = "translate(-50%, -70px)"; return; }
+    if (!ind) { ind = document.createElement("div"); ind.className = "puxa"; ind.innerHTML = `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" class="pu-moeda"/><text x="20" y="25.5" text-anchor="middle">R$</text></svg><span>Puxe para atualizar</span>`; document.body.appendChild(ind); }
+    puxando = true;
+    const d = Math.min(dy * .5, 110);
+    ind.style.transform = `translate(-50%, ${d - 60}px)`;
+    ind.querySelector("svg").style.transform = `rotate(${d * 4}deg)`;
+    const pronto = d >= LIMITE;
+    if (pronto && !ind.classList.contains("pronto")) vibrar(10);
+    ind.classList.toggle("pronto", pronto);
+    ind.querySelector("span").textContent = pronto ? "Solte para atualizar" : "Puxe para atualizar";
+  }, { passive: true });
+  addEventListener("touchend", async () => {
+    if (y0 == null) return; y0 = null;
+    if (!ind) return;
+    const pronto = ind.classList.contains("pronto") && puxando;
+    const el = ind;
+    if (!pronto) { el.style.transform = "translate(-50%, -70px)"; setTimeout(() => el.remove(), 250); ind = null; return; }
+    atualizando = true; el.classList.add("girando"); el.style.transform = "translate(-50%, 18px)"; el.querySelector("span").textContent = "Atualizando...";
+    try { await setView(State.view); atualizarBadge?.(); } catch {}
+    el.querySelector("span").textContent = "Atualizado"; el.classList.add("ok"); vibrar(14);
+    setTimeout(() => { el.style.transform = "translate(-50%, -70px)"; setTimeout(() => el.remove(), 260); }, 500);
+    ind = null; atualizando = false;
+  });
+})();
+
+function _periodo(k) {
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const ini = (a, m) => new Date(a, m, 1), fim = (a, m) => new Date(a, m + 1, 0);
+  const [a, m] = [h.getFullYear(), h.getMonth()];
+  const faixas = { "": ["", ""], hoje: [iso(h), iso(h)], "7d": [iso(new Date(h.getTime() - 6 * 864e5)), iso(h)],
+    mes: [iso(ini(a, m)), iso(fim(a, m))], mesant: [iso(ini(a, m - 1)), iso(fim(a, m - 1))], prox: [iso(ini(a, m + 1)), iso(fim(a, m + 1))] };
+  [FILTRO.de, FILTRO.ate] = faixas[k] || ["", ""];
+  document.querySelectorAll("#periodos .periodo").forEach(b => b.classList.toggle("on", b.dataset.p === k));
+  vibrar(8); recarregarTabela();
+}
+
 Object.assign(window, {
+  vibrar, _menuLanc, _folhaFechar, _lancDuplicar, _lancRepetir, _lancComprovante, _lancCompartilhar, _periodo,
   confirmar,
   fecharLeque, _leqTransferir,
   _salvarSenhaFabrica, abrirRecorrencias, _recValor, _recAtivo, _recEncerrar, baixarBackup,
@@ -6787,3 +6951,4 @@ Object.assign(window, {
 });
 
 render();
+
