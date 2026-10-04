@@ -122,6 +122,8 @@ class Lancamento(Base):
 
     # identidade da linha do extrato bancário que gerou/baixou este lançamento (evita importar 2x)
     import_id = Column(String(80), nullable=True, index=True)
+    # regra de repetição que gerou este lançamento (aluguel, salário, assinatura...)
+    recorrencia_id = Column(Integer, ForeignKey("recorrencias.id", ondelete="SET NULL"), nullable=True, index=True)
 
     criado_em = Column(DateTime, default=datetime.utcnow)
 
@@ -423,4 +425,28 @@ class Anexo(Base):
     mime = Column(String(60), nullable=False)
     tamanho = Column(Integer, nullable=False)
     dados = Column(LargeBinary, nullable=False)
+    criado_em = Column(DateTime, default=datetime.utcnow)
+
+
+class Recorrencia(Base):
+    """Regra de lançamento que se repete (todo mês ou todo ano).
+
+    O sistema cria as ocorrências como contas pendentes, deixando sempre os
+    próximos meses prontos; pagar ou editar uma ocorrência não muda a regra.
+    """
+    __tablename__ = "recorrencias"
+    id = Column(Integer, primary_key=True)
+    descricao = Column(String(200), nullable=False)
+    tipo = Column(Enum(TipoMov), nullable=False)
+    valor = Column(Numeric(14, 2), nullable=False)
+    frequencia = Column(String(10), nullable=False, default="mensal")   # mensal | anual
+    dia = Column(Integer, nullable=False)          # dia do mês (meses curtos usam o último dia)
+    mes = Column(Integer, nullable=True)           # só para anual
+    inicio = Column(Date, nullable=False)
+    ate = Column(Date, nullable=True)              # vazio = sem fim
+    ultima = Column(Date, nullable=True)           # última ocorrência já criada
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="SET NULL"), nullable=True)
+    conta_id = Column(Integer, ForeignKey("contas.id", ondelete="SET NULL"), nullable=True)
+    contato_id = Column(Integer, ForeignKey("contatos.id", ondelete="SET NULL"), nullable=True)
+    ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)

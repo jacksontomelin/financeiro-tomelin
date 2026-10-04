@@ -87,7 +87,10 @@ def get_int(db: Session, chave: str, padrao: int = 0) -> int:
 
 def set_many(db: Session, dados: dict):
     """Salva várias chaves de uma vez."""
+    conhecidas = {k for k, _, _ in DEFS}
     for chave, valor in dados.items():
+        if chave not in conhecidas:      # ignora chaves internas ou inventadas
+            continue
         row = db.get(models.Configuracao, chave)
         if row:
             row.valor = valor

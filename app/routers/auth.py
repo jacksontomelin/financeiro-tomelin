@@ -6,6 +6,8 @@ from ..database import get_db
 from .. import models, schemas, security
 from ..avatares import chave_avatar
 
+SENHA_PADRAO = "tomelin123"   # senha de fábrica: quem entra com ela é obrigado a trocar
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
@@ -21,10 +23,46 @@ def _resumo_ua(ua: str) -> str:
     return "🌐 Navegador"
 
 
+# ── limite de tentativas (memória do processo) ──
+import threading, time
+_FALHAS: dict = {}
+_TRAVA = threading.Lock()
+JANELA, MAX_EMAIL, MAX_IP = 600, 5, 20       # 10 min; 5 erros por e-mail, 20 por IP
+
+
+def _bloqueado(chaves) -> int:
+    """Segundos restantes de bloqueio (0 = liberado)."""
+    agora = time.time()
+    with _TRAVA:
+        resto = 0
+        for k, limite in chaves:
+            lst = [t for t in _FALHAS.get(k, []) if agora - t < JANELA]
+            _FALHAS[k] = lst
+            if len(lst) >= limite:
+                resto = max(resto, int(JANELA - (agora - lst[0])) + 1)
+        return resto
+
+
+def _registra_falha(chaves):
+    with _TRAVA:
+        for k, _ in chaves:
+            _FALHAS.setdefault(k, []).append(time.time())
+
+
+def _limpa_falhas(email):
+    with _TRAVA:
+        _FALHAS.pop(("email", email), None)
+
+
 @router.post("/login", response_model=schemas.TokenOut)
 def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db)):
     ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "")
     ip = ip.split(",")[0].strip()
+    email = (dados.email or "").lower().strip()
+    chaves = [(("email", email), MAX_EMAIL), (("ip", ip), MAX_IP)]
+    espera = _bloqueado(chaves)
+    if espera:
+        raise HTTPException(429, f"Muitas tentativas de entrar. Tente de novo em {max(1, round(espera / 60))} minuto(s).")
     ua = request.headers.get("user-agent", "")
     dispositivo = _resumo_ua(ua)
 
@@ -41,7 +79,9 @@ def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db
             db.rollback()
 
     if not senha_ok:
+        _registra_falha(chaves)
         raise HTTPException(401, "E-mail ou senha inválidos.")
+    _limpa_falhas(email)
     if not u.ativo:
         raise HTTPException(403, "Usuário desativado.")
 
@@ -62,6 +102,7 @@ def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db
         ultimo_acesso=penultimo, ultimo_acesso_ip=penultimo_ip,
         emoji=chave_avatar(av.emoji if av else None),
         papel=(av.papel if av else "membro"),
+        trocar_senha=security.confere_senha(SENHA_PADRAO, u.senha_hash),
     )
 
 
@@ -74,6 +115,7 @@ def eu(u: models.Usuario = Depends(security.usuario_atual), db: Session = Depend
     return {
         "id": u.id, "nome": u.nome, "email": u.email,
         "emoji": chave_avatar(av.emoji if av else None),
+        "trocar_senha": security.confere_senha(SENHA_PADRAO, u.senha_hash),
         "cor": av.cor if av else "#305C74",
         "papel": av.papel if av else "membro",
         "ultimo_acesso": u.ultimo_acesso.isoformat() if u.ultimo_acesso else None,

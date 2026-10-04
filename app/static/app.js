@@ -60,6 +60,8 @@ function diasEntre(iso) {
 
 /* ---------- ícones SVG (sem emoji) ---------- */
 const P = {
+  repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   clip: '<path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   transfer: '<path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/>',
@@ -440,6 +442,7 @@ function _saiModal(el) {
 }
 function fecharModal() {
   const r = modalRoot();
+  if (State._senhaObrigatoria && r.querySelector("#sf-nova")) return;   // troca da senha de fábrica não pode ser pulada
   if (State._contatoRapido && r.children.length > 1) {   // volta ao lançamento
     State._contatoRapido = false;
     _saiModal(r.lastElementChild);
@@ -472,6 +475,7 @@ async function fazerLogin(e) {
     localStorage.setItem("tom_emoji", r.emoji || "pessoa");
     localStorage.setItem("tom_nome", r.nome);
     localStorage.setItem("tom_email", r.email);
+    State._senhaChecada = false;
     await render();
   } catch (err) {
     erro.textContent = err.message; erro.classList.remove("hidden");
@@ -592,7 +596,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.136.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.137.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1245,6 +1249,7 @@ async function viewLancamentos(v, tipoFixo) {
           ${cats.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}
         </select>
         <button class="btn btn-ghost btn-sm" onclick="exportarCSV('${tipoFixo || ''}')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><line x1='8' y1='6' x2='16' y2='6'/><line x1="8" y1="12" x2="16" y2="12"/><polyline points="8 18 12 22 16 18"/></svg> CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirRecorrencias()" title="Lançamentos que se repetem">${icon("repeat")}<span class="so-desktop">Repetições</span></button>
         <button class="btn btn-ghost btn-sm" onclick="abrirLeitorNFe()">NF-e</button>
       </div>
     </div>
@@ -1323,7 +1328,7 @@ async function recarregarTabela() {
         <!-- info principal -->
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${_ANX_CONT[l.id] ? `<span class="anx-ind" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${esc(l.descricao)}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${l.recorrencia_id ? `<span class="anx-ind rep-ind" title="Repete automaticamente">${icon("repeat")}</span>` : ""}${_ANX_CONT[l.id] ? `<span class="anx-ind" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${esc(l.descricao)}</div>
             <div style="font-family:monospace;font-size:17px;font-weight:900;
                  color:${rec?"#15803D":"#DC2626"};flex-shrink:0;
                  background:${rec?"#F0FDF4":"#FEF2F2"};padding:4px 10px;border-radius:10px">
@@ -1493,6 +1498,7 @@ function _formLancamento(l, tipo, pre) {
         <div class="campo"><label>Multa (R$)</label>
           <input id="f-multa" type="number" step="0.01" value="${ed && l.multa && +l.multa ? l.multa : ""}" placeholder="0,00"></div>
 
+        ${_repetirBloco(l || {}, ed)}
         <div class="campo full"><label>Observação</label>
           <textarea id="f-obs" placeholder="Anotações opcionais...">${ed && l.obs ? esc(l.obs) : ""}</textarea></div>
         ${_anxBloco("Foto do recibo, nota ou comprovante do PIX. Até 5 MB por arquivo.")}
@@ -1643,6 +1649,13 @@ async function salvarLanc(id) {
                      : await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
     const lid = id || salvo?.id;
     const nAnx = lid && _ANX.fila.length ? await _anxEnviarFila(lid) : 0;
+    const rep = document.getElementById("f-repetir")?.value;
+    if (lid && rep) {
+      try {
+        const r = await api("/api/recorrencias", { method: "POST", body: JSON.stringify({ lancamento_id: lid, frequencia: rep, ate: $("#f-rep-ate")?.value || null }) });
+        toast(rep === "mensal" ? `Vai se repetir todo dia ${r.dia}${r.criadas ? ` (${r.criadas} próxima(s) já criada(s))` : ""}` : "Vai se repetir todo ano", "ok");
+      } catch (e) { toast(`Lançamento salvo, mas a repetição não: ${e.message}`, "err"); }
+    }
     fecharModal(); toast(nAnx ? `Lançamento salvo com ${nAnx} comprovante(s)` : "Lançamento salvo", "ok");
     if (body.tipo === "despesa") _avisoOrcamento(body.categoria_id, body.data_competencia);
     await recarregarTabela(); atualizarBadge();
@@ -3675,6 +3688,15 @@ async function viewConfiguracoes(v) {
   }
 
   v.innerHTML = `
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div class="card-h"><span class="card-ico i-green">${icon("download")}</span>
+        <div class="grow"><h3>Backup completo</h3><div class="sub">Um arquivo com todos os dados da família. Guarde fora do servidor.</div></div></div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" id="bk-bt" onclick="baixarBackup()">${icon("download")}Baixar backup</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="bk-comp"> Incluir comprovantes (arquivo maior)</label>
+      </div>
+      <div class="campo-dica" style="margin-top:8px">Senhas não vão no arquivo. Só administradores podem baixar.</div>
+    </div>
     <div class="toolbar">
       <h2 style="margin:0;color:var(--navy)">Configurações do sistema</h2>
       <div class="grow"></div>
@@ -4521,6 +4543,7 @@ async function render() {
   renderApp();
 
   marcarNav();
+  _checarSenhaFabrica();
   try {
     await setView(State.view || "dashboard");
     atualizarBadge();
@@ -6308,7 +6331,105 @@ function _loginParallax(e) {
   el.style.setProperty("--py", ((e.clientY / innerHeight) - .5).toFixed(3));
 }
 
+
+/* ── Senha de fábrica: troca obrigatória ─────────────────────── */
+async function _checarSenhaFabrica() {
+  if (State._senhaChecada || !State.token) return;
+  State._senhaChecada = true;
+  try { const eu = await api("/api/auth/eu"); if (eu.trocar_senha) _senhaObrigatoria(eu.id); } catch {}
+}
+function _senhaObrigatoria(uid) {
+  State._senhaObrigatoria = uid;
+  abrirModal(`
+    <div class="modal" style="max-width:440px">
+      <div class="modal-h"><span class="card-ico i-red">${icon("shield")}</span><h3>Troque a senha de fábrica</h3></div>
+      <div class="modal-b">
+        <div class="dica vermelho" style="margin-bottom:12px">${icon("alert")}<div>Você entrou com a senha padrão do sistema, que qualquer pessoa pode conhecer. Escolha uma senha sua para continuar.</div></div>
+        <div class="frm">
+          <div class="campo full"><label>Senha atual</label><input id="sf-atual" type="password" value="" autocomplete="current-password" placeholder="A senha de fábrica"></div>
+          <div class="campo full"><label>Nova senha</label><input id="sf-nova" type="password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"></div>
+          <div class="campo full"><label>Repita a nova senha</label><input id="sf-nova2" type="password" autocomplete="new-password"></div>
+        </div>
+      </div>
+      <div class="modal-f"><button class="btn btn-primary" onclick="_salvarSenhaFabrica()">${icon("check")}Salvar nova senha</button></div>
+    </div>`);
+}
+async function _salvarSenhaFabrica() {
+  const atual = $("#sf-atual").value, nova = $("#sf-nova").value, nova2 = $("#sf-nova2").value;
+  if (!atual) return erroCampo("senha_atual", "Senha atual: digite a senha com que você entrou.");
+  if (nova.length < 6) return erroCampo("nova_senha", `Nova senha: precisa ter no mínimo 6 caracteres (foram ${nova.length}).`);
+  if (nova !== nova2) return erroCampo("nova2", "Repita a nova senha: as duas senhas não são iguais.");
+  try {
+    await api(`/api/usuarios/${State._senhaObrigatoria}/senha`, { method: "POST", body: JSON.stringify({ senha_atual: atual, nova_senha: nova }) });
+    State._senhaObrigatoria = null; fecharModal(); celebrar("Senha trocada!");
+  } catch (e) {
+    const m = /^(Senha atual|Nova senha):/.exec(e.message || "");
+    if (m) erroCampo(m[1] === "Senha atual" ? "senha_atual" : "nova_senha", e.message); else toast(e.message, "err");
+  }
+}
+
+/* ── Repetições (lançamentos que se repetem) ─────────────────── */
+function _repetirBloco(l, ed) {
+  if (ed && l.recorrencia_id) return `<div class="campo full"><div class="rep-info">${icon("repeat")}<span>Este lançamento se repete automaticamente.</span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="fecharModal();abrirRecorrencias()">Gerenciar</button></div></div>`;
+  return `<div class="campo"><label>Repetir</label><select id="f-repetir" onchange="document.getElementById('f-rep-ate-campo').style.display=this.value?'':'none'">
+      <option value="">Não repetir</option><option value="mensal">Todo mês</option><option value="anual">Todo ano</option></select></div>
+    <div class="campo" id="f-rep-ate-campo" style="display:none"><label>Repetir até (opcional)</label><input id="f-rep-ate" type="date"></div>`;
+}
+async function abrirRecorrencias() {
+  let rs = [];
+  try { rs = await api("/api/recorrencias"); } catch (e) { return toast(e.message, "err"); }
+  const freq = r => r.frequencia === "anual" ? `todo ano em ${String(r.dia).padStart(2, "0")}/${String(r.mes).padStart(2, "0")}` : `todo dia ${r.dia}`;
+  abrirModal(`
+    <div class="modal" style="max-width:640px">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("repeat")}</span><h3>Lançamentos que se repetem</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        ${rs.length ? rs.map(r => `
+          <div class="rep-item${r.ativo ? "" : " pausada"}">
+            <span class="rep-ic ${r.tipo}">${icon(r.tipo === "receita" ? "arrowDown" : "arrowUp")}</span>
+            <div class="rep-txt"><b>${esc(r.descricao)}</b>
+              <small>${freq(r)}${r.ate ? ` até ${dataBR(r.ate)}` : ""} · ${r.ativo ? (r.proxima ? `próxima ${dataBR(r.proxima)}` : "sem próxima") : "pausada"}</small></div>
+            <input class="rep-valor" type="number" step="0.01" min="0" value="${r.valor}" aria-label="Valor de ${esc(r.descricao)}"
+                   onkeydown="if(event.key==='Enter')this.blur()" onchange="_recValor(${r.id}, this)">
+            <button class="btn btn-ghost btn-sm" onclick="_recAtivo(${r.id}, ${!r.ativo})">${r.ativo ? "Pausar" : "Retomar"}</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--red)" title="Parar de repetir" onclick="_recEncerrar(${r.id})">${icon("trash")}</button>
+          </div>`).join("") : `<div class="empty" style="padding:24px">${ilus("repeat")}<p>Nenhum lançamento se repete ainda. Ao lançar aluguel, salário ou uma assinatura, escolha "Repetir: todo mês".</p></div>`}
+        <div class="campo-dica" style="margin-top:10px">O novo valor vale para as próximas ocorrências ainda não pagas. As já pagas ficam como foram.</div>
+      </div>
+    </div>`, "lg");
+}
+async function _recValor(id, el) {
+  try { await api(`/api/recorrencias/${id}`, { method: "PUT", body: JSON.stringify({ valor: parseFloat(el.value) }) }); toast("Valor atualizado nas próximas ocorrências", "ok"); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function _recAtivo(id, ativo) {
+  try { await api(`/api/recorrencias/${id}`, { method: "PUT", body: JSON.stringify({ ativo }) }); fecharModal(); abrirRecorrencias(); toast(ativo ? "Repetição retomada" : "Repetição pausada", "ok"); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function _recEncerrar(id) {
+  if (!confirm("Parar de repetir? As próximas ocorrências ainda não pagas serão removidas. O histórico e o lançamento original ficam.")) return;
+  try { const r = await api(`/api/recorrencias/${id}`, { method: "DELETE" }); fecharModal(); abrirRecorrencias(); toast(`Repetição encerrada${r.apagadas ? `, ${r.apagadas} futura(s) removida(s)` : ""}`, "ok"); if (State.view !== "dashboard") recarregarTabela?.(); }
+  catch (e) { toast(e.message, "err"); }
+}
+
+/* ── Backup completo ─────────────────────────────────────────── */
+async function baixarBackup() {
+  const comp = document.getElementById("bk-comp")?.checked;
+  const bt = document.getElementById("bk-bt"); if (bt) { bt.disabled = true; bt.innerHTML = `${icon("refresh")}Gerando...`; }
+  try {
+    const r = await fetch(`/api/backup${comp ? "?comprovantes=true" : ""}`, { headers: { Authorization: `Bearer ${State.token}` } });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.erro || d.detail || "Não foi possível gerar o backup."); }
+    const blob = await r.blob(), url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || "backup-tomelin.json";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`Backup baixado (${_kb(blob.size)})`, "ok");
+  } catch (e) { toast(e.message, "err"); }
+  finally { if (bt) { bt.disabled = false; bt.innerHTML = `${icon("download")}Baixar backup`; } }
+}
+
 Object.assign(window, {
+  _salvarSenhaFabrica, abrirRecorrencias, _recValor, _recAtivo, _recEncerrar, baixarBackup,
   _loginParallax,
   _ccInclina, _ccSolta, _ccVira, _ccEditar, _contaTipo, _contaPrev,
   _saudeFoco, _saudeSai, _pvMover, _pvSair, _temaComTransicao,

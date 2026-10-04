@@ -36,6 +36,32 @@ def _ajusta_membros(engine):
         print("aviso: ajuste dos membros não aplicado:", e)
 
 
+def _chave_sessao(engine):
+    """Sem SECRET_KEY no ambiente, a chave das sessões fica guardada no banco.
+
+    Antes era gerada a cada reinício e todo redeploy deslogava todo mundo.
+    A chave fica numa configuração interna, que não aparece nem pode ser
+    gravada pela tela de Configurações.
+    """
+    import os
+    if os.environ.get("SECRET_KEY") and not os.environ["SECRET_KEY"].startswith("troque"):
+        return
+    try:
+        from sqlalchemy.orm import Session
+        from . import models
+        from .config import settings
+        with Session(engine) as db:
+            row = db.get(models.Configuracao, "_chave_sessao")
+            if row and row.valor and len(row.valor) >= 32:
+                settings.SECRET_KEY = row.valor
+            else:
+                db.merge(models.Configuracao(chave="_chave_sessao", valor=settings.SECRET_KEY,
+                                             descricao="interno: assinatura das sessões"))
+                db.commit()
+    except Exception as e:
+        print("aviso: chave de sessão não persistida:", e)
+
+
 def _migrar(engine):
     """Adiciona colunas novas em tabelas existentes sem quebrar o banco."""
     migrações = [
@@ -85,6 +111,8 @@ def _migrar(engine):
         "UPDATE compras SET estabelecimento = REPLACE(REPLACE(REPLACE(estabelecimento, ' \u2014 ', ' - '), '\u2014', '-'), '\u2013', '-') WHERE estabelecimento LIKE '%\u2014%' OR estabelecimento LIKE '%\u2013%'",
         "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS orcamento_mensal NUMERIC(14,2)",
         "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS import_id VARCHAR(80)",
+        "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS recorrencia_id INTEGER",
+        "CREATE INDEX IF NOT EXISTS ix_lancamentos_recorrencia_id ON lancamentos(recorrencia_id)",
         "ALTER TABLE contas ADD COLUMN IF NOT EXISTS bandeira VARCHAR(20)",
         "ALTER TABLE contas ADD COLUMN IF NOT EXISTS final_cartao VARCHAR(4)",
         "ALTER TABLE contas ADD COLUMN IF NOT EXISTS limite NUMERIC(14,2)",
@@ -126,7 +154,7 @@ except Exception:
     VERSION, BUILD, BUILD_DATE = '2.0.0', 'dev', ''
 from .database import Base, engine
 from . import seed, whatsapp
-from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos, importacao
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos, importacao, recorrencias, backup
 from .routers import whatsapp as whatsapp_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -142,6 +170,13 @@ async def lifespan(app: FastAPI):
     _migrar(engine)
     seed.seed()
     _ajusta_membros(engine)   # depois do seed: banco novo também ganha o admin
+    _chave_sessao(engine)     # redeploy não desloga mais ninguém
+    try:
+        from .database import SessionLocal as _SR
+        from . import recorrencia as _rec
+        _d = _SR(); _rec.gerar(_d); _d.close()
+    except Exception as e:
+        print("aviso: recorrências não geradas no boot:", e)
     # garante configurações padrão no banco
     from .database import SessionLocal as _SL
     from . import cfg as _cfg
@@ -156,6 +191,9 @@ async def lifespan(app: FastAPI):
                       CronTrigger(day_of_week="mon", hour=settings.ALERTA_HORA, minute=5),
                       id="resumo_semanal", replace_existing=True)
     # fechamento do dia (contas pagas hoje)
+    # lançamentos que se repetem: cria as próximas ocorrências todo dia de madrugada
+    from . import recorrencia as _recm
+    scheduler.add_job(_recm.job_diario, CronTrigger(hour=0, minute=15), id="recorrencias", replace_existing=True)
     scheduler.add_job(whatsapp.job_fechamento_dia,
                       CronTrigger(hour=settings.FECHAMENTO_HORA, minute=0),
                       id="fechamento_dia", replace_existing=True)
@@ -186,7 +224,7 @@ app.add_middleware(
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
-          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, importacao.router, whatsapp_router.router):
+          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, importacao.router, recorrencias.router, backup.router, whatsapp_router.router):
     app.include_router(r)
 
 

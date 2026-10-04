@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="/static/icons/favicon-48.png">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/styles.css?v=135-1791071993">
+<link rel="stylesheet" href="/static/styles.css?v=136-1791073807">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,36 +31,29 @@
   };
   window.addEventListener("error", function (e) { window.__bootErro(e.message); });
 </script>
-<script src="/static/app.js?v=135-1791071993"></script>
+<script src="/static/app.js?v=136-1791073807"></script>
 <script>
   if ("serviceWorker" in navigator) {
+    // Só recarrega quando uma versão NOVA assume (atualização publicada).
+    // Na primeira instalação não: antes a página recarregava sozinha logo depois
+    // de abrir e quem estava digitando o login perdia a tentativa.
+    const jaTinha = !!navigator.serviceWorker.controller;
+    let recarregando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!jaTinha || recarregando) return;
+      recarregando = true;
+      window.location.reload();
+    });
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js").then((reg) => {
         reg.update().catch(()=>{});
-        // Se achou atualização, aplica imediatamente sem esperar
         reg.addEventListener("updatefound", () => {
           const w = reg.installing;
           if (w) w.addEventListener("statechange", () => {
-            if (w.state === "installed" && navigator.serviceWorker.controller) {
-              w.postMessage({ type: "SKIP_WAITING" });
-              window.location.reload();
-            }
+            if (w.state === "installed" && navigator.serviceWorker.controller) w.postMessage({ type: "SKIP_WAITING" });
           });
         });
       }).catch(()=>{});
-      // Controller mudou = SW novo ativo: recarrega
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!refreshing) { refreshing = true; window.location.reload(); }
-      });
-    });
-    // Quando um novo Service Worker assume o controle (nova versão publicada),
-    // recarrega a página automaticamente para o usuário ver a versão mais nova.
-    let recarregando = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (recarregando) return;
-      recarregando = true;
-      window.location.reload();
     });
   }
 </script>

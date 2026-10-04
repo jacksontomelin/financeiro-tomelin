@@ -8,6 +8,7 @@ import re
 from ..database import get_db
 from .. import models, security
 from ..security import usuario_atual
+from ..erros import ErroCampo
 from ..avatares import PADRAO, COR_PADRAO, chave_avatar, cor_valida
 
 router = APIRouter(prefix="/api/usuarios", tags=["usuarios"],
@@ -158,9 +159,11 @@ def trocar_senha(uid: int, dados: SenhaIn, me: models.Usuario = Depends(usuario_
     av_me = db.get(models.UsuarioAvatar, me.id)
     if me.id != uid and (not av_me or av_me.papel != "admin"):
         raise HTTPException(403, "Sem permissão.")
-    if me.id == uid and dados.senha_atual:
-        if not security.confere_senha(dados.senha_atual, u.senha_hash):
-            raise HTTPException(400, "Senha atual incorreta.")
+    if me.id == uid:   # a própria senha: sempre confirma a atual (sessão esquecida aberta não basta)
+        if not dados.senha_atual or not security.confere_senha(dados.senha_atual, u.senha_hash):
+            raise ErroCampo("senha_atual", "Senha atual: incorreta.")
+    if (dados.nova_senha or "") == "tomelin123":
+        raise ErroCampo("nova_senha", "Nova senha: escolha uma diferente da senha de fábrica.")
     if len(dados.nova_senha or "") < MIN_SENHA:
         raise HTTPException(400, f"Senha: precisa ter no mínimo {MIN_SENHA} caracteres.")
     u.senha_hash = security.hash_senha(dados.nova_senha)

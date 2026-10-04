@@ -19,6 +19,7 @@ class TokenOut(BaseModel):
     ultimo_acesso_ip: Optional[str] = None
     emoji: Optional[str] = None
     papel: Optional[str] = None
+    trocar_senha: bool = False
 
 
 # ---------- Conta ----------
@@ -114,6 +115,7 @@ class LancamentoOut(BaseModel):
     multa: Optional[Decimal] = None
     valor_total: Optional[Decimal] = None
     recorrente: bool
+    recorrencia_id: Optional[int] = None
     parcela: Optional[int]
     total_parcelas: Optional[int]
     categoria_id: Optional[int]
