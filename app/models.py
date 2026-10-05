@@ -450,3 +450,21 @@ class Recorrencia(Base):
     contato_id = Column(Integer, ForeignKey("contatos.id", ondelete="SET NULL"), nullable=True)
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
+
+
+class DocumentoEmitido(Base):
+    """Cada PDF emitido (recibo, balancete, patrimônio), guardado pelo código
+    de autenticidade impresso no QR. A página /verificar/<código> confere
+    se o documento existe e devolve o PDF original."""
+    __tablename__ = "documentos_emitidos"
+    codigo = Column(String(20), primary_key=True)
+    tipo = Column(String(30), nullable=False)          # recibo | balancete | patrimonio
+    estilo = Column(String(10), nullable=False, default="padrao")   # padrao | cupom
+    titulo = Column(String(120), nullable=False)
+    resumo = Column(String(300), nullable=True)
+    valor = Column(Numeric(14, 2), nullable=True)
+    detalhes = Column(JSON, nullable=True)
+    lancamento_id = Column(Integer, nullable=True, index=True)
+    pdf = Column(LargeBinary, nullable=False)
+    tamanho = Column(Integer, nullable=False)
+    emitido_em = Column(DateTime, default=datetime.utcnow, index=True)

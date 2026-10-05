@@ -43,7 +43,7 @@ def brl(v) -> str:
 
 
 def _hash(*args) -> str:
-    seed = "|".join(str(a) for a in args) + "|" + uuid.uuid4().hex[:8]
+    seed = "|".join(str(a) for a in args)   # determinístico: o mesmo cupom não vira dois documentos
     return hashlib.sha256(seed.encode()).hexdigest()[:20].upper()   # 20: o tamanho que /verificar aceita
 
 
@@ -204,7 +204,7 @@ def _rodape_bobina(mono, bold, center, tiny, auth):
 # ================================================================
 def recibo_matricial(l, categoria="", conta="", contato="") -> bytes:
     mono, bold, center, center_b, title, tiny, label = _styles_mono()
-    auth = _hash("recibo-mtx", l.id, l.valor_total)
+    auth = _hash("recibo-mtx", l.id, l.valor_total, l.data_pagamento)
     tipo_lbl = "RECEBIMENTO" if l.tipo.value == "receita" else "PAGAMENTO"
 
     # (buf/doc criados no final via _build_bobina, após montar todos os elementos)
@@ -259,7 +259,14 @@ def recibo_matricial(l, categoria="", conta="", contato="") -> bytes:
     els.append(Spacer(1, 8))
 
     els += _rodape_bobina(mono, bold, center, tiny, auth)
-    return _build_bobina(els, f"Recibo-{l.id:04d}")
+    pdf = _build_bobina(els, f"Recibo-{l.id:04d}")
+    from .documentos import registrar
+    registrar(auth, pdf, tipo="recibo", estilo="cupom", titulo=f"Recibo de {tipo_lbl.lower()} nº {l.id:04d}",
+              resumo=" · ".join(x for x in (l.descricao, categoria, contato) if x), valor=l.valor_total,
+              detalhes={"situacao": "pago" if l.data_pagamento else "em aberto",
+                        "pago_em": l.data_pagamento.isoformat() if l.data_pagamento else None},
+              lancamento_id=l.id)
+    return pdf
 
 
 # ================================================================
@@ -318,7 +325,11 @@ def balancete_matricial(periodo_label, receitas, despesas, tot_rec, tot_desp, ju
                 els.append(Paragraph(linha, mono))
 
     els += _rodape_bobina(mono, bold, center, tiny, auth)
-    return _build_bobina(els, "Balancete")
+    pdf = _build_bobina(els, "Balancete")
+    from .documentos import registrar
+    registrar(auth, pdf, tipo="balancete", estilo="cupom", titulo="Balancete financeiro", resumo=f"Período {periodo_label}",
+              valor=tot_rec - tot_desp, detalhes={"receitas": float(tot_rec), "despesas": float(tot_desp)})
+    return pdf
 
 
 # ================================================================
@@ -326,7 +337,7 @@ def balancete_matricial(periodo_label, receitas, despesas, tot_rec, tot_desp, ju
 # ================================================================
 def patrimonio_matricial(contas, veiculos, total_contas, total_veic, total_financ) -> bytes:
     mono, bold, center, center_b, title, tiny, label = _styles_mono()
-    auth = _hash("patrimonio-mtx", total_contas, total_veic, total_financ)
+    auth = _hash("patrimonio-mtx", date.today(), total_contas, total_veic, total_financ)
     total_ativos = total_contas + total_veic
     liquido = total_ativos - total_financ
 
@@ -373,4 +384,9 @@ def patrimonio_matricial(contas, veiculos, total_contas, total_veic, total_finan
             els.append(Paragraph(linha, mono))
 
     els += _rodape_bobina(mono, bold, center, tiny, auth)
-    return _build_bobina(els, "Patrimonio")
+    pdf = _build_bobina(els, "Patrimonio")
+    from .documentos import registrar
+    registrar(auth, pdf, tipo="patrimonio", estilo="cupom", titulo="Demonstrativo de patrimônio",
+              resumo=f"Posição em {date.today().strftime('%d/%m/%Y')}", valor=total_contas + total_veic - total_financ,
+              detalhes={"contas": float(total_contas), "veiculos": float(total_veic), "financiamentos": float(total_financ)})
+    return pdf

@@ -42,7 +42,8 @@ def baixar(comprovantes: bool = False, me: models.Usuario = Depends(usuario_atua
         if t.name in TABELAS_FORA:
             continue
         cols = [c for c in t.columns if (t.name, c.name) not in COLUNAS_FORA
-                and not (t.name == "anexos" and c.name == "dados" and not comprovantes)]
+                and not (t.name == "anexos" and c.name == "dados" and not comprovantes)
+                and not (t.name == "documentos_emitidos" and c.name == "pdf" and not comprovantes)]
         linhas = []
         for row in db.execute(select(*cols)).mappings():
             if t.name == "configuracoes" and (t.name, row.get("chave")) in LINHAS_FORA:

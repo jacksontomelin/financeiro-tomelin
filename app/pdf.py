@@ -327,7 +327,7 @@ def _carimbo(texto, cor):
 def recibo(l, categoria="", conta="", contato="") -> bytes:
     ss = _styles()
     buf, doc = _doc_colorido(f"Recibo #{l.id:04d}")
-    auth = _hash("recibo", l.id, l.valor_total)
+    auth = _hash("recibo", l.id, l.valor_total, l.data_pagamento)   # pagou depois: outro documento
     from .urls import verificar
     verify_url = verificar(auth)
     rec = l.tipo.value == "receita"
@@ -377,7 +377,14 @@ def recibo(l, categoria="", conta="", contato="") -> bytes:
     els += _rodape(ss, auth, verify_url)
     doc.build(els, onFirstPage=_pagina(f"Recibo de {tipo_lbl}", f"Nº {l.id:04d} · {settings.EMPRESA_NOME}", tema),
               onLaterPages=_pagina(f"Recibo de {tipo_lbl}", f"Nº {l.id:04d}", tema))
-    return buf.getvalue()
+    pdf_bytes = buf.getvalue()
+    from .documentos import registrar
+    registrar(auth, pdf_bytes, tipo="recibo", titulo=f"Recibo de {tipo_lbl.lower()} nº {l.id:04d}",
+              resumo=" · ".join(x for x in (l.descricao, categoria, contato) if x), valor=l.valor_total,
+              detalhes={"situacao": "pago" if l.data_pagamento else "em aberto",
+                        "pago_em": l.data_pagamento.isoformat() if l.data_pagamento else None},
+              lancamento_id=l.id)
+    return pdf_bytes
 
 
 # ---------------------------------------------------------------- BALANCETE
@@ -419,14 +426,18 @@ def balancete(periodo_label, receitas, despesas, tot_rec, tot_desp, juros_total=
     els += _rodape(ss, auth, verificar(auth))
     doc.build(els, onFirstPage=_pagina("Balancete Financeiro", periodo_label, "azul"),
               onLaterPages=_pagina("Balancete Financeiro", periodo_label, "azul"))
-    return buf.getvalue()
+    pdf_bytes = buf.getvalue()
+    from .documentos import registrar
+    registrar(auth, pdf_bytes, tipo="balancete", titulo="Balancete financeiro", resumo=f"Período {periodo_label}",
+              valor=tot_rec - tot_desp, detalhes={"receitas": float(tot_rec), "despesas": float(tot_desp)})
+    return pdf_bytes
 
 
 # ---------------------------------------------------------------- PATRIMÔNIO
 def patrimonio(contas, veiculos, total_contas, total_veic, total_financ) -> bytes:
     ss = _styles()
     buf, doc = _doc_colorido("Patrimônio")
-    auth = _hash("patrimonio", total_contas, total_veic, total_financ)
+    auth = _hash("patrimonio", date.today(), total_contas, total_veic, total_financ)
     total_ativos = total_contas + total_veic
     liquido = total_ativos - total_financ
     cor_liq = "#2F9E7E" if liquido >= 0 else "#C9573F"
@@ -461,4 +472,9 @@ def patrimonio(contas, veiculos, total_contas, total_veic, total_financ) -> byte
     els += _rodape(ss, auth, verificar(auth))
     doc.build(els, onFirstPage=_pagina("Demonstrativo de Patrimônio", date.today().strftime("%d/%m/%Y"), "dourado"),
               onLaterPages=_pagina("Demonstrativo de Patrimônio", date.today().strftime("%d/%m/%Y"), "dourado"))
-    return buf.getvalue()
+    pdf_bytes = buf.getvalue()
+    from .documentos import registrar
+    registrar(auth, pdf_bytes, tipo="patrimonio", titulo="Demonstrativo de patrimônio",
+              resumo=f"Posição em {date.today().strftime('%d/%m/%Y')}", valor=total_contas + total_veic - total_financ,
+              detalhes={"contas": float(total_contas), "veiculos": float(total_veic), "financiamentos": float(total_financ)})
+    return pdf_bytes

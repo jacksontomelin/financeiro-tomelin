@@ -259,45 +259,8 @@ for r in (auth.router, categorias.router, contas.router, contatos.router,
     app.include_router(r)
 
 
-@app.get("/verificar/{code}")
-def verificar_autenticidade(code: str):
-    """Página pública de verificação de autenticidade de documentos."""
-    from fastapi.responses import HTMLResponse
-    import re as _re
-    # o código é sempre 20 hex maiúsculos: qualquer outra coisa é rejeitada
-    if not _re.fullmatch(r"[A-F0-9]{20}", code or ""):
-        return HTMLResponse("<h1>Código inválido</h1>", status_code=400)
-    html = f"""<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Verificação de Autenticidade</title>
-<style>
-  body{{font-family:system-ui,sans-serif;background:#F1F5F9;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box}}
-  .card{{background:#fff;border-radius:20px;padding:32px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(8,45,81,.12);text-align:center}}
-  .logo{{width:64px;height:64px;background:#082D51;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px}}
-  h1{{font-size:20px;font-weight:800;color:#082D51;margin:0 0 6px}}
-  .sub{{font-size:13px;color:#94A3B8;margin-bottom:24px}}
-  .code{{font-family:monospace;font-size:16px;font-weight:700;color:#082D51;background:#F1F5F9;padding:12px 16px;border-radius:10px;letter-spacing:.08em;margin-bottom:20px}}
-  .badge{{display:inline-flex;align-items:center;gap:8px;background:#DCFCE7;color:#15803D;padding:10px 20px;border-radius:99px;font-size:14px;font-weight:700}}
-  .badge svg{{width:20px;height:20px}}
-  .footer{{margin-top:24px;font-size:12px;color:#CBD5E1}}
-</style>
-</head>
-<body>
-<div class="card">
-  <div class="logo">T</div>
-  <h1>Documento Verificado</h1>
-  <div class="sub">Tomelin Gestão Financeira</div>
-  <div class="code">{code}</div>
-  <div class="badge">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-    Autenticidade confirmada
-  </div>
-  <div class="footer">Este documento foi emitido pelo sistema Tomelin Gestão Financeira.<br>Blumenau/SC · tomelin.com.br</div>
-</div>
-</body>
-</html>"""
-    return HTMLResponse(html)
+from .verificacao import router as _verificacao   # validação pública pelo QR code dos PDFs
+app.include_router(_verificacao)
 
 
 @app.get("/api/health")
