@@ -163,7 +163,9 @@ def fatura(cid: int, mes: str | None = None, db: Session = Depends(get_db)):
     return {"cartao": {"id": c.id, "nome": c.nome, "banco": c.banco, "cor": c.cor, "logo": c.logo, "bandeira": c.bandeira,
                        "final_cartao": c.final_cartao, "limite": float(c.limite) if c.limite is not None else None},
             "mes": mes, "atual": atual, "meses": meses, "vencimento": venc.isoformat(), "fechamento": fecha.isoformat(),
-            "status": status, "total": total, "em_aberto": em_aberto, "itens": itens}
+            "status": status, "total": total, "em_aberto": em_aberto, "itens": itens,
+            "historico": [{"mes": mm, "total": round(sum(i["valor"] for i in todos if i["mes"] == mm), 2),
+                           "em_aberto": round(sum(i["valor"] for i in todos if i["mes"] == mm and not i["pago"]), 2)} for mm in meses]}
 
 
 class PagarFaturaIn(schemas.BaseModel):

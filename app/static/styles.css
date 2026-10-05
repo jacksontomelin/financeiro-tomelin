@@ -3780,3 +3780,66 @@ html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card))
 @media (max-width: 640px) { .fat-mini { width: 112px; } .fat-mini .cc { width: 112px; } .fat-total { font-size: 24px; } .fat-corpo { max-height: none; } }
 .lc-dia, .fat-dia { text-transform: none !important; }
 @media (max-width: 640px) { .fat-pagar label { flex: 1 1 100%; } }
+
+/* ══ Fatura em tela própria ══ */
+.fv { display: flex; flex-direction: column; gap: 14px; }
+.fv-volta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fv-cartoes { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.fv-cc { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; border: 1.5px solid var(--line); background: var(--card);
+  color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.fv-cc i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.fv-cc.on { color: #fff; border-color: transparent; background: var(--c); }
+.fv-cc.on i { background: #fff; }
+.fv-topo { display: flex; gap: 22px; align-items: center; padding: 20px; border-radius: 24px; color: #fff; touch-action: pan-y; user-select: none;
+  background: radial-gradient(60% 120% at 100% 0%, rgba(255,255,255,.22), transparent 60%), radial-gradient(50% 80% at 0% 100%, rgba(0,0,0,.25), transparent 60%),
+              linear-gradient(135deg, color-mix(in srgb, var(--cc) 65%, #000), var(--cc));
+  box-shadow: 0 20px 40px -22px color-mix(in srgb, var(--cc) 70%, #000); animation: telaEntra .4s var(--suave) backwards; }
+.fv-cartao { flex-shrink: 0; } .fv-cartao .cc { width: 300px; cursor: default; }
+.fv-resumo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.fv-resumo .fat-nav { flex-wrap: wrap; }
+.fv-resumo .fat-total { font-size: 36px; }
+.fat-datas { display: flex; align-items: center; gap: 6px; } .fat-datas svg { width: 14px; height: 14px; }
+.fv-numeros { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.fv-numeros div { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 14px; background: rgba(255,255,255,.15); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+.fv-numeros small { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; opacity: .85; }
+.fv-numeros b { font-size: 15px; }
+/* barras dos meses */
+.fv-hist-tit { font-size: 13px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.fv-hist-tit small { font-weight: 600; color: var(--ink-3); margin-left: 6px; }
+.fv-barras { display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.fv-barra { flex: 1 0 48px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: none; background: none; cursor: pointer; padding: 4px 2px; border-radius: 12px; font: inherit; }
+.fv-barra:hover { background: var(--bg); }
+.fv-b-val { font-size: 10px; font-weight: 700; color: var(--ink-3); white-space: nowrap; height: 13px; }
+.fv-b-col { position: relative; width: 24px; height: 90px; border-radius: 8px; background: var(--bg); display: flex; align-items: flex-end; overflow: hidden; }
+.fv-b-col i { display: block; width: 100%; border-radius: 8px; background: color-mix(in srgb, var(--cc) 35%, var(--line)); transform-origin: bottom; animation: barraCresce .7s var(--mola) backwards; }
+.fv-b-col em { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 8px; background: repeating-linear-gradient(45deg, #E9B84E, #E9B84E 4px, #F4D27A 4px, #F4D27A 8px); opacity: .9; }
+.fv-barra.on .fv-b-col i { background: linear-gradient(180deg, color-mix(in srgb, var(--cc) 60%, #fff), var(--cc)); }
+.fv-barra.on .fv-b-val { color: var(--ink); }
+.fv-b-mes { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.fv-barra.on .fv-b-mes { color: var(--ink); }
+.fv-barra.atual .fv-b-mes::after { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #E9B84E; margin-left: 3px; vertical-align: middle; }
+/* grade */
+.fv-grade { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+.fv-lado { display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(var(--topbar) + 14px); }
+.fv-itens .fat-item:last-child { border-bottom: none; }
+.fv-pagar { display: flex; flex-direction: column; gap: 10px; }
+.fv-pagar .fat-falta b { font-size: 26px; }
+.fv-campo { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; }
+.fv-campo select, .fv-campo input { padding: 10px 11px; border: 1.5px solid var(--line); border-radius: 11px; background: var(--card); color: var(--ink); font: inherit; font-size: 13.5px; text-transform: none; }
+.fv-pagar-bt { justify-content: center; padding: 12px; font-size: 14.5px; }
+.fat-paga.grande, .fat-futura.grande { display: flex; gap: 10px; align-items: center; }
+.fat-paga.grande svg, .fat-futura.grande svg { width: 34px; height: 34px; flex-shrink: 0; }
+.fat-paga.grande span, .fat-futura.grande span { display: flex; flex-direction: column; }
+.fat-paga.grande b, .fat-futura.grande b { font-size: 15px; } .fat-paga.grande small, .fat-futura.grande small { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.fv-cat { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 7px 0; }
+.fv-cat-nome { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); }
+.fv-cat-nome i { width: 9px; height: 9px; border-radius: 3px; background: var(--cat); }
+.fv-cat b { font-size: 13px; color: var(--ink); }
+.fv-cat-barra { grid-column: 1 / -1; height: 6px; border-radius: 6px; background: var(--bg); overflow: hidden; }
+.fv-cat-barra em { display: block; height: 100%; border-radius: 6px; background: var(--cat); transform-origin: left; animation: encher .9s var(--suave) backwards; }
+@media (max-width: 900px) {
+  .fv-topo { flex-direction: column; align-items: stretch; padding: 16px; }
+  .fv-cartao { display: flex; justify-content: center; } .fv-cartao .cc { width: min(300px, 82vw); }
+  .fv-resumo .fat-total { font-size: 30px; }
+  .fv-grade { grid-template-columns: 1fr; } .fv-lado { position: static; order: -1; }
+}

@@ -589,6 +589,7 @@ const NAV = [
   { id: "whatsapp",     nome: "WhatsApp",              ic: "whatsapp",  sub: "Alertas e comandos no grupo",          badge: false },
 ];
 const META = Object.fromEntries(NAV.filter(n => n.id).map(n => [n.id, n]));
+META.fatura = { id: "fatura", nome: "Fatura do cartão", sub: "Compras, parcelas e pagamento" };
 
 let VENC_BADGE = 0;
 
@@ -603,7 +604,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.151.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.152.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -677,13 +678,13 @@ function toggleSidebar(open) {
 
 function marcarNav() {
   document.querySelectorAll(".nav-item").forEach(a => {
-    a.classList.toggle("on", a.dataset.id === State.view ||
+    a.classList.toggle("on", a.dataset.id === State.view || (State.view === "fatura" && a.dataset.id === "compras") ||
       (["pagar","receber"].includes(State.view) && a.dataset.id === State.view));
   });
 
   // Sincroniza bottom tab bar
   const tabMap = { pagar:"lancamentos", receber:"lancamentos",
-    compras:"lancamentos", metas:"mais", relatorios:"mais",
+    compras:"lancamentos", fatura:"lancamentos", metas:"mais", relatorios:"mais",
     configuracoes:"mais", usuarios:"mais", veiculos:"mais",
     contas:"mais", categorias:"mais", contatos:"mais", whatsapp:"mais" };
   const tabAtivo = tabMap[State.view] || State.view;
@@ -782,6 +783,7 @@ async function setView(id, opts = {}) {
     else if (id === "receber") await viewLancamentos(v, "receita");
     else if (id === "lancamentos") await viewLancamentos(v, null);
     else if (id === "compras") await viewCompras(v);
+    else if (id === "fatura") await viewFatura(v);
     else if (id === "metas") await viewMetas(v);
     else if (id === "contas") await viewContas(v);
     else if (id === "categorias") await viewCategorias(v);
@@ -6641,6 +6643,7 @@ function _cenaTela(id) {
     whatsapp: s(`<path d="M5 8a3 3 0 0 1 3-3h16a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H13l-6 5v-5H8a3 3 0 0 1-3-3z" stroke="${C.n}" stroke-width="2" fill="${C.t}" fill-opacity=".15"/>${[11, 16, 21].map((x, i) => `<circle class="tc-ponto" style="--i:${i}" cx="${x}" cy="13.5" r="1.8" fill="${C.t}"/>`).join("")}`, "tc-chat"),
   };
   cenas.pagar = cenas.receber = cenas.lancamentos;
+  cenas.fatura = cenas.contas;
   return cenas[id] || cenas.dashboard;
 }
 
@@ -7431,67 +7434,6 @@ function _formaSelo(l) {
 const _MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const _ST_FATURA = { aberta: ["Aberta", "#2F817A"], fechada: ["Fechada", "#C2742A"], paga: ["Paga", "#1F7A55"], atrasada: ["Atrasada", "#C9573F"], futura: ["Futura", "#5B6876"] };
 let _FAT = null;
-async function abrirFatura(cid, mes) {
-  let f;
-  try { f = await api(`/api/contas/${cid}/fatura${mes ? `?mes=${mes}` : ""}`); } catch (e) { return toast(e.message, "err"); }
-  _FAT = f;
-  const [a, m] = f.mes.split("-").map(Number);
-  const i = f.meses.indexOf(f.mes), ant = f.meses[i - 1], prox = f.meses[i + 1];
-  const st = _ST_FATURA[f.status] || _ST_FATURA.aberta;
-  const cor = _corOk(f.cartao.cor, "#305C74");
-  const grupos = [];
-  for (const it of f.itens) { const k = it.data || ""; if (!grupos.length || grupos.at(-1).k !== k) grupos.push({ k, itens: [] }); grupos.at(-1).itens.push(it); }
-  const linha = it => {
-    const cat = (State.cats || []).find(c => c.id === it.categoria_id);
-    return `<div class="fat-item${it.pago ? " pago" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
-      <span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>
-      <div class="fat-txt"><b>${esc(it.descricao)}</b><small>${it.parcela ? `<span class="fat-parc">Parcela ${it.parcela}</span>` : "À vista"}${cat ? ` · ${esc(cat.nome)}` : ""}${it.local && it.local !== it.descricao ? ` · ${esc(it.local)}` : ""}</small></div>
-      <span class="fat-val mono-num">${money(it.valor)}</span>${it.pago ? `<span class="fat-ok" title="Pago">${icon("check")}</span>` : ""}
-    </div>`;
-  };
-  const contas = Object.values(_CACHE.contas || {}).filter(c => c.tipo !== "cartao");
-  modalRoot().querySelectorAll(".fatura-ov").forEach(e => e.remove());
-  const html = `
-    <div class="modal fatura-modal" style="max-width:620px;--cc:${cor}">
-      <div class="fat-topo" id="fat-topo">
-        <button class="close-btn fat-x" onclick="fecharModal()">${icon("x")}</button>
-        <div class="fat-cab">
-          <div class="fat-mini">${cartaoVisual(f.cartao, { semVerso: true, mini: true })}</div>
-          <div class="fat-resumo">
-            <div class="fat-nav">
-              <button class="fat-seta" ${ant ? `onclick="abrirFatura(${cid},'${ant}')"` : "disabled"} aria-label="Fatura anterior">‹</button>
-              <div class="fat-mes"><small>Fatura de</small><b>${_MESES_LONGOS[m - 1]} ${a}</b></div>
-              <button class="fat-seta" ${prox ? `onclick="abrirFatura(${cid},'${prox}')"` : "disabled"} aria-label="Próxima fatura">›</button>
-            </div>
-            <span class="fat-st" style="--sc:${st[1]}">${st[0]}</span>
-            <div class="fat-total mono-num">${money(f.total)}</div>
-            <div class="fat-datas">vence ${dataBR(f.vencimento)} · fecha ${dataBR(f.fechamento)}</div>
-          </div>
-        </div>
-      </div>
-      <div class="fat-meses">${f.meses.map(mm => { const [aa, mo] = mm.split("-").map(Number);
-        return `<button class="fat-mes-bt${mm === f.mes ? " on" : ""}${mm === f.atual ? " atual" : ""}" onclick="abrirFatura(${cid},'${mm}')">${_MESES_LONGOS[mo - 1].slice(0, 3)}${aa !== new Date().getFullYear() ? `<small>${String(aa).slice(2)}</small>` : ""}</button>`; }).join("")}</div>
-      <div class="modal-b fat-corpo">
-        ${f.itens.length ? grupos.map(g => `<div class="fat-dia">${g.k ? _rotDia(g.k) : "Sem data"}</div>${g.itens.map(linha).join("")}`).join("")
-          : `<div class="empty" style="padding:30px">${ilus("wallet")}<p>Nenhuma compra nesta fatura.</p></div>`}
-      </div>
-      <div class="modal-f fat-pe" id="fat-pe">
-        ${f.status === "paga" ? `<span class="fat-paga">${icon("checkCircle")}Fatura paga</span><span class="grow"></span><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>`
-          : f.em_aberto > 0 && f.status !== "futura"
-            ? `<div class="fat-falta"><small>Em aberto</small><b class="mono-num">${money(f.em_aberto)}</b></div><span class="grow"></span>
-               <button class="btn btn-primary" onclick="_fatPagarForm()">${icon("check")}Pagar fatura</button>`
-            : `<span class="fat-futura">${icon("clock")}Esta fatura ainda não fechou</span><span class="grow"></span><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>`}
-      </div>
-    </div>`;
-  if (modalRoot().querySelector(".fatura-modal")) {
-    const ov = modalRoot().querySelector(".fatura-modal").closest(".overlay");
-    ov.innerHTML = html;                                   // troca o mês sem fechar/abrir de novo
-  } else abrirModal(html, "lg");
-  modalRoot().querySelector(".fatura-modal")?.closest(".overlay")?.classList.add("fatura-ov");
-  _fatGestos(cid, ant, prox);
-  modalRoot().querySelector(".fat-mes-bt.on")?.scrollIntoView({ inline: "center", block: "nearest" });
-  window._fatContas = contas;
-}
 function _fatGestos(cid, ant, prox) {                       // deslizar o dedo no topo troca o mês
   const t = document.getElementById("fat-topo"); if (!t) return;
   let x0 = null;
@@ -7501,30 +7443,132 @@ function _fatGestos(cid, ant, prox) {                       // deslizar o dedo n
     if (dx < -60 && prox) { vibrar(8); abrirFatura(cid, prox); } else if (dx > 60 && ant) { vibrar(8); abrirFatura(cid, ant); }
   });
 }
-async function _fatPagarForm() {
+
+
+/* ── Fatura do cartão em tela própria ── */
+function abrirFatura(cid, mes) {
+  State._fatura = { cid, mes: mes || null };
+  vibrar(8);
+  if (State.view === "fatura") return setView("fatura", { silencioso: true });
+  return setView("fatura");
+}
+function _voltarTela() {
+  const ant = _PILHA_TELAS.pop() || "compras";
+  _naVolta = true; setView(ant); _naVolta = false;
+}
+async function viewFatura(v) {
+  const sel = State._fatura || {};
+  const cartoes = await api("/api/contas/cartoes").catch(() => []);
+  if (!sel.cid) {
+    if (!cartoes.length) {
+      v.innerHTML = `<div class="empty" style="padding:50px">${ilus("wallet")}<p>Nenhum cartão de crédito cadastrado.</p>
+        <button class="btn btn-primary" onclick="formConta({tipo:'cartao'})">${icon("plus")}Adicionar cartão</button></div>`;
+      return;
+    }
+    sel.cid = cartoes[0].id; State._fatura = sel;
+  }
   if (!Object.keys(_CACHE.contas || {}).length) { try { (await api("/api/contas")).forEach(c => _CACHE.contas[c.id] = c); } catch {} }
-  const contas = Object.values(_CACHE.contas).filter(c => c.tipo !== "cartao");
-  const pe = document.getElementById("fat-pe"); if (!pe || !_FAT) return;
-  pe.innerHTML = `<div class="fat-pagar">
-      <label>Pagar com<select id="fat-conta">${contas.map(c => `<option value="${c.id}">${esc(c.nome)} · ${money(c.saldo_atual || 0)}</option>`).join("")}</select></label>
-      <label>Data<input type="date" id="fat-data" value="${hojeISO()}"></label>
-    </div>
-    <span class="grow"></span>
-    <button class="btn btn-ghost" onclick="abrirFatura(${_FAT.cartao.id},'${_FAT.mes}')">Cancelar</button>
-    <button class="btn btn-primary" onclick="_fatPagar()">${icon("check")}Pagar ${money(_FAT.em_aberto)}</button>`;
+  const f = await api(`/api/contas/${sel.cid}/fatura${sel.mes ? `?mes=${sel.mes}` : ""}`);
+  _FAT = f;
+  const [a, m] = f.mes.split("-").map(Number);
+  const k = f.meses.indexOf(f.mes), ant = f.meses[k - 1], prox = f.meses[k + 1];
+  const st = _ST_FATURA[f.status] || _ST_FATURA.aberta;
+  const cor = _corOk(f.cartao.cor, "#305C74");
+  const resumo = cartoes.find(c => c.id === f.cartao.id) || {};
+  const pago = Math.round((f.total - f.em_aberto) * 100) / 100;
+  // agrupado por data
+  const grupos = [];
+  for (const it of f.itens) { const g = it.data || ""; if (!grupos.length || grupos.at(-1).k !== g) grupos.push({ k: g, itens: [] }); grupos.at(-1).itens.push(it); }
+  const linha = it => {
+    const cat = (State.cats || []).find(c => c.id === it.categoria_id);
+    return `<div class="fat-item${it.pago ? " pago" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
+      <span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>
+      <div class="fat-txt"><b>${esc(it.descricao)}</b><small>${it.parcela ? `<span class="fat-parc">Parcela ${it.parcela}</span>` : "À vista"}${cat ? ` · ${esc(cat.nome)}` : ""}${it.local && it.local !== it.descricao ? ` · ${esc(it.local)}` : ""}</small></div>
+      <span class="fat-val mono-num">${money(it.valor)}</span>${it.pago ? `<span class="fat-ok" title="Pago">${icon("check")}</span>` : ""}
+    </div>`;
+  };
+  // por categoria
+  const porCat = {};
+  f.itens.forEach(it => { porCat[it.categoria_id || 0] = (porCat[it.categoria_id || 0] || 0) + it.valor; });
+  const cats = Object.entries(porCat).map(([id, val]) => ({ cat: (State.cats || []).find(c => c.id === +id), val })).sort((x, y) => y.val - x.val);
+  // histórico dos meses (barras clicáveis)
+  const hist = f.historico || [];
+  const maxH = Math.max(1, ...hist.map(h => h.total));
+  const contas = Object.values(_CACHE.contas || {}).filter(c => c.tipo !== "cartao");
+  v.innerHTML = `
+    <div class="fv" style="--cc:${cor}">
+      <div class="fv-volta">
+        <button class="btn btn-ghost btn-sm" onclick="_voltarTela()">‹ Voltar</button>
+        ${cartoes.length > 1 ? `<div class="fv-cartoes">${cartoes.map(c => `<button class="fv-cc${c.id === f.cartao.id ? " on" : ""}" style="--c:${_corOk(c.cor, "#305C74")}"
+            onclick="abrirFatura(${c.id})"><i></i>${esc(c.nome)}</button>`).join("")}</div>` : ""}
+      </div>
+      <div class="fv-topo" id="fat-topo">
+        <div class="fv-cartao">${cartaoVisual({ ...f.cartao, ...resumo }, { semVerso: true })}</div>
+        <div class="fv-resumo">
+          <div class="fat-nav">
+            <button class="fat-seta" ${ant ? `onclick="abrirFatura(${f.cartao.id},'${ant}')"` : "disabled"} aria-label="Fatura anterior">‹</button>
+            <div class="fat-mes"><small>Fatura de</small><b>${_MESES_LONGOS[m - 1]} ${a}</b></div>
+            <button class="fat-seta" ${prox ? `onclick="abrirFatura(${f.cartao.id},'${prox}')"` : "disabled"} aria-label="Próxima fatura">›</button>
+            <span class="fat-st" style="--sc:${st[1]}">${st[0]}</span>
+          </div>
+          <div class="fat-total mono-num">${money(f.total)}</div>
+          <div class="fat-datas">${icon("calendar")}vence ${dataBR(f.vencimento)} · fecha ${dataBR(f.fechamento)}</div>
+          <div class="fv-numeros">
+            <div><small>Em aberto</small><b class="mono-num">${money(f.em_aberto)}</b></div>
+            <div><small>Já pago</small><b class="mono-num">${money(pago)}</b></div>
+            ${resumo.limite != null ? `<div><small>Limite disponível</small><b class="mono-num">${money(resumo.disponivel ?? resumo.limite)}</b></div>` : ""}
+          </div>
+        </div>
+      </div>
+      ${hist.length > 1 ? `<div class="card card-pad fv-hist">
+        <div class="fv-hist-tit">Faturas mês a mês <small>toque numa barra para abrir</small></div>
+        <div class="fv-barras">${hist.map(h => { const [ha, hm] = h.mes.split("-").map(Number);
+          return `<button class="fv-barra${h.mes === f.mes ? " on" : ""}${h.mes === f.atual ? " atual" : ""}" onclick="abrirFatura(${f.cartao.id},'${h.mes}')" title="${_MESES_LONGOS[hm - 1]} ${ha}: ${money(h.total)}">
+            <span class="fv-b-val mono-num">${h.total ? money0(h.total) : ""}</span>
+            <span class="fv-b-col"><i style="height:${Math.max(4, h.total / maxH * 100)}%"></i>${h.em_aberto && h.em_aberto < h.total ? `<em style="height:${h.em_aberto / maxH * 100}%"></em>` : ""}</span>
+            <span class="fv-b-mes">${_MESES_LONGOS[hm - 1].slice(0, 3)}${ha !== new Date().getFullYear() ? `/${String(ha).slice(2)}` : ""}</span></button>`; }).join("")}</div>
+      </div>` : ""}
+      <div class="fv-grade">
+        <div class="card card-pad fv-itens">
+          <div class="card-h"><span class="card-ico i-navy">${icon("receipt")}</span><div class="grow"><h3>Compras da fatura</h3>
+            <div class="sub">${f.itens.length} item(ns)${f.itens.some(i => i.parcela) ? " · inclui parcelas" : ""}</div></div></div>
+          ${f.itens.length ? grupos.map(g => `<div class="fat-dia">${g.k ? _rotDia(g.k) : "Sem data"}</div>${g.itens.map(linha).join("")}`).join("")
+            : `<div class="empty" style="padding:24px">${ilus("wallet")}<p>Nenhuma compra nesta fatura.</p></div>`}
+        </div>
+        <div class="fv-lado">
+          <div class="card card-pad fv-pagar" id="fat-pe">
+            ${f.status === "paga" ? `<div class="fat-paga grande">${icon("checkCircle")}<span><b>Fatura paga</b><small>Tudo certo com ${_MESES_LONGOS[m - 1].toLowerCase()}.</small></span></div>`
+              : f.em_aberto > 0 && f.status !== "futura" ? `
+                <div class="fat-falta"><small>Para pagar</small><b class="mono-num">${money(f.em_aberto)}</b></div>
+                <label class="fv-campo">Pagar com<select id="fat-conta">${contas.map(c => `<option value="${c.id}">${esc(c.nome)} · ${money(c.saldo_atual || 0)}</option>`).join("")}</select></label>
+                <label class="fv-campo">Data do pagamento<input type="date" id="fat-data" value="${hojeISO()}"></label>
+                <button class="btn btn-primary fv-pagar-bt" onclick="_fatPagar()">${icon("check")}Pagar fatura</button>
+                <small class="campo-dica">O valor sai da conta escolhida e as compras ficam pagas.</small>`
+              : `<div class="fat-futura grande">${icon("clock")}<span><b>Fatura ainda aberta para compras</b><small>Ela fecha em ${dataBR(f.fechamento)}.</small></span></div>`}
+          </div>
+          ${cats.length ? `<div class="card card-pad">
+            <div class="card-h"><span class="card-ico i-gold">${icon("pie")}</span><div class="grow"><h3>Por categoria</h3></div></div>
+            ${cats.map(({ cat, val }) => `<div class="fv-cat" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
+                <span class="fv-cat-nome"><i></i>${esc(cat?.nome || "Sem categoria")}</span><b class="mono-num">${money(val)}</b>
+                <span class="fv-cat-barra"><em style="width:${Math.round(val / (f.total || 1) * 100)}%"></em></span></div>`).join("")}
+          </div>` : ""}
+        </div>
+      </div>
+    </div>`;
+  _fatGestos(f.cartao.id, ant, prox);
 }
 async function _fatPagar() {
   const cid = _FAT.cartao.id, mes = _FAT.mes;
   try {
     await api(`/api/contas/${cid}/fatura/pagar`, { method: "POST", body: JSON.stringify({ mes, conta_id: +$("#fat-conta").value, data: $("#fat-data").value || null }) });
-    celebrar("Fatura paga!"); vibrar([20, 40, 30]);
-    await abrirFatura(cid, mes);
-    _ccFaixa("cc-compras", true); _ccFaixa("cc-contas", true); atualizarBadge?.();
+    celebrar("Fatura paga!");
+    try { (await api("/api/contas")).forEach(c => _CACHE.contas[c.id] = c); } catch {}
+    State._fatura = { cid, mes }; await setView("fatura", { silencioso: true }); atualizarBadge?.();
   } catch (e) { toast(e.message, "err"); }
 }
 
 Object.assign(window, {
-  abrirFatura, _fatPagarForm, _fatPagar,
+  abrirFatura, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,
