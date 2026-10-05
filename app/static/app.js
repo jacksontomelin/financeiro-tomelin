@@ -3721,7 +3721,7 @@ async function viewConfiguracoes(v) {
       <div class="cfg-row">
         <label class="cfg-label">${c.descricao}</label>
         <input class="cfg-input" id="cfg-${c.chave}" type="${isPass ? 'password' : isInt ? 'number' : 'text'}"
-          value="${val}" placeholder="${c.chave}" autocomplete="off">
+          value="${esc(val)}" placeholder="${c.chave}" autocomplete="off">
       </div>`;
   }
 

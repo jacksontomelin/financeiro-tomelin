@@ -67,12 +67,10 @@ def listar(
 
 @router.get("/{lid}", response_model=schemas.LancamentoOut)
 def obter(lid: int, db: Session = Depends(get_db)):
-    from ..models import Lancamento
-    from fastapi import HTTPException
-    l = db.get(Lancamento, lid)
+    l = db.get(models.Lancamento, lid)
     if not l:
-        raise HTTPException(404, "Lançamento não encontrado")
-    return l
+        raise HTTPException(404, "Lançamento não encontrado.")
+    return _out(l)   # com nomes de categoria, contato e conta, igual à lista
 
 
 @router.post("", response_model=schemas.LancamentoOut)

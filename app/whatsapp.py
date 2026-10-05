@@ -576,36 +576,41 @@ def processar_comando(texto: str, db: Session | None = None,
 
 
 # ── Jobs agendados ────────────────────────────────────────────────────────────
+# As opções vêm da tela de Configurações (banco > .env > padrão), não só do .env.
 def job_alerta_vencimentos():
+    from . import cfg
     db = SessionLocal()
     try:
-        v = service.vencimentos(db, dias_antes=settings.ALERTA_DIAS_ANTES)
+        dias = cfg.get_int(db, "ALERTA_DIAS_ANTES", settings.ALERTA_DIAS_ANTES)
+        v = service.vencimentos(db, dias_antes=dias)
         if not v["atrasados"] and not v["proximos"]:
             return
         enviar("🔔 *Contas da casa a vencer*\n\n" +
-               service.texto_vencimentos(db, dias_antes=settings.ALERTA_DIAS_ANTES))
+               service.texto_vencimentos(db, dias_antes=dias), db=db)
     finally:
         db.close()
 
 
 def job_resumo_semanal():
-    if not settings.RESUMO_SEMANAL:
-        return
+    from . import cfg
     db = SessionLocal()
     try:
-        enviar("🗓️ *Resumo da semana: Finanças da família*\n\n" + service.texto_resumo_mes(db))
+        if not cfg.get_bool(db, "RESUMO_SEMANAL", settings.RESUMO_SEMANAL):
+            return
+        enviar("🗓️ *Resumo da semana: Finanças da família*\n\n" + service.texto_resumo_mes(db), db=db)
     finally:
         db.close()
 
 
 def job_fechamento_dia():
-    if not settings.FECHAMENTO_DIARIO:
-        return
+    from . import cfg
     db = SessionLocal()
     try:
+        if not cfg.get_bool(db, "FECHAMENTO_DIARIO", settings.FECHAMENTO_DIARIO):
+            return
         txt = service.texto_fechamento_dia(db)
         if txt:
-            enviar(txt)
+            enviar(txt, db=db)
     finally:
         db.close()
 

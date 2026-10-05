@@ -67,7 +67,7 @@ def atualizar_fipe(vid: int, db: Session = Depends(get_db)):
     v = db.get(models.Veiculo, vid)
     if not v:
         raise HTTPException(404, "Veículo não encontrado.")
-    valor, erro = fipe.consultar(v.fipe_codigo)
+    valor, erro = fipe.consultar(v.fipe_codigo, db)
     if erro:
         raise HTTPException(400, erro)
     v.fipe_valor = Decimal(str(valor))
@@ -77,10 +77,6 @@ def atualizar_fipe(vid: int, db: Session = Depends(get_db)):
 
 
 @router.get("/fipe/status")
-def fipe_status():
-    from ..config import settings
-    return {
-        "ativo": settings.FIPE_ATIVO,
-        "url": settings.FIPE_API_URL or None,
-        "endpoint": settings.FIPE_ENDPOINT,
-    }
+def fipe_status(db: Session = Depends(get_db)):
+    c = fipe.config(db)
+    return {"ativo": c["ativo"], "url": c["url"] or None, "endpoint": c["endpoint"]}

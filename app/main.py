@@ -205,9 +205,38 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(job_escutar_grupo, IntervalTrigger(seconds=4), id="escuta_whatsapp",
                       replace_existing=True, max_instances=1, coalesce=True)
     scheduler.start()
-    log.info("Scheduler iniciado (alerta %02d:00, tz %s)", settings.ALERTA_HORA, settings.TIMEZONE)
+    reagendar()   # horários vêm da tela de Configurações (banco > .env)
     yield
     scheduler.shutdown(wait=False)
+
+
+def _hora_valida(v, padrao):
+    return v if 0 <= v <= 23 else padrao
+
+
+def reagendar():
+    """Aplica nos alertas os horários salvos na tela de Configurações.
+
+    Chamado no boot e sempre que as configurações são salvas: antes os
+    horários vinham só do .env e mudar na tela não tinha efeito.
+    """
+    from .database import SessionLocal
+    from . import cfg
+    db = SessionLocal()
+    try:
+        h_alerta = _hora_valida(cfg.get_int(db, "ALERTA_HORA", settings.ALERTA_HORA), 8)
+        h_fech = _hora_valida(cfg.get_int(db, "FECHAMENTO_HORA", settings.FECHAMENTO_HORA), 20)
+    finally:
+        db.close()
+    tz = scheduler.timezone
+    try:
+        scheduler.reschedule_job("alerta_vencimentos", trigger=CronTrigger(hour=h_alerta, minute=0, timezone=tz))
+        scheduler.reschedule_job("resumo_semanal", trigger=CronTrigger(day_of_week="mon", hour=h_alerta, minute=5, timezone=tz))
+        scheduler.reschedule_job("fechamento_dia", trigger=CronTrigger(hour=h_fech, minute=0, timezone=tz))
+    except Exception as e:   # scheduler ainda não iniciado (testes) ou job ausente
+        log.warning("Reagendamento não aplicado: %s", e)
+        return
+    log.info("Alertas às %02d:00, fechamento às %02d:00 (tz %s)", h_alerta, h_fech, settings.TIMEZONE)
 
 
 app = FastAPI(title=settings.APP_NOME, lifespan=lifespan)
@@ -278,7 +307,14 @@ def health():
 
 @app.get("/api/config")
 def config_publica():
-    return {"app": settings.APP_NOME, "alerta_dias_antes": settings.ALERTA_DIAS_ANTES}
+    from .database import SessionLocal
+    from . import cfg
+    db = SessionLocal()
+    try:
+        dias = cfg.get_int(db, "ALERTA_DIAS_ANTES", settings.ALERTA_DIAS_ANTES)
+    finally:
+        db.close()
+    return {"app": settings.APP_NOME, "alerta_dias_antes": dias}
 
 
 # ---- Frontend (SPA + PWA) ----

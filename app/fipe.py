@@ -53,21 +53,33 @@ def _extrai_preco(data):
     return None
 
 
-def consultar(codigo: str):
+def config(db) -> dict:
+    """Configuração da FIPE: tela de Configurações (banco) > .env > padrão."""
+    from . import cfg
+    return {
+        "ativo": cfg.get_bool(db, "FIPE_ATIVO", settings.FIPE_ATIVO),
+        "url": (cfg.get(db, "FIPE_API_URL", settings.FIPE_API_URL) or "").strip(),
+        "token": (cfg.get(db, "FIPE_API_TOKEN", settings.FIPE_API_TOKEN) or "").strip(),
+        "endpoint": cfg.get(db, "FIPE_ENDPOINT", settings.FIPE_ENDPOINT) or "/api/fipe/{codigo}",
+    }
+
+
+def consultar(codigo: str, db):
     """Consulta a FIPEConsulta pelo código/parametro do veículo.
 
     Retorna (valor: float|None, erro: str|None).
     """
-    if not settings.FIPE_ATIVO:
-        return None, "Integração FIPE desativada (defina FIPE_ATIVO=true)"
-    if not settings.FIPE_API_URL or not codigo:
+    c = config(db)
+    if not c["ativo"]:
+        return None, "Integração FIPE desativada (ative em Configurações)"
+    if not c["url"] or not codigo:
         return None, "Configuração FIPE incompleta (URL ou código do veículo)"
 
-    path = settings.FIPE_ENDPOINT.replace("{codigo}", str(codigo))
-    url = settings.FIPE_API_URL.rstrip("/") + "/" + path.lstrip("/")
+    path = c["endpoint"].replace("{codigo}", str(codigo))
+    url = c["url"].rstrip("/") + "/" + path.lstrip("/")
     headers = {}
-    if settings.FIPE_API_TOKEN:
-        headers["Authorization"] = f"Bearer {settings.FIPE_API_TOKEN}"
+    if c["token"]:
+        headers["Authorization"] = f"Bearer {c['token']}"
     try:
         with httpx.Client(timeout=12) as c:
             r = c.get(url, headers=headers)

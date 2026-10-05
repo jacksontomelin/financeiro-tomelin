@@ -28,7 +28,9 @@ def despesas_categoria(db: Session = Depends(get_db)):
 
 @router.get("/vencimentos")
 def vencimentos(dias: int = None, db: Session = Depends(get_db)):
-    dias = dias if dias is not None else settings.ALERTA_DIAS_ANTES
+    if dias is None:
+        from .. import cfg
+        dias = cfg.get_int(db, "ALERTA_DIAS_ANTES", settings.ALERTA_DIAS_ANTES)
     v = service.vencimentos(db, dias_antes=dias)
 
     def fmt(l):

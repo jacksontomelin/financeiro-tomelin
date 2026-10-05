@@ -59,9 +59,14 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         _log(f"[{evento}] sem texto", "ignorado", "")
         return {"ok": True, "ignorado": f"sem texto (evento={evento})"}
 
-    # só o grupo configurado
+    # só o grupo configurado, e exatamente ele. Sem grupo definido, nada é
+    # processado: antes qualquer POST aqui lançava/baixava contas e a resposta
+    # (saldos, contas) ia para o número que viesse no "jid".
     grupo = (cfg.get(db, "WHATSAPP_GRUPO", "") or "").strip()
-    if grupo and grupo not in jid:
+    if not grupo:
+        _log(texto, "ignorado: grupo não configurado")
+        return {"ok": True, "ignorado": "grupo não configurado"}
+    if jid.strip().lower() != grupo.lower():
         return {"ok": True, "ignorado": "outro grupo"}
 
     # só o dono: igual ao Sentinela
@@ -76,8 +81,8 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     if de_mim and zapapi.foi_enviado_pelo_sistema(texto):
         return {"ok": True, "ignorado": "eco do bot"}
 
-    # --- processa e responde ---
-    destino = jid or grupo
+    # --- processa e responde (sempre no grupo configurado) ---
+    destino = grupo
 
     # comando que gera PDF
     arq = None
@@ -147,8 +152,10 @@ def listar_grupos(busca: str = "", db: Session = Depends(get_db)):
         return {"ok": False, "erro": str(e), "grupos": []}
 
 
-@router.post("/grupo", dependencies=[Depends(usuario_atual)])
-def definir_grupo(body: dict, db: Session = Depends(get_db)):
+@router.post("/grupo")
+def definir_grupo(body: dict, me=Depends(usuario_atual), db: Session = Depends(get_db)):
+    from .configuracoes import exigir_admin
+    exigir_admin(db, me)
     jid = (body.get("jid") or "").strip()
     cfg.set_many(db, {"WHATSAPP_GRUPO": jid})
     return {"ok": True, "grupo": jid}
@@ -264,72 +271,6 @@ def job_escutar_grupo():
         db.close()
 
 
-# ── ESCUTA DIRETA (fallback, não substitui o webhook) ──────
-_ESCUTA = {"ultimo_ts": None, "ultima_leitura": None, "erro": None}
-_ESCUTADOS: set = set()
-
-
-def _ts_aware(v):
-    from datetime import datetime, timezone
-    if v is None: return None
-    if isinstance(v, datetime):
-        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-    try:
-        s = str(v).strip()
-        if s.isdigit():
-            n = int(s); return datetime.fromtimestamp(n/1000 if n>1e10 else n, tz=timezone.utc)
-        dt = datetime.fromisoformat(s.replace("Z","+00:00"))
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
-
-def job_escutar_grupo():
-    from ..database import SessionLocal
-    from datetime import datetime, timezone, timedelta
-    db = SessionLocal()
-    try:
-        c = zapapi.config(db)
-        if not (c["ativo"] and c["url"] and c["chave"] and c["grupo"]): return
-        grupo = c["grupo"]
-        if "@g.us" not in grupo: return
-        meu_num = (cfg.get(db, "WHATSAPP_MEU_NUMERO","") or "").replace("+","").replace("-","").replace(" ","")
-        msgs = zapapi.mensagens(grupo, 10, db) or []
-        _ESCUTA["ultima_leitura"] = datetime.now().strftime("%d/%m %H:%M:%S")
-        _ESCUTA["erro"] = None
-        tss = [_ts_aware(x.get("ts")) for x in msgs if _ts_aware(x.get("ts"))]
-        if _ESCUTA["ultimo_ts"] is None:
-            _ESCUTA["ultimo_ts"] = max(tss) if tss else datetime.now(timezone.utc)
-            return
-        limite = datetime.now(timezone.utc) - timedelta(minutes=3)
-        for x in msgs:
-            t = _ts_aware(x.get("ts"))
-            if not t or t <= _ESCUTA["ultimo_ts"]: continue
-            _ESCUTA["ultimo_ts"] = t
-            if t < limite: continue
-            mid = x.get("id") or ""
-            if mid and mid in _ESCUTADOS: continue
-            if mid: _ESCUTADOS.add(mid)
-            if len(_ESCUTADOS) > 500: _ESCUTADOS.clear()
-            de_mim = bool(x.get("de_mim"))
-            autor_raw = (x.get("autor_numero") or "").replace("+","").replace("-","").replace(" ","")
-            if meu_num:
-                eh_meu = de_mim or (autor_raw and autor_raw.endswith(meu_num[-8:]))
-                if not eh_meu: continue
-            texto = (x.get("texto") or "").strip()
-            if not texto: continue
-            if de_mim and zapapi.foi_enviado_pelo_sistema(texto): continue
-            resp = whatsapp.processar_comando(texto, db, remetente=autor_raw or grupo)
-            if resp:
-                zapapi.enviar_texto(resp, grupo, db=db)
-                _log(texto, "respondido (escuta)", autor_raw)
-    except Exception as e:
-        _ESCUTA["erro"] = str(e)
-        import logging; logging.getLogger("tomelin.wa").error("escuta: %s", e)
-    finally:
-        db.close()
-
-
 # ── DEBUG: captura payloads brutos do gateway ───────────────
 from collections import deque as _deque
 _DEBUG_PAYLOADS: _deque = _deque(maxlen=20)
@@ -342,7 +283,7 @@ async def webhook_debug(req: Request, db: Session = Depends(get_db)):
     try:
         body = await req.json()
     except Exception as e:
-        body = {"erro_parse": str(e), "raw": await req.body().decode("utf-8", errors="replace")}
+        body = {"erro_parse": str(e), "raw": (await req.body()).decode("utf-8", errors="replace")[:500]}
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
         "payload": body,
