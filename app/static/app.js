@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.150.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.151.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1255,7 +1255,7 @@ async function viewLancamentos(v, tipoFixo) {
   if (window._filtroInicial) { Object.assign(FILTRO, window._filtroInicial); window._filtroInicial = null; }
   const selCat = v.querySelector('select[onchange^="filtroCat"]'); if (selCat && FILTRO.cat) selCat.value = String(FILTRO.cat);
   window._tipoFixo = tipoFixo;
-  await recarregarTabela();
+  await recarregarTabela({ cache: true });
 }
 
 let _debTimer;
@@ -1267,7 +1267,7 @@ function filtroStatus(s) {
 }
 function filtroCat(c) { FILTRO.cat = c; recarregarTabela(); }
 
-async function recarregarTabela() {
+async function recarregarTabela(opts = {}) {
   const tf = window._tipoFixo;
   let q = "?limite=500";
   if (tf) q += `&tipo=${tf}`;
@@ -1278,101 +1278,102 @@ async function recarregarTabela() {
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
   if (FILTRO.de) q += `&de=${FILTRO.de}`;
   if (FILTRO.ate) q += `&ate=${FILTRO.ate}`;
+  const lista0 = document.getElementById("lanc-lista");
+  const guardado = opts.cache ? _LISTA_CACHE[q] : null;
+  if (lista0 && guardado) _renderLista(guardado);                 // aparece na hora com o que já tinha
+  else if (lista0 && !lista0.children.length) lista0.innerHTML = _esqueletoLista();
   const [itens] = await Promise.all([api("/api/lancamentos" + q), _anxContagem()]);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
+  _LISTA_CACHE[q] = itens;
   setTimeout(() => { const ls = document.getElementById("lanc-lista"); _swipeIniciar(ls); _seguraIniciar(ls); _swipeDica(ls); }, 0);
   _lancBanner(itens, window._tipoFixo);
-
   const lista = document.getElementById("lanc-lista");
   if (!lista) return;
+  const assin = JSON.stringify(itens.map(l => [l.id, l.status, l.valor, l.data_pagamento, l.descricao, l.data_vencimento, l.categoria_id, l.forma_pagamento, l.recorrencia_id]));
+  if (guardado && lista._assin === assin) return;                // nada mudou: não redesenha
+  _renderLista(itens);
+  lista._assin = assin;
+}
 
-  if (!itens.length) {
-    lista.innerHTML = `<div class="empty">${ilus("wallet")}<p>Nenhum lançamento encontrado.</p></div>`;
-    return;
+/* ── Lista no estilo extrato: agrupada por dia, uma linha por lançamento, desenhada aos poucos ── */
+let _LISTA_ATUAL = [], _LISTA_CACHE = {};
+const _esqueletoLista = () => `<div class="lc-esq">${Array.from({ length: 6 }, () => `<div class="lc-esq-linha"><i></i><span><b></b><small></small></span><em></em></div>`).join("")}</div>`;
+function _rotDia(iso) {
+  if (!iso) return "Sem data";
+  const d = diasEntre(iso);
+  if (d === 0) return "Hoje"; if (d === 1) return "Amanhã"; if (d === -1) return "Ontem";
+  const dt = new Date(iso + "T00:00:00");
+  const txt = dt.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).replace(/\./g, "");
+  const t = dt.getFullYear() !== new Date().getFullYear() ? `${txt} de ${dt.getFullYear()}` : txt;
+  return t.charAt(0).toUpperCase() + t.slice(1);            // só a primeira letra: "Ter, 29 de set"
+}
+function _linhaLanc(l) {
+  const rec = l.tipo === "receita", st = l.status || "pendente";
+  const cat = (State.cats || []).find(c => c.id === l.categoria_id);
+  const cor = _corOk(cat?.cor, rec ? "#2F9E7E" : "#7E8C9A");
+  const d = l.data_vencimento ? diasEntre(l.data_vencimento) : null;
+  const stTxt = st === "pago" ? (rec ? "Recebido" : "Pago")
+    : st === "atrasado" ? (d != null ? `Atrasado há ${Math.abs(d)} dia${Math.abs(d) > 1 ? "s" : ""}` : "Atrasado")
+    : d === 0 ? "Vence hoje" : d === 1 ? "Vence amanhã" : rec ? "A receber" : "A pagar";
+  const valor = Number(l.valor_total ?? l.valor ?? 0);
+  return `<div class="lanc-card lc st-${st} ${rec ? "rec" : "desp"}" data-id="${l.id}" style="--cat:${cor}" onclick="_menuLanc(${l.id})">
+    <span class="lc-ic">${icon(cat?.icone || (rec ? "arrowDown" : "arrowUp"))}</span>
+    <div class="lc-meio"><b class="lc-desc">${esc(l.descricao)}</b>
+      <small class="lc-sub"><span class="lc-st">${stTxt}</span>${cat ? `<span class="lc-cat">${esc(cat.nome)}</span>` : ""}${l.conta_nome ? `<span class="lc-cat">${esc(l.conta_nome)}</span>` : ""}${l.recorrencia_id ? `<span class="lc-mini" title="Repete todo mês">${icon("repeat")}</span>` : ""}${_ANX_CONT[l.id] ? `<span class="lc-mini" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${_formaSelo(l)}</small></div>
+    <div class="lc-dir"><span class="lc-val mono-num">${rec ? "+" : "−"} ${money(valor)}</span>
+      ${st !== "pago" ? `<button class="lc-bt" onclick="event.stopPropagation();formBaixaId(${l.id})">${icon("check")}${rec ? "Recebi" : "Paguei"}</button>` : ""}</div>
+  </div>`;
+}
+function _ordenarLista(itens) {
+  // A pagar / A receber: atrasadas e mais próximas primeiro; pagas depois, das mais recentes. Extrato: mais recente primeiro.
+  if (!window._tipoFixo) return itens;
+  const dt = l => String(l.data_vencimento || l.data_competencia || "");
+  const pend = itens.filter(l => !l.data_pagamento).sort((a, b) => dt(a).localeCompare(dt(b)));
+  const pagos = itens.filter(l => l.data_pagamento).sort((a, b) => dt(b).localeCompare(dt(a)));
+  return pend.concat(pagos);
+}
+function _renderLista(itens) {
+  const lista = document.getElementById("lanc-lista"); if (!lista) return;
+  itens = _ordenarLista(itens);
+  _LISTA_ATUAL = itens;
+  if (!itens.length) { lista.innerHTML = `<div class="empty">${ilus("wallet")}<p>Nenhum lançamento encontrado.</p></div>`; return; }
+  const pedacos = []; let ant = null, grupo = null;
+  for (const l of itens) {
+    const dk = String(l.data_vencimento || l.data_competencia || "").slice(0, 10);
+    if (dk !== ant) { grupo = { dk, soma: 0, n: 0 }; pedacos.push({ cab: grupo }); ant = dk; }
+    grupo.soma += (l.tipo === "receita" ? 1 : -1) * Number(l.valor_total ?? l.valor ?? 0); grupo.n++;
+    pedacos.push({ l });
   }
-
-  // cores e estilos por status
-  const STATUS_COR = {
-    pago:     { bg: "#F0FDF4", borda: "#86EFAC", txt: "#15803D", label: "Pago"      },
-    pendente: { bg: "#FEFCE8", borda: "#FDE047", txt: "#854D0E", label: "Pendente"    },
-    atrasado: { bg: "#FEF2F2", borda: "#FCA5A5", txt: "#991B1B", label: "Atrasado" },
-  };
-
-  lista.innerHTML = itens.map(l => {
-    const rec = l.tipo === "receita";
-    const st  = STATUS_COR[l.status] || STATUS_COR.pendente;
-    const catCor = (State.cats.find(c => c.id === l.categoria_id) || {}).cor || "#7E8C9A";
-    const podeBaixar = l.status !== "pago";
-    const d = l.data_vencimento ? diasEntre(l.data_vencimento) : null;
-    const quando = l.status === "atrasado" && d !== null
-      ? `Venceu há ${Math.abs(d)}d`
-      : d === 0 ? "Vence hoje"
-      : d === 1 ? "Vence amanhã"
-      : l.data_vencimento ? dataBR(l.data_vencimento)
-      : "Sem vencimento";
-
-    return `<div class="lanc-card" data-id="${l.id}" style="--cat:${catCor};background:${st.bg};border:1.5px solid ${st.borda};border-radius:16px;padding:14px 16px;
-                cursor:pointer;transition:all .15s;border-left:4px solid ${st.borda.replace('.3)','1)').replace('.35)','1)')}"
-              onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(8,45,81,.12)'"
-              onmouseout="this.style.transform='';this.style.boxShadow=''"
-              onclick="formLancamentoId(${l.id})">
-      <div style="display:flex;align-items:flex-start;gap:12px">
-        <!-- ícone de tipo -->
-        <div style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-             background:${rec ? "linear-gradient(135deg,#DCFCE7,#BBF7D0)" : "linear-gradient(135deg,#FEE2E2,#FECACA)"};
-             margin-top:1px;font-size:22px;font-weight:800;color:${rec?"#15803D":"#991B1B"}">
-          ${rec
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" ><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`}
-        </div>
-        <!-- info principal -->
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-            <div style="font-size:15px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${l.recorrencia_id ? `<span class="anx-ind rep-ind" title="Repete automaticamente">${icon("repeat")}</span>` : ""}${_ANX_CONT[l.id] ? `<span class="anx-ind" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${esc(l.descricao)}</div>
-            <div style="font-family:monospace;font-size:17px;font-weight:900;
-                 color:${rec?"#15803D":"#DC2626"};flex-shrink:0;
-                 background:${rec?"#F0FDF4":"#FEF2F2"};padding:4px 10px;border-radius:10px">
-              ${rec ? "+" : "−"} ${money(l.valor)}
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px">
-            <!-- status badge -->
-            <span style="font-size:11.5px;font-weight:700;color:${st.txt};background:${st.bg};
-                         border:1px solid ${st.borda};border-radius:20px;padding:2px 9px">${st.label}</span>${_formaSelo(l)}
-            <!-- quando -->
-            <span style="font-size:12px;color:${l.status === "atrasado" ? "var(--red)" : "var(--ink-3)"}">${quando}</span>
-            <!-- categoria -->
-            ${l.categoria_nome ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-3)">
-              <span style="width:8px;height:8px;border-radius:50%;background:${catCor};flex-shrink:0"></span>${esc(l.categoria_nome)}
-            </span>` : ""}
-            <!-- conta -->
-            ${l.conta_nome ? `<span style="font-size:12px;color:var(--ink-3)">· ${esc(l.conta_nome)}</span>` : ""}
-          </div>
-        </div>
-      </div>
-      <!-- botões de ação: linha separada -->
-      <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid ${st.borda};flex-wrap:wrap">
-        ${podeBaixar
-          ? `<button class="btn btn-green btn-sm" onclick="event.stopPropagation();formBaixaId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' width='16' height='16'><polyline points='20 6 9 17 4 12'/></svg> Dar baixa</button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();estornar(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><polyline points='9 14 4 9 9 4'/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg> Estornar</button>`}
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();formLancamentoId(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirPDF('/api/lancamentos/${l.id}/recibo.pdf')"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z'/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg> Recibo</button>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reciboWhats(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15' ><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg> WA</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirLanc(${l.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='14' height='14'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg></button>
-      </div>
-    </div>`;
-  }).join("");
+  const html = p => p.cab
+    ? `<div class="lc-dia"><span>${_rotDia(p.cab.dk)}</span><b class="mono-num ${p.cab.soma >= 0 ? "pos" : "neg"}">${p.cab.soma >= 0 ? "+" : "−"} ${money(Math.abs(p.cab.soma))}</b></div>`
+    : _linhaLanc(p.l);
+  const PRIMEIRO = 40;
+  lista.innerHTML = pedacos.slice(0, PRIMEIRO).map(html).join("") + (pedacos.length > PRIMEIRO ? `<div class="lc-mais" id="lc-mais">Carregando mais...</div>` : "");
+  const sent = document.getElementById("lc-mais");
+  if (!sent || !window.IntersectionObserver) { if (sent) sent.outerHTML = pedacos.slice(PRIMEIRO).map(html).join(""); return; }
+  let pos = PRIMEIRO;
+  const io = new IntersectionObserver(ents => {
+    if (!ents.some(e => e.isIntersecting)) return;
+    sent.insertAdjacentHTML("beforebegin", pedacos.slice(pos, pos + 60).map(html).join("")); pos += 60;
+    if (pos >= pedacos.length) { io.disconnect(); sent.remove(); }
+  }, { rootMargin: "700px" });
+  io.observe(sent);
 }
 
 function exportarCSV(tf) {
-  const rows = [...document.querySelectorAll("#tbl tbody tr")].map(tr =>
-    [...tr.querySelectorAll("td")].slice(0, -1).map(td => `"${td.innerText.replace(/\s+/g, ' ').trim()}"`).join(";"));
+  const linhas = (_LISTA_ATUAL || []).map(l => {
+    const cat = (State.cats || []).find(c => c.id === l.categoria_id);
+    const v = Number(l.valor_total ?? l.valor ?? 0).toFixed(2).replace(".", ",");
+    return [l.descricao, cat?.nome || "", ...(tf ? [] : [l.tipo === "receita" ? "Receita" : "Despesa"]),
+            l.data_vencimento ? dataBR(String(l.data_vencimento).slice(0, 10)) : "", l.status || "", v]
+      .map(c => `"${String(c).replace(/"/g, '""')}"`).join(";");
+  });
+  if (!linhas.length) return toast("Nada para exportar com os filtros atuais.", "warn");
   const head = ["Descrição", "Categoria", ...(tf ? [] : ["Tipo"]), "Vencimento", "Situação", "Valor"].join(";");
-  const csv = "\uFEFF" + head + "\n" + rows.join("\n");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.href = URL.createObjectURL(new Blob(["\uFEFF" + head + "\n" + linhas.join("\n")], { type: "text/csv" }));
   a.download = `lancamentos-tomelin-${hojeISO()}.csv`; a.click();
-  toast("CSV exportado", "ok");
+  toast(`CSV exportado com ${linhas.length} lançamento(s)`, "ok");
 }
 
 /* ---------- form lançamento ---------- */
@@ -6270,7 +6271,7 @@ function cartaoVisual(c, opts = {}) {
   const venc = c.proximo_vencimento ? _dm(c.proximo_vencimento) : (c.dia_vencimento ? `dia ${c.dia_vencimento}` : "");
   const uso = c.uso_pct ?? null;
   const verso = opts.semVerso ? "" : `
-      <div class="cc-face cc-verso">
+      <div class="cc-face cc-verso" onclick="event.stopPropagation();_ccVira(this.closest('.cc'))">
         <div class="cc-tarja"></div>
         <div class="cc-dados">
           <div><small>Fatura atual</small><b>${money(c.fatura_atual || 0)}</b><small>${venc ? "vence " + venc : "sem vencimento definido"}</small></div>
@@ -6280,8 +6281,8 @@ function cartaoVisual(c, opts = {}) {
         <div class="cc-uso-rot">${uso != null ? `${uso.toFixed(0)}% do limite em uso` : ""}${c.dia_fechamento ? ` · fecha dia ${c.dia_fechamento}` : ""}${c.parcelas_abertas ? ` · ${c.parcelas_abertas} parcela(s) em aberto` : ""}</div>
       </div>`;
   return `
-  <div class="cc${opts.mini ? " mini" : ""}" style="--cc:${cor}" ${opts.semVerso ? "" : `tabindex="0" role="button" aria-label="Cartão ${esc(c.nome || "")}: toque para ver fatura e limite"
-       onclick="_ccVira(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_ccVira(this)}"`}
+  <div class="cc${opts.mini ? " mini" : ""}" style="--cc:${cor}" ${opts.semVerso ? "" : `tabindex="0" role="button" aria-label="Cartão ${esc(c.nome || "")}: toque para abrir a fatura"
+       onclick="${c.id ? `abrirFatura(${c.id})` : "_ccVira(this)"}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`}
        onpointermove="_ccInclina(event,this)" onpointerleave="_ccSolta(this)">
     <div class="cc-giro">
       <div class="cc-face cc-frente">
@@ -6292,6 +6293,7 @@ function cartaoVisual(c, opts = {}) {
         <div class="cc-base"><div class="cc-nome"><small>Cartão</small><b>${esc(c.nome || "Novo cartão")}</b></div>
           ${_bandImg(c.bandeira) ? `<span class="cc-band img"><img src="${_bandImg(c.bandeira)}" alt="${esc(band)}"></span>` : band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
         <div class="cc-brilho"></div>
+        ${opts.semVerso ? "" : `<button type="button" class="cc-virar" title="Ver limite e fatura no verso" onclick="event.stopPropagation();_ccVira(this.closest('.cc'))">${icon("refresh")}</button>`}
       </div>${verso}
     </div>
   </div>`;
@@ -6311,12 +6313,12 @@ async function _ccFaixa(alvoId, comAcoes) {
   try { cs = await api("/api/contas/cartoes"); } catch { box.innerHTML = ""; return; }
   if (!document.getElementById(alvoId)) return;
   box.innerHTML = `
-    <div class="cc-faixa-cab"><h3>Cartões de crédito</h3><span class="sub">${cs.length ? "Toque no cartão para ver fatura e limite" : "Cadastre seu cartão para acompanhar fatura e limite"}</span></div>
+    <div class="cc-faixa-cab"><h3>Cartões de crédito</h3><span class="sub">${cs.length ? "Toque no cartão para abrir a fatura" : "Cadastre seu cartão para acompanhar fatura e limite"}</span></div>
     <div class="cc-faixa">
       ${cs.map(c => `<div class="cc-item">${cartaoVisual(c)}
         ${comAcoes ? `<div class="cc-acoes">
           <button class="btn btn-ghost btn-sm" onclick="_ccEditar(${c.id})">${icon("edit")}Editar</button>
-          <button class="btn btn-ghost btn-sm" onclick="window._filtroInicial={conta:${c.id}};window._tipoFixo='';setView('lancamentos')">${icon("receipt")}Lançamentos</button>
+          <button class="btn btn-ghost btn-sm" onclick="abrirFatura(${c.id})">${icon("receipt")}Fatura</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="excluirConta(${c.id})">${icon("trash")}</button></div>` : ""}
       </div>`).join("")}
       <button type="button" class="cc-novo" onclick="formConta({tipo:'cartao'})">${icon("plus")}<b>Adicionar cartão</b><small>Bandeira, final, limite e vencimento</small></button>
@@ -6862,6 +6864,7 @@ function _menuLanc(id) {
     { rot: "Comprovante", ic: "clip", c1: "#B35C1E", c2: "#E59A4B", f: `_lancComprovante(${id})` },
     { rot: "Recibo", ic: "doc", c1: "#2F5D50", c2: "#4E9C84", f: `abrirPDF('/api/lancamentos/${id}/recibo.pdf')` },
     { rot: "Compartilhar", ic: "send", c1: "#1E7A4A", c2: "#25B26A", f: `_lancCompartilhar(${id})` },
+    { rot: "Recibo no WhatsApp", ic: "whatsapp", c1: "#2F5D50", c2: "#3FCB7E", f: `reciboWhats(${id})` },
     { rot: "Excluir", ic: "trash", c1: "#8E3326", c2: "#D0624E", f: `excluirLanc(${id})` },
   ];
   document.getElementById("menu-lanc")?.remove();
@@ -7423,7 +7426,105 @@ function _formaSelo(l) {
   return `<span class="forma-selo" title="Pago com ${f[1]}">${img ? `<img src="${img}" alt="${f[1]}">` : `${icon(f[2])}${f[1]}`}</span>`;
 }
 
+
+/* ── Fatura do cartão (abre ao tocar no cartão) ── */
+const _MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const _ST_FATURA = { aberta: ["Aberta", "#2F817A"], fechada: ["Fechada", "#C2742A"], paga: ["Paga", "#1F7A55"], atrasada: ["Atrasada", "#C9573F"], futura: ["Futura", "#5B6876"] };
+let _FAT = null;
+async function abrirFatura(cid, mes) {
+  let f;
+  try { f = await api(`/api/contas/${cid}/fatura${mes ? `?mes=${mes}` : ""}`); } catch (e) { return toast(e.message, "err"); }
+  _FAT = f;
+  const [a, m] = f.mes.split("-").map(Number);
+  const i = f.meses.indexOf(f.mes), ant = f.meses[i - 1], prox = f.meses[i + 1];
+  const st = _ST_FATURA[f.status] || _ST_FATURA.aberta;
+  const cor = _corOk(f.cartao.cor, "#305C74");
+  const grupos = [];
+  for (const it of f.itens) { const k = it.data || ""; if (!grupos.length || grupos.at(-1).k !== k) grupos.push({ k, itens: [] }); grupos.at(-1).itens.push(it); }
+  const linha = it => {
+    const cat = (State.cats || []).find(c => c.id === it.categoria_id);
+    return `<div class="fat-item${it.pago ? " pago" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
+      <span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>
+      <div class="fat-txt"><b>${esc(it.descricao)}</b><small>${it.parcela ? `<span class="fat-parc">Parcela ${it.parcela}</span>` : "À vista"}${cat ? ` · ${esc(cat.nome)}` : ""}${it.local && it.local !== it.descricao ? ` · ${esc(it.local)}` : ""}</small></div>
+      <span class="fat-val mono-num">${money(it.valor)}</span>${it.pago ? `<span class="fat-ok" title="Pago">${icon("check")}</span>` : ""}
+    </div>`;
+  };
+  const contas = Object.values(_CACHE.contas || {}).filter(c => c.tipo !== "cartao");
+  modalRoot().querySelectorAll(".fatura-ov").forEach(e => e.remove());
+  const html = `
+    <div class="modal fatura-modal" style="max-width:620px;--cc:${cor}">
+      <div class="fat-topo" id="fat-topo">
+        <button class="close-btn fat-x" onclick="fecharModal()">${icon("x")}</button>
+        <div class="fat-cab">
+          <div class="fat-mini">${cartaoVisual(f.cartao, { semVerso: true, mini: true })}</div>
+          <div class="fat-resumo">
+            <div class="fat-nav">
+              <button class="fat-seta" ${ant ? `onclick="abrirFatura(${cid},'${ant}')"` : "disabled"} aria-label="Fatura anterior">‹</button>
+              <div class="fat-mes"><small>Fatura de</small><b>${_MESES_LONGOS[m - 1]} ${a}</b></div>
+              <button class="fat-seta" ${prox ? `onclick="abrirFatura(${cid},'${prox}')"` : "disabled"} aria-label="Próxima fatura">›</button>
+            </div>
+            <span class="fat-st" style="--sc:${st[1]}">${st[0]}</span>
+            <div class="fat-total mono-num">${money(f.total)}</div>
+            <div class="fat-datas">vence ${dataBR(f.vencimento)} · fecha ${dataBR(f.fechamento)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="fat-meses">${f.meses.map(mm => { const [aa, mo] = mm.split("-").map(Number);
+        return `<button class="fat-mes-bt${mm === f.mes ? " on" : ""}${mm === f.atual ? " atual" : ""}" onclick="abrirFatura(${cid},'${mm}')">${_MESES_LONGOS[mo - 1].slice(0, 3)}${aa !== new Date().getFullYear() ? `<small>${String(aa).slice(2)}</small>` : ""}</button>`; }).join("")}</div>
+      <div class="modal-b fat-corpo">
+        ${f.itens.length ? grupos.map(g => `<div class="fat-dia">${g.k ? _rotDia(g.k) : "Sem data"}</div>${g.itens.map(linha).join("")}`).join("")
+          : `<div class="empty" style="padding:30px">${ilus("wallet")}<p>Nenhuma compra nesta fatura.</p></div>`}
+      </div>
+      <div class="modal-f fat-pe" id="fat-pe">
+        ${f.status === "paga" ? `<span class="fat-paga">${icon("checkCircle")}Fatura paga</span><span class="grow"></span><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>`
+          : f.em_aberto > 0 && f.status !== "futura"
+            ? `<div class="fat-falta"><small>Em aberto</small><b class="mono-num">${money(f.em_aberto)}</b></div><span class="grow"></span>
+               <button class="btn btn-primary" onclick="_fatPagarForm()">${icon("check")}Pagar fatura</button>`
+            : `<span class="fat-futura">${icon("clock")}Esta fatura ainda não fechou</span><span class="grow"></span><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>`}
+      </div>
+    </div>`;
+  if (modalRoot().querySelector(".fatura-modal")) {
+    const ov = modalRoot().querySelector(".fatura-modal").closest(".overlay");
+    ov.innerHTML = html;                                   // troca o mês sem fechar/abrir de novo
+  } else abrirModal(html, "lg");
+  modalRoot().querySelector(".fatura-modal")?.closest(".overlay")?.classList.add("fatura-ov");
+  _fatGestos(cid, ant, prox);
+  modalRoot().querySelector(".fat-mes-bt.on")?.scrollIntoView({ inline: "center", block: "nearest" });
+  window._fatContas = contas;
+}
+function _fatGestos(cid, ant, prox) {                       // deslizar o dedo no topo troca o mês
+  const t = document.getElementById("fat-topo"); if (!t) return;
+  let x0 = null;
+  t.addEventListener("pointerdown", e => { if (!e.target.closest("button")) x0 = e.clientX; });
+  t.addEventListener("pointerup", e => {
+    if (x0 == null) return; const dx = e.clientX - x0; x0 = null;
+    if (dx < -60 && prox) { vibrar(8); abrirFatura(cid, prox); } else if (dx > 60 && ant) { vibrar(8); abrirFatura(cid, ant); }
+  });
+}
+async function _fatPagarForm() {
+  if (!Object.keys(_CACHE.contas || {}).length) { try { (await api("/api/contas")).forEach(c => _CACHE.contas[c.id] = c); } catch {} }
+  const contas = Object.values(_CACHE.contas).filter(c => c.tipo !== "cartao");
+  const pe = document.getElementById("fat-pe"); if (!pe || !_FAT) return;
+  pe.innerHTML = `<div class="fat-pagar">
+      <label>Pagar com<select id="fat-conta">${contas.map(c => `<option value="${c.id}">${esc(c.nome)} · ${money(c.saldo_atual || 0)}</option>`).join("")}</select></label>
+      <label>Data<input type="date" id="fat-data" value="${hojeISO()}"></label>
+    </div>
+    <span class="grow"></span>
+    <button class="btn btn-ghost" onclick="abrirFatura(${_FAT.cartao.id},'${_FAT.mes}')">Cancelar</button>
+    <button class="btn btn-primary" onclick="_fatPagar()">${icon("check")}Pagar ${money(_FAT.em_aberto)}</button>`;
+}
+async function _fatPagar() {
+  const cid = _FAT.cartao.id, mes = _FAT.mes;
+  try {
+    await api(`/api/contas/${cid}/fatura/pagar`, { method: "POST", body: JSON.stringify({ mes, conta_id: +$("#fat-conta").value, data: $("#fat-data").value || null }) });
+    celebrar("Fatura paga!"); vibrar([20, 40, 30]);
+    await abrirFatura(cid, mes);
+    _ccFaixa("cc-compras", true); _ccFaixa("cc-contas", true); atualizarBadge?.();
+  } catch (e) { toast(e.message, "err"); }
+}
+
 Object.assign(window, {
+  abrirFatura, _fatPagarForm, _fatPagar,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

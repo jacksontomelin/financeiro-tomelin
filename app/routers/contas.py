@@ -62,16 +62,16 @@ def cartoes(db: Session = Depends(get_db)):
     hoje = date.today()
     out = []
     for c in db.query(models.Conta).filter(models.Conta.tipo == "cartao").order_by(models.Conta.nome):
-        abertas = (db.query(models.ParcelaCartao)
-                   .join(models.Parcelamento, models.Parcelamento.id == models.ParcelaCartao.parcelamento_id)
-                   .filter(models.Parcelamento.cartao_id == c.id, models.ParcelaCartao.paga.is_(False))
-                   .order_by(models.ParcelaCartao.data_vencimento).all())
-        em_aberto = sum((Decimal(p.valor) for p in abertas), Decimal(0))
-        if c.dia_vencimento:
-            venc = _proximo_dia(hoje, c.dia_vencimento)
-        else:
-            venc = abertas[0].data_vencimento if abertas else None
-        fatura = sum((Decimal(p.valor) for p in abertas if venc and p.data_vencimento <= venc), Decimal(0))
+        itens = _itens_fatura(db, c)                       # mesma regra da tela da fatura
+        abertos = [x for x in itens if not x["pago"]]
+        em_aberto = Decimal(str(round(sum(x["valor"] for x in abertos), 2)))
+        aberta = _venc_da_fatura(c, hoje).strftime("%Y-%m")
+        pend = sorted({x["mes"] for x in abertos})
+        atual = pend[0] if pend and pend[0] < aberta else aberta
+        a, m = int(atual[:4]), int(atual[5:7])
+        venc = date(a, m, min(c.dia_vencimento or monthrange(a, m)[1], monthrange(a, m)[1]))
+        fatura = Decimal(str(round(sum(x["valor"] for x in abertos if x["mes"] == atual), 2)))
+        abertas = abertos
         limite = Decimal(c.limite) if c.limite is not None else None
         out.append({
             "id": c.id, "nome": c.nome, "banco": c.banco, "cor": c.cor, "logo": c.logo, "ativo": c.ativo,
@@ -85,6 +85,118 @@ def cartoes(db: Session = Depends(get_db)):
             "parcelas_abertas": len(abertas),
         })
     return out
+
+
+def _venc_da_fatura(c, d: date) -> date:
+    """Vencimento da fatura em que cai uma compra feita no dia d (regra do fechamento)."""
+    fech, venc = c.dia_fechamento, c.dia_vencimento
+    if not venc:
+        return date(d.year, d.month, monthrange(d.year, d.month)[1])
+    if not fech:
+        fech = max(1, venc - 7)
+    a, m = d.year, d.month
+    fecha = date(a, m, min(fech, monthrange(a, m)[1]))
+    if d > fecha:                                   # passou do fechamento: próximo ciclo
+        a, m = (a + 1, 1) if m == 12 else (a, m + 1)
+    if venc <= fech:                                # vence no mês seguinte ao fechamento
+        a, m = (a + 1, 1) if m == 12 else (a, m + 1)
+    return date(a, m, min(venc, monthrange(a, m)[1]))
+
+
+def _itens_fatura(db, c):
+    """Todas as parcelas e compras do cartão, cada uma com o mês da fatura (AAAA-MM)."""
+    itens = []
+    parc = (db.query(models.ParcelaCartao, models.Parcelamento, models.Compra, models.Lancamento)
+            .join(models.Parcelamento, models.Parcelamento.id == models.ParcelaCartao.parcelamento_id)
+            .join(models.Compra, models.Compra.id == models.Parcelamento.compra_id)
+            .outerjoin(models.Lancamento, models.Lancamento.id == models.Compra.lancamento_id)
+            .filter(models.Parcelamento.cartao_id == c.id).all())
+    com_parcelas = set()
+    for p, pm, cp, l in parc:
+        if l:
+            com_parcelas.add(l.id)
+        itens.append({"chave": f"p{p.id}", "tipo": "parcela", "id": p.id, "lancamento_id": l.id if l else None,
+                      "descricao": (l.descricao if l else None) or cp.estabelecimento or "Compra parcelada",
+                      "local": cp.estabelecimento, "parcela": f"{p.numero}/{pm.total_parcelas}",
+                      "data": (cp.data_emissao or pm.primeira_parcela_data).isoformat() if (cp.data_emissao or pm.primeira_parcela_data) else None,
+                      "valor": float(p.valor), "pago": bool(p.paga), "mes": p.data_vencimento.strftime("%Y-%m"),
+                      "categoria_id": l.categoria_id if l else None})
+    for l in db.query(models.Lancamento).filter(models.Lancamento.conta_id == c.id, models.Lancamento.tipo == models.TipoMov.despesa).all():
+        if l.id in com_parcelas:
+            continue
+        d = l.data_competencia or l.data_vencimento or date.today()
+        itens.append({"chave": f"l{l.id}", "tipo": "compra", "id": l.id, "lancamento_id": l.id, "descricao": l.descricao, "local": None,
+                      "parcela": None, "data": d.isoformat(), "valor": float(l.valor_total), "pago": bool(l.data_pagamento),
+                      "mes": _venc_da_fatura(c, d).strftime("%Y-%m"), "categoria_id": l.categoria_id})
+    return itens
+
+
+@router.get("/{cid}/fatura")
+def fatura(cid: int, mes: str | None = None, db: Session = Depends(get_db)):
+    c = db.get(models.Conta, cid)
+    if not c or c.tipo != "cartao":
+        raise HTTPException(404, "Cartão não encontrado.")
+    hoje = date.today()
+    todos = _itens_fatura(db, c)
+    aberta = _venc_da_fatura(c, hoje)
+    # a fatura atual é a mais antiga ainda com algo a pagar; se não houver, a do ciclo de hoje
+    pend = sorted({i["mes"] for i in todos if not i["pago"]})
+    atual = pend[0] if pend and pend[0] < aberta.strftime("%Y-%m") else aberta.strftime("%Y-%m")
+    mes = mes or atual
+    a, m = int(mes[:4]), int(mes[5:7])
+    venc = date(a, m, min(c.dia_vencimento or monthrange(a, m)[1], monthrange(a, m)[1]))
+    fech_dia = c.dia_fechamento or max(1, (c.dia_vencimento or 10) - 7)
+    fa, fm = (a, m) if fech_dia < (c.dia_vencimento or 31) else ((a - 1, 12) if m == 1 else (a, m - 1))
+    fecha = date(fa, fm, min(fech_dia, monthrange(fa, fm)[1]))
+    itens = sorted([i for i in todos if i["mes"] == mes], key=lambda i: (i["data"] or "", i["chave"]), reverse=True)
+    total = round(sum(i["valor"] for i in itens), 2)
+    em_aberto = round(sum(i["valor"] for i in itens if not i["pago"]), 2)
+    if itens and not em_aberto:
+        status = "paga"
+    elif mes > aberta.strftime("%Y-%m"):
+        status = "futura"
+    elif hoje > fecha:
+        status = "atrasada" if hoje > venc and em_aberto else "fechada"
+    else:
+        status = "aberta"
+    meses = sorted({i["mes"] for i in todos} | {atual})
+    return {"cartao": {"id": c.id, "nome": c.nome, "banco": c.banco, "cor": c.cor, "logo": c.logo, "bandeira": c.bandeira,
+                       "final_cartao": c.final_cartao, "limite": float(c.limite) if c.limite is not None else None},
+            "mes": mes, "atual": atual, "meses": meses, "vencimento": venc.isoformat(), "fechamento": fecha.isoformat(),
+            "status": status, "total": total, "em_aberto": em_aberto, "itens": itens}
+
+
+class PagarFaturaIn(schemas.BaseModel):
+    mes: str
+    conta_id: int
+    data: date | None = None
+
+
+@router.post("/{cid}/fatura/pagar")
+def pagar_fatura(cid: int, dados: PagarFaturaIn, db: Session = Depends(get_db)):
+    c = db.get(models.Conta, cid)
+    if not c or c.tipo != "cartao":
+        raise HTTPException(404, "Cartão não encontrado.")
+    origem = db.get(models.Conta, dados.conta_id)
+    if not origem or origem.id == c.id or origem.tipo == "cartao":
+        raise ErroCampo("conta_id", "Pagar com: escolha uma conta (não um cartão).")
+    quando = dados.data or date.today()
+    total = Decimal(0)
+    for i in _itens_fatura(db, c):
+        if i["mes"] != dados.mes or i["pago"]:
+            continue
+        if i["tipo"] == "parcela":
+            p = db.get(models.ParcelaCartao, i["id"]); p.paga = True; p.data_pagamento = quando
+        else:
+            l = db.get(models.Lancamento, i["id"]); l.data_pagamento = quando
+        total += Decimal(str(i["valor"]))
+    if not total:
+        raise HTTPException(400, "Esta fatura não tem nada em aberto.")
+    a, m = dados.mes[:4], dados.mes[5:7]
+    db.add(models.Transferencia(data=quando, valor=total, conta_origem_id=origem.id, conta_destino_id=c.id,
+                                descricao=f"Pagamento da fatura {m}/{a} do {c.nome}"))
+    db.commit()
+    return {"ok": True, "pago": float(total)}
 
 
 @router.post("", response_model=schemas.ContaOut)
