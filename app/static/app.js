@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.148.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.149.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -3721,6 +3721,7 @@ async function viewConfiguracoes(v) {
       </div>`;
   }
 
+  setTimeout(_exStatus, 0);
   v.innerHTML = `
     <div class="card card-pad" style="margin-bottom:16px">
       <div class="card-h"><span class="card-ico i-green">${icon("download")}</span>
@@ -3730,6 +3731,30 @@ async function viewConfiguracoes(v) {
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="bk-comp"> Incluir comprovantes (arquivo maior)</label>
       </div>
       <div class="campo-dica" style="margin-top:8px">Senhas não vão no arquivo. Só administradores podem baixar.</div>
+    </div>
+    <div class="card card-pad ex-card" id="ex-card" style="margin-bottom:16px">
+      <div class="ex-topo">
+        <svg viewBox="0 0 120 80" class="ex-fig" aria-hidden="true">
+          <rect x="10" y="30" width="34" height="40" rx="6" fill="#2F817A" class="ex-cx c1"/><rect x="48" y="18" width="34" height="52" rx="6" fill="#C9A94E" class="ex-cx c2"/>
+          <rect x="86" y="38" width="26" height="32" rx="6" fill="#C9573F" class="ex-cx c3"/>
+          <path d="M18 42h18M18 50h12M56 30h18M56 38h12M92 48h14" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+          <circle cx="100" cy="16" r="8" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5" class="ex-moeda"/>
+        </svg>
+        <div class="grow"><h3>Dados de exemplo</h3>
+          <div class="sub">Uma família de teste com 6 meses de histórico: salário, contas, cartões, parcelas, metas, veículos e orçamento. Teste tudo e depois apague.</div></div>
+      </div>
+      <div class="ex-status" id="ex-status">Verificando...</div>
+      <div class="ex-bts">
+        <button class="btn btn-primary" id="ex-carregar" onclick="exemplosCarregar()">${icon("plus")}Carregar exemplos</button>
+        <button class="btn btn-ghost" id="ex-apagar" style="color:var(--red);display:none" onclick="exemplosApagar()">${icon("trash")}Apagar exemplos</button>
+      </div>
+      <div class="ex-perigo">
+        <div><b>Começar de verdade</b><small>Apaga todos os lançamentos, contas, cartões, compras, metas, veículos e contatos (inclusive os exemplos antigos). Mantém usuários, categorias e configurações.</small></div>
+        <div class="ex-bts">
+          <button class="btn btn-ghost btn-sm" onclick="baixarBackup()">${icon("download")}Baixar backup antes</button>
+          <button class="btn btn-sm ex-zerar" onclick="exemplosZerar()">${icon("alert")}Zerar o sistema</button>
+        </div>
+      </div>
     </div>
     <div class="toolbar">
       <h2 style="margin:0;color:var(--navy)">Configurações do sistema</h2>
@@ -6731,6 +6756,7 @@ function confirmar(o = {}) {
                 <span class="dlg-ck">${icon("check")}</span><span class="dlg-rot">${esc(it.rot)}</span>${it.valor ? `<b class="mono-num">${esc(it.valor)}</b>` : ""}</label>`).join("")}</div>
             <div class="dlg-todos"><button type="button" data-todos="1">Marcar todas</button><button type="button" data-todos="0">Nenhuma</button></div>` : ""}
           ${o.campo != null ? `<input class="dlg-campo" readonly value="${esc(o.campo)}" aria-label="Texto para copiar">` : ""}
+          ${o.digitar ? `<label class="dlg-digitar">Para confirmar, digite <b>${esc(o.digitar)}</b><input class="dlg-campo" autocomplete="off" autocapitalize="characters" aria-label="Digite ${esc(o.digitar)} para confirmar"></label>` : ""}
           ${o.detalhe ? `<div class="dlg-det">${icon(tipo === "perigo" ? "alert" : "shield")}<span>${esc(o.detalhe)}</span></div>` : ""}
           <div class="dlg-bts">
             <button type="button" class="btn btn-ghost dlg-nao">${esc(o.cancelar || "Cancelar")}</button>
@@ -6741,6 +6767,8 @@ function confirmar(o = {}) {
     document.body.appendChild(el);
     const sim = el.querySelector(".dlg-sim"), nao = el.querySelector(".dlg-nao");
     const marcados = () => [...el.querySelectorAll(".dlg-item input:checked")].map(c => Number(c.dataset.i));
+    const dig = o.digitar ? el.querySelector(".dlg-digitar input") : null;
+    if (dig) { sim.disabled = true; dig.oninput = () => { sim.disabled = dig.value.trim().toUpperCase() !== String(o.digitar).toUpperCase(); }; }
     const rotulo = () => { if (!itens) return; const n = marcados().length; sim.disabled = !n;
       sim.textContent = n ? (o.okItens ? o.okItens(n) : `${o.ok || "Confirmar"} (${n})`) : "Nada marcado"; };
     const fim = valor => {
@@ -6755,7 +6783,8 @@ function confirmar(o = {}) {
         if (a === nao || a === sim || a?.type === "checkbox") return;    // o próprio botão/caixa decide
         e.preventDefault();
         // perigo (excluir): Enter só confirma com o foco no botão de confirmar; senão volta ao Cancelar
-        if (tipo === "perigo") nao.focus();
+        if (tipo === "perigo" && !(dig && !sim.disabled && document.activeElement === dig)) nao.focus();
+        else if (dig && !sim.disabled) sim.click();
         else if (!sim.disabled) sim.click();
       }
       else if (e.key === "Tab") {                              // o foco não sai da janela
@@ -6778,7 +6807,7 @@ function confirmar(o = {}) {
     rotulo();
     requestAnimationFrame(() => {
       const campo = el.querySelector(".dlg-campo");
-      if (campo) { campo.focus(); campo.select(); } else (tipo === "perigo" ? nao : sim).focus();
+      if (dig) dig.focus(); else if (campo) { campo.focus(); campo.select(); } else (tipo === "perigo" ? nao : sim).focus();
     });
   });
 }
@@ -7179,7 +7208,53 @@ function _baixaFeita(id) {
   }, linhas.size ? 780 : 0);
 }
 
+
+/* ── Dados de exemplo (Configurações) ── */
+async function _exStatus() {
+  const box = document.getElementById("ex-status"); if (!box) return;
+  try {
+    const st = await api("/api/exemplos");
+    box.innerHTML = st.exemplos
+      ? `<span class="ex-ponto on"></span><b>${st.exemplos}</b> registros de exemplo carregados. Use à vontade e apague quando terminar.`
+      : `<span class="ex-ponto"></span>Nenhum exemplo carregado. O sistema tem ${st.lancamentos} lançamento(s).`;
+    document.getElementById("ex-carregar").style.display = st.exemplos ? "none" : "";
+    document.getElementById("ex-apagar").style.display = st.exemplos ? "" : "none";
+  } catch (e) { box.textContent = e.message; }
+}
+async function exemplosCarregar() {
+  if (!(await confirmar({ tipo: "info", figura: "moedas", titulo: "Carregar dados de exemplo?", ok: "Carregar",
+    texto: "Cria uma família de teste com 6 meses de histórico e os próximos 2 meses: salário, aluguel, escola, mercado, contas atrasadas, 2 cartões com parcelas, metas, veículos e limites de orçamento.",
+    detalhe: "Tudo fica marcado como exemplo e sai inteiro com Apagar exemplos. O que você já lançou não muda." }))) return;
+  const bt = document.getElementById("ex-carregar"); if (bt) { bt.disabled = true; bt.innerHTML = `${icon("refresh")}Criando...`; }
+  try {
+    const r = await api("/api/exemplos", { method: "POST" });
+    celebrar("Exemplos prontos!");
+    const c = r.criados || {};
+    toast(`Criados ${(c.lancamentos || 0) + (c.lancamentos_futuros || 0)} lançamentos, ${c.contas || 0} contas e cartões, ${c.metas || 0} metas e ${c.veiculos || 0} veículos`, "ok");
+    setTimeout(() => setView("dashboard"), 1200);
+  } catch (e) { toast(e.message, "err"); _exStatus(); if (bt) { bt.disabled = false; bt.innerHTML = `${icon("plus")}Carregar exemplos`; } }
+}
+async function exemplosApagar() {
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", titulo: "Apagar os dados de exemplo?", ok: "Apagar exemplos",
+    texto: "Remove só o que o botão Carregar exemplos criou. O que você lançou de verdade continua.",
+    detalhe: "Os limites de orçamento voltam a ser como eram antes." }))) return;
+  try { const r = await api("/api/exemplos", { method: "DELETE" }); toast(`${r.apagados} registros de exemplo apagados`, "ok"); _exStatus(); atualizarBadge?.(); }
+  catch (e) { toast(e.message, "err"); }
+}
+async function exemplosZerar() {
+  if (!(await confirmar({ tipo: "perigo", figura: "alerta", titulo: "Zerar o sistema?", ok: "Zerar tudo",
+    texto: "Apaga todos os lançamentos, contas, cartões, compras, parcelas, metas, veículos, contatos e repetições. Ficam os usuários, as categorias e as configurações.",
+    detalhe: "Não dá para desfazer. Se ainda não baixou o backup, cancele e baixe antes.", digitar: "ZERAR" }))) return;
+  try {
+    const r = await api("/api/exemplos/zerar", { method: "POST", body: JSON.stringify({ confirmacao: "ZERAR" }) });
+    const n = Object.values(r.apagados || {}).reduce((a, b) => a + b, 0);
+    toast(`Sistema zerado: ${n} registros apagados. Cadastre suas contas para começar.`, "ok");
+    atualizarBadge?.(); setView("contas");
+  } catch (e) { toast(e.message, "err"); }
+}
+
 Object.assign(window, {
+  exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,
   _mascoteToque, _calDia, _catPrev,
   vibrar, _menuLanc, _folhaFechar, _lancDuplicar, _lancRepetir, _lancComprovante, _lancCompartilhar, _periodo,

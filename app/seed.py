@@ -64,6 +64,16 @@ def seed():
                 db.add(models.Categoria(nome=nome, tipo=tipo, cor=cor, icone=ico))
             log.info("Categorias padrão criadas")
 
+        # contas, contatos, veículos e lançamentos de exemplo: só na primeira instalação.
+        # Antes, apagar tudo e reiniciar trazia os exemplos de volta.
+        ja = db.get(models.Configuracao, "_semente_feita")
+        if not ja and (db.query(models.Lancamento).count() or db.query(models.Conta).count()):
+            db.add(models.Configuracao(chave="_semente_feita", valor="1", descricao="interno")); db.commit(); ja = True
+        if ja:
+            db.commit()
+            return
+        db.add(models.Configuracao(chave="_semente_feita", valor="1", descricao="interno"))
+
         if db.query(models.Conta).count() == 0:
             db.add_all([
                 models.Conta(nome="Conta Corrente", tipo="banco", banco="Banco",

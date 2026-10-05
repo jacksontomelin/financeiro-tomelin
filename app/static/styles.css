@@ -3616,3 +3616,28 @@ html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card))
   padding-top: 0 !important; padding-bottom: 0 !important; transition: height .4s cubic-bezier(.4,0,.2,1), opacity .25s, transform .35s, margin .4s, padding .4s; }
 /* atualização silenciosa: conteúdo novo aparece já pronto, sem repetir animações de entrada */
 .view-alvo.sem-anim *, .view-alvo.sem-anim::before, .view-alvo.sem-anim::after { animation-duration: 0s !important; animation-delay: 0s !important; }
+
+/* ══ Configurações: dados de exemplo ══ */
+.ex-card { position: relative; overflow: hidden; }
+.ex-card::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 90px; pointer-events: none;
+  background: linear-gradient(120deg, #2F817A1f, #C9A94E1c 50%, #C9573F14); }
+.ex-card > * { position: relative; }
+.ex-topo { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
+.ex-topo h3 { margin: 0 0 2px; }
+.ex-fig { width: 96px; height: 64px; flex-shrink: 0; overflow: visible; }
+.ex-cx { transform-box: fill-box; transform-origin: 50% 100%; animation: exCaixa 2.6s ease-in-out infinite; }
+.ex-cx.c2 { animation-delay: .3s; } .ex-cx.c3 { animation-delay: .6s; }
+@keyframes exCaixa { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.ex-moeda { animation: moedaPula 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.ex-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); padding: 9px 12px; border-radius: 12px; background: var(--bg); margin-bottom: 10px; }
+.ex-ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex-shrink: 0; }
+.ex-ponto.on { background: #3EC28F; box-shadow: 0 0 0 4px #3EC28F33; animation: pisca 2s ease-in-out infinite; }
+.ex-bts { display: flex; gap: 8px; flex-wrap: wrap; }
+.ex-perigo { margin-top: 14px; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed #C9573F66; background: #C9573F0a;
+  display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.ex-perigo > div:first-child { display: flex; flex-direction: column; gap: 2px; flex: 1 1 260px; }
+.ex-perigo b { color: var(--red); font-size: 13.5px; } .ex-perigo small { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.ex-zerar { color: #fff !important; border: none !important; background: linear-gradient(135deg, #A2412F, #D0624E) !important; box-shadow: 0 8px 16px -10px #A2412F; }
+.dlg-digitar { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); text-align: left; }
+.dlg-digitar b { color: var(--red); letter-spacing: .08em; }
+.dlg-digitar input { text-transform: uppercase; letter-spacing: .12em; font-weight: 800; text-align: center; }
