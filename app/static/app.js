@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.146.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.147.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -3487,10 +3487,13 @@ async function viewRelatorios(v) {
           <button class="btn btn-primary" onclick="aplicarPeriodo()">${icon("filter")}Aplicar</button>
         </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">${icon("download")}Balancete PDF</button>
-        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">${icon("terminal")}Cupom</button>
-        <button class="btn btn-ghost btn-sm" onclick="abrirPDF('/api/relatorios/patrimonio.pdf')">${icon("download")}Patrimônio PDF</button>
+      <div class="pdf-cards">
+        <button class="pdf-card" style="--c1:#061E38;--c2:#2F817A" onclick="vibrar(10);abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}')">
+          <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#2F817A"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><rect class="pdf-b" x="8" y="34" width="5" height="12" rx="1" fill="#2F9E7E"/><rect class="pdf-b b2" x="16" y="28" width="5" height="18" rx="1" fill="#C9A94E"/><rect class="pdf-b b3" x="24" y="38" width="5" height="8" rx="1" fill="#C9573F"/><path d="M8 20h26M8 24h18" stroke="#C9D3DC" stroke-width="2" stroke-linecap="round"/></svg><span><b>Balancete</b><small>Receitas, despesas e gráficos do período</small></span>${icon("download")}</button>
+        <button class="pdf-card" style="--c1:#7A5E16;--c2:#D4B25A" onclick="vibrar(10);abrirPDF('/api/relatorios/patrimonio.pdf')">
+          <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#C9A94E"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><circle cx="21" cy="36" r="9" fill="none" stroke="#E6ECF1" stroke-width="5"/><circle class="pdf-anel" cx="21" cy="36" r="9" fill="none" stroke="#C9A94E" stroke-width="5" stroke-dasharray="40 57" transform="rotate(-90 21 36)"/><path d="M8 20h26" stroke="#C9D3DC" stroke-width="2" stroke-linecap="round"/></svg><span><b>Patrimônio</b><small>Contas, veículos e financiamentos</small></span>${icon("download")}</button>
+        <button class="pdf-card" style="--c1:#3A4654;--c2:#7E8C9A" onclick="vibrar(10);abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">
+          <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#5B6876"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><path d="M8 20h26M8 25h22M8 30h26M8 35h16M8 40h26" stroke="#9AA7B4" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 2"/></svg><span><b>Cupom</b><small>Para impressora térmica (preto e branco)</small></span>${icon("download")}</button>
       </div>
     </div>
 

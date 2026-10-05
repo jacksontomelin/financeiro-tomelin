@@ -3585,3 +3585,23 @@ html.dark .topbar .btn-tema { background: linear-gradient(135deg, #C2742A, #F4C2
 .cal-item-bt:hover { transform: translateY(-1px); } .cal-item-bt:active { transform: scale(.94); }
 html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card)); }
 @media (max-width: 640px) { .cal-item .btn { margin-left: 0; } .cal-item { flex-wrap: nowrap; } }
+
+/* ══ Relatórios: cartões para gerar os PDFs ══ */
+.pdf-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.pdf-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: none; border-radius: 16px; cursor: pointer;
+  text-align: left; color: #fff; font: inherit;
+  background: radial-gradient(90% 120% at 100% 0%, rgba(255,255,255,.25), transparent 60%), linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: 0 12px 22px -14px var(--c1); transition: transform .25s var(--mola), box-shadow .25s; }
+.pdf-card:hover { transform: translateY(-3px); box-shadow: 0 16px 26px -14px var(--c1); }
+.pdf-card:active { transform: scale(.96); }
+.pdf-card > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pdf-card b { font-size: 14px; } .pdf-card small { font-size: 11.5px; opacity: .85; line-height: 1.3; }
+.pdf-card > svg:last-child { width: 20px; height: 20px; flex-shrink: 0; opacity: .9; transition: transform .3s var(--mola); }
+.pdf-card:hover > svg:last-child { transform: translateY(3px); }
+.pdf-doc { width: 38px; height: 46px; flex-shrink: 0; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); transition: transform .3s var(--mola); }
+.pdf-card:hover .pdf-doc { transform: rotate(-8deg) scale(1.06); }
+.pdf-b { transform-box: fill-box; transform-origin: 50% 100%; animation: tcBarra 2.4s ease-in-out infinite; }
+.pdf-b.b2 { animation-delay: .25s; } .pdf-b.b3 { animation-delay: .5s; }
+.pdf-anel { animation: pdfAnel 3s ease-in-out infinite; }
+@keyframes pdfAnel { 50% { stroke-dasharray: 22 57; } }
+@media (max-width: 900px) { .pdf-cards { grid-template-columns: 1fr; } }
