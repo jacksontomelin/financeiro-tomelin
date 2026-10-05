@@ -205,6 +205,8 @@ def _pagina(titulo, subtitulo, tema="azul"):
         cv.setFillColor(STEEL); cv.setFont("Helvetica", 7.5)
         cv.drawString(18 * mm, 9.5 * mm, settings.EMPRESA_NOME)
         cv.drawRightString(W - 18 * mm, 9.5 * mm, f"Página {doc.page}")
+        cv.setFillColor(HexColor("#9AA8B6")); cv.setFont("Helvetica", 6.5)
+        cv.drawCentredString(W / 2, 5.5 * mm, "Sistema criado pela UniController · Dev Jackson Tomelin")
         cv.restoreState()
     return desenha
 

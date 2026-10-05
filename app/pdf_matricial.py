@@ -200,6 +200,8 @@ def _rodape_bobina(mono, bold, center, tiny, auth):
     els.append(Paragraph(_linha_pontilhada("-"), mono))
     els.append(Paragraph(_centralizar("DOCUMENTO GERADO POR"), tiny))
     els.append(Paragraph(_centralizar("TOMELIN GESTAO FINANCEIRA"), tiny))
+    els.append(Paragraph(_centralizar("CRIADO PELA UNICONTROLLER"), tiny))
+    els.append(Paragraph(_centralizar("DEV JACKSON TOMELIN"), tiny))
     els.append(Spacer(1, 6))
     qr = _qr_mini(auth, size=18*mm)
     qr_t = Table([[qr]], colWidths=[LARGURA_BOBINA - 2*MARGEM])
