@@ -3494,3 +3494,63 @@ html, body { overscroll-behavior-y: contain; }
   .orc-item .orc-meio { flex: 1 1 calc(100% - 60px); min-width: 0; }
   .orc-item .orc-chip { flex: 0 0 calc(100% - 48px); margin-left: 48px; }
 }
+
+/* ══════════════════════════════════════════════════════
+   COMPUTADOR: menu lateral e topo coloridos
+   ══════════════════════════════════════════════════════ */
+.nav-item[data-id="dashboard"]     { --c1: #1F6F5C; --c2: #3EC28F; }
+.nav-item[data-id="vencimentos"]   { --c1: #C2742A; --c2: #E9B84E; }
+.nav-item[data-id="relatorios"]    { --c1: #3F3D9E; --c2: #8C8AF0; }
+.nav-item[data-id="orcamento"]     { --c1: #8A6D1E; --c2: #E2C46E; }
+.nav-item[data-id="receber"]       { --c1: #1F7A55; --c2: #4FD39A; }
+.nav-item[data-id="pagar"]         { --c1: #A2412F; --c2: #F08A6E; }
+.nav-item[data-id="lancamentos"]   { --c1: #5B3FA0; --c2: #A68AF0; }
+.nav-item[data-id="compras"]       { --c1: #7F3F98; --c2: #D07BE8; }
+.nav-item[data-id="metas"]         { --c1: #A0285F; --c2: #F06AA8; }
+.nav-item[data-id="veiculos"]      { --c1: #24507A; --c2: #62A0E0; }
+.nav-item[data-id="contas"]        { --c1: #1C6E8C; --c2: #4FC3EA; }
+.nav-item[data-id="categorias"]    { --c1: #B35C1E; --c2: #F4A85A; }
+.nav-item[data-id="contatos"]      { --c1: #2F5D50; --c2: #5CC0A0; }
+.nav-item[data-id="usuarios"]      { --c1: #B4503E; --c2: #F59A8C; }
+.nav-item[data-id="configuracoes"] { --c1: #4A5A6A; --c2: #A8B8C8; }
+.nav-item[data-id="whatsapp"]      { --c1: #1E7A4A; --c2: #3FCB7E; }
+
+/* menu lateral: fundo com brilhos de cor */
+.sidebar::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(300px 240px at 0% 0%, rgba(62,194,143,.20), transparent 70%),
+              radial-gradient(280px 300px at 100% 55%, rgba(155,123,232,.14), transparent 70%),
+              radial-gradient(260px 260px at 0% 100%, rgba(233,184,78,.16), transparent 70%); }
+.sidebar > * { position: relative; z-index: 1; }
+.sb-sec { display: flex; align-items: center; gap: 7px; color: #8FB4CF; }
+.sb-sec::before { content: ""; width: 14px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #3EC28F, #E9B84E); }
+/* itens: ícone em pílula da própria cor */
+.sidebar .nav-item { padding: 5px 10px; gap: 10px; border-left: 3px solid transparent !important; transition: background .2s, color .2s, transform .2s var(--mola); }
+.sidebar .nav-item svg { box-sizing: border-box; width: 30px !important; height: 30px !important; padding: 6px; border-radius: 10px; stroke-width: 2;
+  color: var(--c2, #8FB4CF); background: color-mix(in srgb, var(--c2, #8FB4CF) 16%, transparent);
+  transition: background .25s, color .25s, transform .3s var(--mola), box-shadow .25s; }
+.sidebar .nav-item:hover { background: rgba(255,255,255,.06) !important; transform: translateX(3px); }
+.sidebar .nav-item:hover svg { color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); transform: rotate(-6deg) scale(1.06); }
+.sidebar .nav-item.on { color: #fff; font-weight: 700; border-left-color: var(--c2) !important;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c2) 30%, transparent), color-mix(in srgb, var(--c2) 4%, transparent)) !important; }
+.sidebar .nav-item.on svg { color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 6px 14px -6px var(--c2); }
+.sidebar .nav-item.on::before { display: none; }
+.sidebar .nav-badge { background: linear-gradient(135deg, #C9573F, #F07A5F); box-shadow: 0 4px 10px -3px rgba(201,87,63,.7); animation: tcBate 1.8s ease-in-out infinite; }
+@media (min-width: 821px) and (max-width: 1280px) { .sidebar .nav-item { padding: 6px; justify-content: center; } .sidebar .nav-item:hover { transform: none; } }
+
+/* topo: linha com as cores da marca e botões coloridos */
+@media (min-width: 821px) {
+  .topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, #3EC28F, #E9B84E, #F08A6E, #A68AF0, #4FC3EA); background-size: 200% 100%; animation: faixaCorre 12s linear infinite; opacity: .85; }
+}
+.topbar .btn-icon { border: none; transition: transform .25s var(--mola), box-shadow .2s, filter .2s; }
+.topbar .btn-icon:hover { transform: translateY(-2px) rotate(-6deg); filter: brightness(1.08); }
+.topbar .btn-icon:active { transform: scale(.9); }
+.topbar .tb-tour { color: #fff; background: linear-gradient(135deg, #8A6D1E, #E2C46E); box-shadow: 0 6px 14px -6px #C9A94E; }
+.topbar .btn-tema { color: #fff; background: linear-gradient(135deg, #3F3D9E, #8C8AF0); box-shadow: 0 6px 14px -6px #5B5AD0; }
+html.dark .topbar .btn-tema { background: linear-gradient(135deg, #C2742A, #F4C25A); box-shadow: 0 6px 14px -6px #E9B84E; }
+.topbar .tb-atualizar { color: #fff; background: linear-gradient(135deg, #1F6F5C, #3EC28F); box-shadow: 0 6px 14px -6px #2F9E7E; }
+.topbar .tb-atualizar.gira svg { animation: gira .7s cubic-bezier(.4,0,.2,1); }
+.topbar .btn-icon.show-mob { color: #fff; background: linear-gradient(135deg, #1C6E8C, #4FC3EA); }
+/* busca do topo com borda em gradiente ao digitar */
+.busca-input:focus { border-color: transparent !important; outline: none;
+  background: linear-gradient(var(--card), var(--card)) padding-box, var(--grad-marca) border-box !important; box-shadow: 0 4px 16px rgba(47,129,122,.16); }

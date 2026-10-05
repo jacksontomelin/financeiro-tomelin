@@ -60,6 +60,7 @@ function diasEntre(iso) {
 
 /* ---------- ícones SVG (sem emoji) ---------- */
 const P = {
+  compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
   repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   clip: '<path d="M21.4 11.1l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/>',
@@ -602,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.144.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.145.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -639,9 +640,9 @@ function renderApp() {
           <div id="tb-title" style="font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px"></div>
         </div>
         <div class="grow"></div>
-        <button class="btn-icon hide-mob" title="Tour do sistema" onclick="iniciarTour()" style="background:linear-gradient(135deg,#C9A94E,#B8963B);border:none;color:#fff">${icon("alert")}</button>
+        <button class="btn-icon hide-mob tb-tour" title="Tour do sistema" onclick="iniciarTour()">${icon("compass")}</button>
         <button class="btn-icon btn-tema" title="Tema claro/escuro" onclick="_temaComTransicao(event)">${icon(temaAtual() === "dark" ? "sun" : "moon")}</button>
-        <button class="btn-icon" title="Atualizar" onclick="setView(State.view)">${icon("refresh")}</button>
+        <button class="btn-icon tb-atualizar" title="Atualizar" onclick="this.classList.remove('gira');void this.offsetWidth;this.classList.add('gira');setView(State.view)">${icon("refresh")}</button>
       </header>
       <main class="content" id="view"></main>
     </div>
