@@ -12,6 +12,7 @@ from decimal import Decimal
 from . import cfg, models, service
 
 log = logging.getLogger("tomelin.orcamento")
+_TRAVA = threading.Lock()   # um aviso por vez: dois lançamentos juntos não avisam duas vezes
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
          "setembro", "outubro", "novembro", "dezembro"]
 
@@ -22,6 +23,11 @@ def _brl(v) -> str:
 
 def verificar(db, categoria_id: int | None, competencia: date | None = None, enviar: bool = True) -> str | None:
     """Devolve o texto do aviso quando um nível novo foi atingido (e manda, se enviar=True)."""
+    with _TRAVA:
+        return _verificar(db, categoria_id, competencia, enviar)
+
+
+def _verificar(db, categoria_id, competencia, enviar):
     if not categoria_id or not cfg.get_bool(db, "ORCAMENTO_AVISO", True):
         return None
     c = db.get(models.Categoria, categoria_id)

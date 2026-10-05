@@ -3,6 +3,7 @@ from datetime import date
 
 def test_avisa_80_e_100_uma_vez_cada(api, db, monkeypatch):
     from app import orcamento_aviso, whatsapp
+    monkeypatch.setattr(orcamento_aviso, "em_segundo_plano", lambda *a, **k: None)   # confere aqui, na mão
     enviados = []
     monkeypatch.setattr(whatsapp, "enviar", lambda texto, *a, **k: enviados.append(texto) or True)
     c = api.post("/api/categorias", json={"nome": "Lazer Aviso", "tipo": "despesa"}).json()
@@ -23,6 +24,7 @@ def test_avisa_80_e_100_uma_vez_cada(api, db, monkeypatch):
 
 def test_whatsapp_desligado_nao_marca(api, db, monkeypatch):
     from app import orcamento_aviso, whatsapp
+    monkeypatch.setattr(orcamento_aviso, "em_segundo_plano", lambda *a, **k: None)
     monkeypatch.setattr(whatsapp, "enviar", lambda *a, **k: False)
     c = api.post("/api/categorias", json={"nome": "Roupas Aviso", "tipo": "despesa"}).json()
     api.put(f"/api/orcamento/{c['id']}", json={"limite": 100})
@@ -37,3 +39,10 @@ def test_comando_despesa_no_whatsapp_traz_o_aviso(api, db):
     api.put(f"/api/orcamento/{c['id']}", json={"limite": 100})
     r = whatsapp.processar_comando("despesa 120 pizzaria", db)
     assert "Despesa lançada" in r and "estourado" in r
+
+
+def test_marcacao_interna_aguenta_gravar_duas_vezes(db):
+    from app import cfg
+    cfg.set_interno(db, "_teste_upsert", "1")
+    cfg.set_interno(db, "_teste_upsert", "2")
+    assert cfg.get(db, "_teste_upsert") == "2"

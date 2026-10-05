@@ -111,11 +111,15 @@ def set_many(db: Session, dados: dict):
 def set_interno(db: Session, chave: str, valor: str, descricao: str = "interno"):
     """Grava uma chave interna (começa com _): não aparece nem é gravável pela tela."""
     assert chave.startswith("_")
-    row = db.get(models.Configuracao, chave)
-    if row:
-        row.valor = valor
-    else:
-        db.add(models.Configuracao(chave=chave, valor=valor, descricao=descricao))
+    if db.bind.dialect.name == "postgresql":     # à prova de duas gravações ao mesmo tempo
+        from sqlalchemy.dialects.postgresql import insert
+        t = models.Configuracao.__table__
+        db.execute(insert(t).values(chave=chave, valor=valor, descricao=descricao)
+                   .on_conflict_do_update(index_elements=[t.c.chave], set_={"valor": valor}))
+        db.commit()
+        db.expire_all()
+        return
+    db.merge(models.Configuracao(chave=chave, valor=valor, descricao=descricao))
     db.commit()
 
 
