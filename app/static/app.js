@@ -602,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.142.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.143.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -657,7 +657,7 @@ function renderApp() {
     </button>
     <button class="btab-fab" onclick="abrirFabMenu()">
       <div class="btab-fab-inner">${icon("plus")}</div>
-      <span style="color:var(--ink-3)">Novo</span>
+      <span class="btab-fab-rot">Novo</span>
     </button>
     <button class="btab-item" data-tab="lancamentos" onclick="setView('lancamentos')">
       ${icon("wallet")}<span>Extrato</span>

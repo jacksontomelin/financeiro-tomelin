@@ -3406,3 +3406,37 @@ html, body { overscroll-behavior-y: contain; }
 /* celular e tablet: grades de 2 colunas viram 1 (uma regra de tela cheia forçava 2 colunas
    em qualquer largura e espremia Categorias e outros blocos no celular) */
 @media (max-width: 1024px) { .grid-2-igual { grid-template-columns: 1fr !important; } }
+
+/* ══ Barra de baixo do celular: um gradiente por botão ══ */
+.btab-item[data-tab="dashboard"]   { --c1: #1F6F5C; --c2: #3EC28F; }
+.btab-item[data-tab="vencimentos"] { --c1: #C2742A; --c2: #E9B84E; }
+.btab-item[data-tab="lancamentos"] { --c1: #5B3FA0; --c2: #9B7BE8; }
+.btab-item[data-tab="mais"]        { --c1: #1C6E8C; --c2: #45B3DA; }
+@media (max-width: 1024px) {
+  .btab { border-top: none !important; box-shadow: 0 -10px 30px -12px rgba(8,45,81,.28); }
+  .btab::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #3EC28F, #E9B84E, #E07A5F, #9B7BE8, #45B3DA); background-size: 200% 100%; animation: faixaCorre 10s linear infinite; }
+  .btab-item { color: color-mix(in srgb, var(--c1) 75%, #6B7A89) !important; transition: color .2s; }
+  .btab-item svg { box-sizing: border-box; width: 46px !important; height: 30px !important; padding: 5px 12px; border-radius: 14px; stroke-width: 2.2;
+    color: var(--c1); background: color-mix(in srgb, var(--c2) 18%, transparent);
+    transition: background .25s, color .25s, transform .3s var(--mola), box-shadow .25s; }
+  .btab-item:active svg { transform: scale(.88); }
+  .btab-item.on { color: var(--c1) !important; font-weight: 800; }
+  .btab-item.on svg { color: #fff; background: linear-gradient(135deg, var(--c1), var(--c2)); transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 16px -6px var(--c1); animation: tabPulo .5s var(--mola); }
+  .btab-item::before { display: none; }
+  html.dark .btab-item { color: color-mix(in srgb, var(--c2) 80%, #AFC2D6) !important; }
+  html.dark .btab-item svg { color: var(--c2); background: color-mix(in srgb, var(--c2) 16%, transparent); }
+  html.dark .btab-item.on { color: var(--c2) !important; }
+  html.dark .btab-item.on svg { color: #fff; }
+  /* botão + */
+  .btab-fab-inner { background: radial-gradient(120% 100% at 30% 20%, rgba(255,255,255,.3), transparent 55%), linear-gradient(135deg, #082D51, #2F817A 60%, #3EC28F) !important;
+    box-shadow: 0 10px 22px -6px rgba(47,129,122,.75), 0 0 0 3px var(--card), 0 0 0 5px #E9B84E !important; animation: fabBrilho 2.8s ease-in-out infinite; }
+  @keyframes fabBrilho { 50% { box-shadow: 0 12px 26px -4px rgba(47,129,122,.9), 0 0 0 3px var(--card), 0 0 0 6px #F4D27A, 0 0 22px 6px rgba(233,184,78,.35); } }
+  .btab-fab.aberto .btab-fab-inner { animation: none; }
+  .btab-fab-rot { font-weight: 800; background: linear-gradient(90deg, #2F817A, #C9A94E); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  /* contador de vencidas */
+  .btab-badge { background: linear-gradient(135deg, #C9573F, #F07A5F) !important; color: #fff !important; box-shadow: 0 0 0 2px var(--card), 0 4px 8px -2px rgba(201,87,63,.7);
+    animation: tcBate 1.8s ease-in-out infinite; }
+}
+@media (max-width: 1024px) { .btab-fab { background: transparent !important; box-shadow: none !important; } }
