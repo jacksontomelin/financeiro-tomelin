@@ -3605,3 +3605,14 @@ html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card))
 .pdf-anel { animation: pdfAnel 3s ease-in-out infinite; }
 @keyframes pdfAnel { 50% { stroke-dasharray: 22 57; } }
 @media (max-width: 900px) { .pdf-cards { grid-template-columns: 1fr; } }
+
+/* ── baixa: a linha fica verde, recolhe e some ── */
+.baixou { position: relative; background: linear-gradient(90deg, #2F9E7E26, #2F9E7E0d) !important; box-shadow: inset 4px 0 0 #2F9E7E !important; transition: background .2s; }
+.baixou::after { content: "✓"; position: absolute; right: 14px; top: 50%; transform: translateY(-50%) scale(.4); width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; background: linear-gradient(135deg, #1F6F5C, #3EC28F);
+  animation: baixouCheck .3s var(--mola) forwards; z-index: 3; }
+@keyframes baixouCheck { to { transform: translateY(-50%) scale(1); } }
+.saindo-baixa { overflow: hidden; opacity: 0; transform: translateX(40px); margin-top: 0 !important; margin-bottom: 0 !important;
+  padding-top: 0 !important; padding-bottom: 0 !important; transition: height .4s cubic-bezier(.4,0,.2,1), opacity .25s, transform .35s, margin .4s, padding .4s; }
+/* atualização silenciosa: conteúdo novo aparece já pronto, sem repetir animações de entrada */
+.view-alvo.sem-anim *, .view-alvo.sem-anim::before, .view-alvo.sem-anim::after { animation-duration: 0s !important; animation-delay: 0s !important; }

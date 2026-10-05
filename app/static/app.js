@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.147.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.148.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -756,7 +756,8 @@ function abrirMenuMais() {
 // desta terminar de carregar, a resposta atrasada cai num espaço que já saiu da
 // tela e não sobrescreve a tela nova (antes o menu marcava uma e mostrava outra).
 let _SEQ_VIEW = 0;
-async function setView(id) {
+async function setView(id, opts = {}) {
+  const silencioso = !!opts.silencioso && State.view === id;
   if (!_naVolta && State.view && State.view !== id) { _PILHA_TELAS.push(State.view); if (_PILHA_TELAS.length > 30) _PILHA_TELAS.shift(); }
   State.view = id;
   toggleSidebar(false);
@@ -766,8 +767,14 @@ async function setView(id) {
   const vez = ++_SEQ_VIEW;
   const v = document.createElement("div");
   v.className = "view-alvo";
-  v.innerHTML = `<div class="empty" style="padding:80px">${ilusCarregando()}<p>Carregando...</p></div>`;
-  raiz.replaceChildren(v);
+  const rolagem = window.scrollY;
+  if (silencioso) {
+    // monta escondido ANTES do conteúdo atual (os ids novos vêm primeiro) e troca no fim
+    v.classList.add("sem-anim"); v.hidden = true; raiz.prepend(v);
+  } else {
+    v.innerHTML = `<div class="empty" style="padding:80px">${ilusCarregando()}<p>Carregando...</p></div>`;
+    raiz.replaceChildren(v);
+  }
   try {
     if (id === "dashboard") await viewDashboard(v);
     else if (id === "vencimentos") await viewVencimentos(v);
@@ -785,8 +792,12 @@ async function setView(id) {
     else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
     else if (id === "configuracoes") await viewConfiguracoes(v);
-    if (vez === _SEQ_VIEW) _animarNumeros(v);
+    if (vez === _SEQ_VIEW) {
+      if (silencioso) { [...raiz.children].forEach(c => { if (c !== v) c.remove(); }); v.hidden = false; window.scrollTo(0, rolagem); }
+      else _animarNumeros(v);
+    } else if (silencioso) v.remove();
   } catch (e) {
+    if (silencioso) { v.remove(); return; }
     if (vez === _SEQ_VIEW) v.innerHTML = `<div class="empty" style="padding:60px">${ilusAlerta(80)}<p>${esc(e.message)}</p></div>`;
   }
 }
@@ -1739,7 +1750,8 @@ async function confirmarBaixa(id) {
     }) });
     const nAnx = _ANX.fila.length ? await _anxEnviarFila(id) : 0;
     fecharModal(); celebrar(_LANC_CACHE.get(id)?.tipo === "receita" ? "Recebido!" : "Pago!");
-    toast(nAnx ? `Baixa registrada com ${nAnx} comprovante(s)` : "Baixa registrada", "ok"); await recarregarTabela(); atualizarBadge();
+    toast(nAnx ? `Baixa registrada com ${nAnx} comprovante(s)` : "Baixa registrada", "ok");
+    _baixaFeita(id);
   } catch (e) { toast(e.message, "err"); }
 }
 
@@ -7145,6 +7157,26 @@ async function _orcAplicar(cid, valor) {
     toast(r.limite == null ? `Limite de ${r.nome} removido` : `Limite de ${r.nome}: ${money(r.limite)} por mês`, "ok");
     setView("orcamento");
   } catch (e) { toast(e.message, "err"); }
+}
+
+
+/* ── Depois da baixa: a conta some na hora de todo lugar da tela e os números se atualizam sem piscar ── */
+function _baixaFeita(id) {
+  const linhas = new Set();
+  document.querySelectorAll(`[onclick*="formBaixaId(${id})"], .lanc-card[data-id="${id}"]`).forEach(b => {
+    const r = b.closest('.cal-item, .venc-item, .lanc-card, [onclick^="formLancamentoId("]');
+    if (r && !r.closest(".overlay")) linhas.add(r);
+  });
+  linhas.forEach(r => {
+    r.classList.add("baixou");
+    setTimeout(() => { r.style.height = r.offsetHeight + "px"; void r.offsetHeight; r.classList.add("saindo-baixa"); r.style.height = "0px"; }, 320);
+    setTimeout(() => r.remove(), 760);
+  });
+  setTimeout(async () => {
+    atualizarBadge?.();
+    if (document.getElementById("lanc-lista")) await recarregarTabela();
+    else await setView(State.view, { silencioso: true });
+  }, linhas.size ? 780 : 0);
 }
 
 Object.assign(window, {
