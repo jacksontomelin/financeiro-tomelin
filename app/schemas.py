@@ -135,6 +135,7 @@ class BaixaIn(BaseModel):
     conta_id: Optional[int] = None
     juros: Optional[Decimal] = None
     multa: Optional[Decimal] = None
+    forma_pagamento: Optional[str] = None
 
 
 # ---------- Veículo ----------

@@ -23,7 +23,7 @@ def listar(db: Session = Depends(get_db)):
     return saida
 
 
-BANDEIRAS = {"visa": "Visa", "master": "Mastercard", "elo": "Elo", "amex": "American Express",
+BANDEIRAS = {"visa": "Visa", "master": "Mastercard", "maestro": "Maestro", "alelo": "Alelo", "elo": "Elo", "amex": "American Express",
              "hiper": "Hipercard", "diners": "Diners Club", "outra": "Outra"}
 
 

@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.149.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.150.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1338,7 +1338,7 @@ async function recarregarTabela() {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px">
             <!-- status badge -->
             <span style="font-size:11.5px;font-weight:700;color:${st.txt};background:${st.bg};
-                         border:1px solid ${st.borda};border-radius:20px;padding:2px 9px">${st.label}</span>
+                         border:1px solid ${st.borda};border-radius:20px;padding:2px 9px">${st.label}</span>${_formaSelo(l)}
             <!-- quando -->
             <span style="font-size:12px;color:${l.status === "atrasado" ? "var(--red)" : "var(--ink-3)"}">${quando}</span>
             <!-- categoria -->
@@ -1734,6 +1734,7 @@ function formBaixa(l) {
           <div class="campo"><label>Conta</label><select id="b-conta"><option value="">Manter</option>${State.contas.map(c => `<option value="${c.id}" ${l.conta_id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
           <div class="campo"><label>Juros (R$)</label><input id="b-juros" type="number" step="0.01" value="${l.juros && +l.juros ? l.juros : ''}" placeholder="0,00"></div>
           <div class="campo"><label>Multa (R$)</label><input id="b-multa" type="number" step="0.01" value="${l.multa && +l.multa ? l.multa : ''}" placeholder="0,00"></div>
+          ${_formaChips(l.forma_pagamento)}
           ${_anxBloco("Opcional: o comprovante do pagamento fica guardado no lançamento.")}
         </div>
       </div>
@@ -1745,7 +1746,7 @@ function formBaixa(l) {
 async function confirmarBaixa(id) {
   try {
     await api(`/api/lancamentos/${id}/baixa`, { method: "POST", body: JSON.stringify({
-      data_pagamento: $("#b-data").value, conta_id: +$("#b-conta").value || null,
+      data_pagamento: $("#b-data").value, conta_id: +$("#b-conta").value || null, forma_pagamento: $("#b-forma")?.value || null,
       juros: parseFloat($("#b-juros").value || "0"), multa: parseFloat($("#b-multa").value || "0"),
     }) });
     const nAnx = _ANX.fila.length ? await _anxEnviarFila(id) : 0;
@@ -3721,7 +3722,7 @@ async function viewConfiguracoes(v) {
       </div>`;
   }
 
-  setTimeout(_exStatus, 0);
+  setTimeout(() => { _exStatus(); _bandGrade(); }, 0);
   v.innerHTML = `
     <div class="card card-pad" style="margin-bottom:16px">
       <div class="card-h"><span class="card-ico i-green">${icon("download")}</span>
@@ -3732,6 +3733,7 @@ async function viewConfiguracoes(v) {
       </div>
       <div class="campo-dica" style="margin-top:8px">Senhas não vão no arquivo. Só administradores podem baixar.</div>
     </div>
+    ${_bandCard()}
     <div class="card card-pad ex-card" id="ex-card" style="margin-bottom:16px">
       <div class="ex-topo">
         <svg viewBox="0 0 120 80" class="ex-fig" aria-hidden="true">
@@ -4606,6 +4608,7 @@ async function render() {
 
   marcarNav();
   _checarSenhaFabrica();
+  _bandeirasCarregar();
   _historicoIniciar();
   _redeEstado();
   try {
@@ -6252,7 +6255,7 @@ function _temaComTransicao(ev) {
 
 
 /* ── Cartão de crédito desenhado (original: chip, aproximação, selo com o nome da bandeira) ── */
-const CC_BANDEIRAS = { visa: "Visa", master: "Mastercard", elo: "Elo", amex: "American Express", hiper: "Hipercard", diners: "Diners Club", outra: "" };
+const CC_BANDEIRAS = { visa: "Visa", master: "Mastercard", maestro: "Maestro", alelo: "Alelo", elo: "Elo", amex: "American Express", hiper: "Hipercard", diners: "Diners Club", outra: "" };
 const _CC_CHIP = `<svg class="cc-chip" viewBox="0 0 46 36" aria-hidden="true"><defs><linearGradient id="ccOuro" x1="0" y1="0" x2="1" y2="1">
   <stop offset="0" stop-color="#F6E3A1"/><stop offset=".5" stop-color="#D4B25A"/><stop offset="1" stop-color="#A88732"/></linearGradient></defs>
   <rect x="1" y="1" width="44" height="34" rx="7" fill="url(#ccOuro)" stroke="#8C6D24" stroke-opacity=".5"/>
@@ -6287,7 +6290,7 @@ function cartaoVisual(c, opts = {}) {
         <div class="cc-meio">${_CC_CHIP}${_CC_APROX}</div>
         <div class="cc-num">•••• •••• •••• ${esc(fin)}</div>
         <div class="cc-base"><div class="cc-nome"><small>Cartão</small><b>${esc(c.nome || "Novo cartão")}</b></div>
-          ${band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
+          ${_bandImg(c.bandeira) ? `<span class="cc-band img"><img src="${_bandImg(c.bandeira)}" alt="${esc(band)}"></span>` : band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
         <div class="cc-brilho"></div>
       </div>${verso}
     </div>
@@ -7253,7 +7256,175 @@ async function exemplosZerar() {
   } catch (e) { toast(e.message, "err"); }
 }
 
+
+/* ── Imagens das bandeiras e do Pix (enviadas pela família) ── */
+const BAND_LISTA = [["visa", "Visa"], ["master", "Mastercard"], ["maestro", "Maestro"], ["elo", "Elo"], ["alelo", "Alelo"],
+  ["amex", "American Express"], ["hiper", "Hipercard"], ["diners", "Diners Club"], ["pix", "Pix"]];
+const FORMAS_PAG = [["pix", "Pix", "send"], ["dinheiro", "Dinheiro", "cash"], ["debito", "Débito", "wallet"],
+  ["credito", "Crédito", "wallet"], ["boleto", "Boleto", "receipt"], ["transferencia", "Transferência", "transfer"]];
+async function _bandeirasCarregar(forcar) {
+  if (State.bandeiras && !forcar) return State.bandeiras;
+  try { State.bandeiras = await api("/api/bandeiras"); } catch { State.bandeiras = State.bandeiras || {}; }
+  return State.bandeiras;
+}
+const _bandImg = k => (State.bandeiras || {})[k] || null;
+
+function _bandCard() {
+  return `<div class="card card-pad" id="band-card" style="margin-bottom:16px">
+    <div class="card-h"><span class="card-ico i-navy">${icon("wallet")}</span>
+      <div class="grow"><h3>Imagens das bandeiras e do Pix</h3>
+        <div class="sub">Envie a imagem de cada bandeira. Dá para recortar e tirar o fundo aqui mesmo. Aparecem nos cartões e nos pagamentos.</div></div></div>
+    <div class="band-grade" id="band-grade"><div class="sub">Carregando...</div></div>
+    <input type="file" id="band-arq" accept="image/png,image/jpeg,image/webp" hidden onchange="_bandArquivo(this)">
+  </div>`;
+}
+async function _bandGrade() {
+  const g = document.getElementById("band-grade"); if (!g) return;
+  await _bandeirasCarregar(true);
+  g.innerHTML = BAND_LISTA.map(([k, n]) => {
+    const img = _bandImg(k);
+    return `<div class="band-item${img ? " tem" : ""}">
+      <div class="band-prev xadrez">${img ? `<img src="${img}" alt="${esc(n)}">` : `<span>${esc(n)}</span>`}</div>
+      <b>${esc(n)}</b>
+      <div class="band-bts">
+        <button class="btn btn-ghost btn-sm" onclick="_bandEscolher('${k}')">${icon(img ? "edit" : "plus")}${img ? "Trocar" : "Enviar"}</button>
+        ${img ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" title="Remover" onclick="_bandRemover('${k}')">${icon("trash")}</button>` : ""}
+      </div></div>`;
+  }).join("");
+}
+function _bandEscolher(k) { window._bandChave = k; const i = document.getElementById("band-arq"); i.value = ""; i.click(); }
+async function _bandRemover(k) {
+  const n = (BAND_LISTA.find(b => b[0] === k) || [])[1];
+  if (!(await confirmar({ tipo: "perigo", figura: "lixeira", titulo: `Remover a imagem de ${n}?`, ok: "Remover",
+    texto: "No lugar dela volta a aparecer o nome escrito." }))) return;
+  try { await api(`/api/bandeiras/${k}`, { method: "PUT", body: JSON.stringify({ imagem: null }) }); toast("Imagem removida", "ok"); _bandGrade(); }
+  catch (e) { toast(e.message, "err"); }
+}
+function _bandArquivo(inp) {
+  const f = inp.files?.[0]; if (!f) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return toast("Use uma imagem PNG, JPG ou WEBP.", "err");
+  const img = new Image();
+  img.onload = () => _recorteAbrir(img, window._bandChave);
+  img.onerror = () => toast("Não consegui abrir essa imagem.", "err");
+  img.src = URL.createObjectURL(f);
+}
+
+/* ferramenta de recorte: arraste para escolher a área; tira o fundo pela cor dos cantos */
+let _RC = null;
+function _recorteAbrir(img, chave) {
+  const nome = (BAND_LISTA.find(b => b[0] === chave) || [])[1] || chave;
+  _RC = { img, chave, sel: null, fundo: true, tol: 30 };
+  abrirModal(`
+    <div class="modal" style="max-width:720px">
+      <div class="modal-h"><span class="card-ico i-navy">${icon("edit")}</span><h3>Recortar: ${esc(nome)}</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+      <div class="modal-b">
+        <div class="rc-dica">${icon("target")}<span>Arraste sobre a imagem para marcar só a parte de <b>${esc(nome)}</b>. Sem marcar, usa a imagem inteira.</span></div>
+        <div class="rc-area"><canvas id="rc-tela"></canvas></div>
+        <div class="rc-ctrl">
+          <label class="rc-fundo"><input type="checkbox" id="rc-fundo" checked onchange="_RC.fundo=this.checked;_recortePrev()"> Tirar o fundo (deixar transparente)</label>
+          <label class="rc-tol">Sensibilidade <input type="range" id="rc-tol" min="5" max="90" value="30" oninput="_RC.tol=+this.value;_recortePrev()"></label>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="_RC.sel=null;_recorteDesenhar();_recortePrev()">Imagem inteira</button>
+        </div>
+        <div class="rc-res"><span>Resultado</span><div class="xadrez rc-prev-box"><canvas id="rc-prev"></canvas></div><small id="rc-info"></small></div>
+      </div>
+      <div class="modal-f">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="_recorteSalvar()">${icon("check")}Salvar imagem</button>
+      </div>
+    </div>`, "lg");
+  const cv = document.getElementById("rc-tela");
+  const larg = Math.min(660, cv.parentElement.clientWidth || 660);
+  _RC.esc = larg / img.naturalWidth;
+  cv.width = Math.round(img.naturalWidth * _RC.esc); cv.height = Math.round(img.naturalHeight * _RC.esc);
+  let ini = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return [Math.max(0, Math.min(cv.width, (e.clientX - r.left) * cv.width / r.width)), Math.max(0, Math.min(cv.height, (e.clientY - r.top) * cv.height / r.height))]; };
+  cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); ini = pos(e); _RC.sel = null; };
+  cv.onpointermove = e => { if (!ini) return; const p = pos(e);
+    _RC.sel = [Math.min(ini[0], p[0]), Math.min(ini[1], p[1]), Math.abs(p[0] - ini[0]), Math.abs(p[1] - ini[1])]; _recorteDesenhar(); };
+  cv.onpointerup = () => { ini = null; if (_RC.sel && (_RC.sel[2] < 6 || _RC.sel[3] < 6)) _RC.sel = null; _recorteDesenhar(); _recortePrev(); };
+  _recorteDesenhar(); _recortePrev();
+}
+function _recorteDesenhar() {
+  const cv = document.getElementById("rc-tela"); if (!cv) return;
+  const c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); c.drawImage(_RC.img, 0, 0, cv.width, cv.height);
+  if (!_RC.sel) return;
+  const [x, y, w, h] = _RC.sel;
+  c.fillStyle = "rgba(6,22,42,.55)";
+  c.fillRect(0, 0, cv.width, y); c.fillRect(0, y + h, cv.width, cv.height - y - h); c.fillRect(0, y, x, h); c.fillRect(x + w, y, cv.width - x - w, h);
+  c.setLineDash([6, 4]); c.lineWidth = 2; c.strokeStyle = "#E9B84E"; c.strokeRect(x + 1, y + 1, w - 2, h - 2); c.setLineDash([]);
+}
+function _recorteProcessar() {
+  const { img, sel, esc: k } = _RC;
+  const [sx, sy, sw, sh] = sel ? sel.map(v => v / k) : [0, 0, img.naturalWidth, img.naturalHeight];
+  const w = Math.max(1, Math.round(sw)), h = Math.max(1, Math.round(sh));
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const c = cv.getContext("2d"); c.imageSmoothingQuality = "high"; c.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+  const d = c.getImageData(0, 0, w, h), px = d.data;
+  if (_RC.fundo) {
+    const canto = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
+    const cs = [canto(0, 0), canto(w - 1, 0), canto(0, h - 1), canto(w - 1, h - 1)];
+    const bg = [0, 1, 2].map(j => cs.map(q => q[j]).sort((a, b) => a - b)[1] / 2 + cs.map(q => q[j]).sort((a, b) => a - b)[2] / 2);
+    const tol = _RC.tol * 2.2, N = w * h;
+    const dist = p => Math.hypot(px[p * 4] - bg[0], px[p * 4 + 1] - bg[1], px[p * 4 + 2] - bg[2]);
+    // como o balde de tinta: só o fundo LIGADO às bordas some; partes claras de dentro do desenho ficam
+    const fora = new Uint8Array(N), fila = new Int32Array(N); let ini = 0, fim = 0;
+    const tenta = p => { if (!fora[p] && dist(p) < tol) { fora[p] = 1; fila[fim++] = p; } };
+    for (let x = 0; x < w; x++) { tenta(x); tenta((h - 1) * w + x); }
+    for (let y = 0; y < h; y++) { tenta(y * w); tenta(y * w + w - 1); }
+    while (ini < fim) {
+      const p = fila[ini++], x = p % w;
+      if (x > 0) tenta(p - 1); if (x < w - 1) tenta(p + 1); if (p >= w) tenta(p - w); if (p < N - w) tenta(p + w);
+    }
+    for (let p = 0; p < N; p++) {
+      if (fora[p]) { px[p * 4 + 3] = 0; continue; }
+      const x = p % w, vizinho = (x > 0 && fora[p - 1]) || (x < w - 1 && fora[p + 1]) || (p >= w && fora[p - w]) || (p < N - w && fora[p + w]);
+      const dd = dist(p);
+      if (vizinho && dd < tol * 1.6) px[p * 4 + 3] = Math.round(px[p * 4 + 3] * Math.max(0, dd - tol) / (tol * .6));   // borda suave
+    }
+    c.putImageData(d, 0, 0);
+  }
+  // corta as margens vazias
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return cv;
+  const out = document.createElement("canvas"); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+  out.getContext("2d").drawImage(cv, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out;
+}
+function _recortePrev() {
+  const r = _recorteProcessar(), p = document.getElementById("rc-prev"); if (!p) return;
+  const k = Math.min(1, 300 / r.width, 110 / r.height);
+  p.width = Math.max(1, Math.round(r.width * k)); p.height = Math.max(1, Math.round(r.height * k));
+  const c = p.getContext("2d"); c.imageSmoothingQuality = "high"; c.drawImage(r, 0, 0, p.width, p.height);
+  document.getElementById("rc-info").textContent = `${r.width} × ${r.height} pixels${r.width < 120 ? " · imagem pequena: uma foto maior fica mais nítida" : ""}`;
+}
+async function _recorteSalvar() {
+  let r = _recorteProcessar();
+  if (r.width > 800) { const k = 800 / r.width, o = document.createElement("canvas"); o.width = 800; o.height = Math.round(r.height * k);
+    const c = o.getContext("2d"); c.imageSmoothingQuality = "high"; c.drawImage(r, 0, 0, o.width, o.height); r = o; }
+  try {
+    await api(`/api/bandeiras/${_RC.chave}`, { method: "PUT", body: JSON.stringify({ imagem: r.toDataURL("image/png") }) });
+    fecharModal(); toast("Imagem salva", "ok"); vibrar(12); _bandGrade();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+/* forma de pagamento: escolhida ao dar baixa; selo nos lançamentos pagos */
+function _formaChips(atual) {
+  return `<div class="campo full"><label>Forma de pagamento</label><input type="hidden" id="b-forma" value="${esc(atual || "")}">
+    <div class="forma-grade">${FORMAS_PAG.map(([k, n, ic]) => `<button type="button" class="forma-chip${atual === k ? " on" : ""}" data-f="${k}"
+        onclick="document.getElementById('b-forma').value=this.classList.contains('on')?'':'${k}';document.querySelectorAll('.forma-chip').forEach(b=>b.classList.toggle('on',b===this&&document.getElementById('b-forma').value==='${k}'));vibrar(8)">
+        ${_bandImg(k) ? `<img src="${_bandImg(k)}" alt="">` : icon(ic)}<span>${n}</span></button>`).join("")}</div></div>`;
+}
+function _formaSelo(l) {
+  if (!l.data_pagamento || !l.forma_pagamento) return "";
+  const f = FORMAS_PAG.find(x => x[0] === l.forma_pagamento); if (!f) return "";
+  const img = _bandImg(f[0]);
+  return `<span class="forma-selo" title="Pago com ${f[1]}">${img ? `<img src="${img}" alt="${f[1]}">` : `${icon(f[2])}${f[1]}`}</span>`;
+}
+
 Object.assign(window, {
+  _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,
   _mascoteToque, _calDia, _catPrev,

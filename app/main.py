@@ -155,7 +155,7 @@ except Exception:
     VERSION, BUILD, BUILD_DATE = '2.0.0', 'dev', ''
 from .database import Base, engine
 from . import seed, whatsapp
-from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos, importacao, recorrencias, backup, exemplos as exemplos_router
+from .routers import auth, categorias, contas, contatos, lancamentos, dashboard, veiculos, relatorios, configuracoes, usuarios, nfe as nfe_router, compras, metas, transferencias, orcamento, anexos, importacao, recorrencias, backup, exemplos as exemplos_router, bandeiras
 from .routers import whatsapp as whatsapp_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -226,7 +226,7 @@ app.add_middleware(
 
 for r in (auth.router, categorias.router, contas.router, contatos.router,
           lancamentos.router, dashboard.router, veiculos.router,
-          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, importacao.router, recorrencias.router, backup.router, exemplos_router.router, whatsapp_router.router):
+          relatorios.router, configuracoes.router, usuarios.router, nfe_router.router, compras.router, metas.router, transferencias.router, orcamento.router, anexos.router, importacao.router, recorrencias.router, backup.router, exemplos_router.router, bandeiras.router, whatsapp_router.router):
     app.include_router(r)
 
 

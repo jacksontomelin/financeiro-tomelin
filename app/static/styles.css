@@ -3641,3 +3641,45 @@ html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card))
 .dlg-digitar { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); text-align: left; }
 .dlg-digitar b { color: var(--red); letter-spacing: .08em; }
 .dlg-digitar input { text-transform: uppercase; letter-spacing: .12em; font-weight: 800; text-align: center; }
+
+/* ══ Bandeiras: imagens enviadas, recorte e forma de pagamento ══ */
+.xadrez { background-color: #fff; background-image: linear-gradient(45deg, #E6EAEE 25%, transparent 25%), linear-gradient(-45deg, #E6EAEE 25%, transparent 25%),
+  linear-gradient(45deg, transparent 75%, #E6EAEE 75%), linear-gradient(-45deg, transparent 75%, #E6EAEE 75%);
+  background-size: 14px 14px; background-position: 0 0, 0 7px, 7px -7px, -7px 0; }
+.band-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.band-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; border-radius: 14px; border: 1.5px dashed var(--line); text-align: center; }
+.band-item.tem { border-style: solid; }
+.band-item b { font-size: 12.5px; color: var(--ink); }
+.band-prev { width: 100%; height: 64px; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.band-prev img { max-width: 88%; max-height: 52px; object-fit: contain; }
+.band-prev span { font-size: 12px; color: var(--ink-3); background: rgba(255,255,255,.85); padding: 2px 8px; border-radius: 8px; }
+.band-bts { display: flex; gap: 4px; }
+/* recorte */
+.rc-dica { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); padding: 8px 12px; border-radius: 12px; background: #2F817A12; margin-bottom: 10px; }
+.rc-dica svg { width: 18px; height: 18px; color: var(--teal); flex-shrink: 0; }
+.rc-area { display: flex; justify-content: center; background: #0B2540; border-radius: 14px; padding: 10px; }
+.rc-area canvas { max-width: 100%; height: auto; cursor: crosshair; touch-action: none; border-radius: 6px; }
+.rc-ctrl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 12px 0; font-size: 13px; color: var(--ink-2); }
+.rc-fundo, .rc-tol { display: flex; align-items: center; gap: 8px; }
+.rc-tol input { width: 140px; accent-color: var(--teal); }
+.rc-res { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rc-res > span { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.rc-prev-box { padding: 10px; border-radius: 12px; border: 1px solid var(--line); display: flex; }
+.rc-res small { font-size: 11.5px; color: var(--ink-3); }
+/* no cartão desenhado */
+.cc-band.img { background: rgba(255,255,255,.94); padding: 4px 8px; display: flex; align-items: center; height: 26px; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+.cc-band.img img { max-height: 18px; max-width: 70px; object-fit: contain; display: block; }
+/* forma de pagamento */
+.forma-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.forma-chip { display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 8px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink-2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .2s var(--mola); }
+.forma-chip svg { width: 16px; height: 16px; } .forma-chip img { max-height: 18px; max-width: 46px; object-fit: contain; }
+.forma-chip:active { transform: scale(.94); }
+.forma-chip.on { border-color: transparent; color: #fff; background: linear-gradient(135deg, #082D51, #2F817A); box-shadow: 0 6px 14px -8px #082D51; }
+.forma-chip.on img { background: #fff; border-radius: 6px; padding: 2px 4px; }
+.forma-selo { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 8px; border-radius: 20px; background: var(--card);
+  border: 1px solid var(--line); font-size: 11px; font-weight: 700; color: var(--ink-2); vertical-align: middle; height: 22px; }
+.forma-selo svg { width: 12px; height: 12px; } .forma-selo img { max-height: 14px; max-width: 44px; object-fit: contain; }
+.forma-grade { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.forma-chip span { white-space: nowrap; }
+@media (max-width: 440px) { .forma-grade { grid-template-columns: repeat(2, 1fr); } }

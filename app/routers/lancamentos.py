@@ -6,6 +6,8 @@ from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
 
+FORMAS = {"pix", "dinheiro", "debito", "credito", "boleto", "transferencia"}
+
 router = APIRouter(prefix="/api/lancamentos", tags=["lancamentos"],
                    dependencies=[Depends(usuario_atual)])
 
@@ -107,6 +109,10 @@ def dar_baixa(lid: int, dados: schemas.BaixaIn, db: Session = Depends(get_db)):
     l.data_pagamento = dados.data_pagamento or date.today()
     if dados.conta_id:
         l.conta_id = dados.conta_id
+    if dados.forma_pagamento:
+        if dados.forma_pagamento not in FORMAS:
+            raise HTTPException(400, "Forma de pagamento: escolha uma da lista.")
+        l.forma_pagamento = dados.forma_pagamento
     if dados.juros is not None:
         l.juros = dados.juros
     if dados.multa is not None:
