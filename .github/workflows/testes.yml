@@ -1,0 +1,33 @@
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tomelin
+          POSTGRES_PASSWORD: tomelin
+          POSTGRES_DB: tomelin_teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tomelin" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://tomelin:tomelin@localhost:5432/tomelin_teste
+      SECRET_KEY: chave-de-teste-com-mais-de-trinta-e-dois-caracteres
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m pytest -q
+      - name: Sintaxe do app.js
+        run: node --check app/static/app.js
