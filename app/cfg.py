@@ -34,6 +34,12 @@ DEFS = [
     ("EMPRESA_NOME",             "Nome que aparece nos PDFs e recibos",                               "Tomelin Gestão Financeira"),
     ("EMPRESA_DOC",              "CPF/CNPJ (opcional, aparece no rodapé dos PDFs)",                   ""),
     ("EMPRESA_CIDADE",           "Cidade/UF (rodapé dos PDFs)",                                       "Blumenau/SC"),
+    # ---- Backup ----
+    ("BACKUP_AUTO",              "Fazer backup automático todo dia",                                  "true"),
+    ("BACKUP_HORA",              "Hora do backup automático (0-23)",                                  "3"),
+    ("BACKUP_MANTER",            "Quantos backups automáticos guardar",                               "7"),
+    ("BACKUP_WHATSAPP",          "Mandar o arquivo do backup no grupo do WhatsApp",                   "false"),
+    ("BACKUP_COMPROVANTES",      "Incluir fotos e PDFs dos comprovantes no backup automático",        "false"),
     ("APP_URL",                  "Endereço do sistema para o QR code dos PDFs (ex.: https://financeiro.seudominio.com.br). Vazio = detecta sozinho", ""),
 ]
 
@@ -98,6 +104,17 @@ def set_many(db: Session, dados: dict):
         else:
             desc = next((d for k, d, _ in DEFS if k == chave), "")
             db.add(models.Configuracao(chave=chave, valor=valor, descricao=desc))
+    db.commit()
+
+
+def set_interno(db: Session, chave: str, valor: str, descricao: str = "interno"):
+    """Grava uma chave interna (começa com _): não aparece nem é gravável pela tela."""
+    assert chave.startswith("_")
+    row = db.get(models.Configuracao, chave)
+    if row:
+        row.valor = valor
+    else:
+        db.add(models.Configuracao(chave=chave, valor=valor, descricao=descricao))
     db.commit()
 
 

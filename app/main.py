@@ -196,6 +196,9 @@ async def lifespan(app: FastAPI):
     # lançamentos que se repetem: cria as próximas ocorrências todo dia de madrugada
     from . import recorrencia as _recm
     scheduler.add_job(_recm.job_diario, CronTrigger(hour=0, minute=15), id="recorrencias", replace_existing=True)
+    # backup automático (hora vem de Configurações; reagendar() aplica)
+    from . import backup_auto as _bk
+    scheduler.add_job(_bk.job, CronTrigger(hour=3, minute=30), id="backup_auto", replace_existing=True)
     scheduler.add_job(whatsapp.job_fechamento_dia,
                       CronTrigger(hour=settings.FECHAMENTO_HORA, minute=0),
                       id="fechamento_dia", replace_existing=True)
@@ -226,6 +229,7 @@ def reagendar():
     try:
         h_alerta = _hora_valida(cfg.get_int(db, "ALERTA_HORA", settings.ALERTA_HORA), 8)
         h_fech = _hora_valida(cfg.get_int(db, "FECHAMENTO_HORA", settings.FECHAMENTO_HORA), 20)
+        h_bk = _hora_valida(cfg.get_int(db, "BACKUP_HORA", 3), 3)
     finally:
         db.close()
     tz = scheduler.timezone
@@ -233,6 +237,7 @@ def reagendar():
         scheduler.reschedule_job("alerta_vencimentos", trigger=CronTrigger(hour=h_alerta, minute=0, timezone=tz))
         scheduler.reschedule_job("resumo_semanal", trigger=CronTrigger(day_of_week="mon", hour=h_alerta, minute=5, timezone=tz))
         scheduler.reschedule_job("fechamento_dia", trigger=CronTrigger(hour=h_fech, minute=0, timezone=tz))
+        scheduler.reschedule_job("backup_auto", trigger=CronTrigger(hour=h_bk, minute=30, timezone=tz))
     except Exception as e:   # scheduler ainda não iniciado (testes) ou job ausente
         log.warning("Reagendamento não aplicado: %s", e)
         return

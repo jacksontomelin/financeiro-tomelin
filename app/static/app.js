@@ -3705,13 +3705,18 @@ const CFG_GRUPOS = [
     chaves: ["FIPE_ATIVO","FIPE_API_URL","FIPE_API_TOKEN","FIPE_ENDPOINT"],
   },
   {
+    titulo: "Backup automático", ic: "shield", cor: "i-green",
+    desc: "Cópia de todos os dados feita sozinha todo dia. Ligue o envio pelo WhatsApp para ter uma cópia fora do servidor.",
+    chaves: ["BACKUP_AUTO","BACKUP_HORA","BACKUP_MANTER","BACKUP_WHATSAPP","BACKUP_COMPROVANTES"],
+  },
+  {
     titulo: "PDFs e recibos", ic: "doc", cor: "i-gold",
     desc: "Nome e dados da empresa que aparecem no cabeçalho e rodapé dos PDFs gerados.",
     chaves: ["EMPRESA_NOME","EMPRESA_DOC","EMPRESA_CIDADE","APP_URL"],
   },
 ];
-const BOOL_CHAVES = new Set(["WHATSAPP_ATIVO","RECIBO_WHATSAPP_AUTO","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FIPE_ATIVO"]);
-const INT_CHAVES  = new Set(["ALERTA_HORA","ALERTA_DIAS_ANTES","FECHAMENTO_HORA"]);
+const BOOL_CHAVES = new Set(["WHATSAPP_ATIVO","RECIBO_WHATSAPP_AUTO","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FIPE_ATIVO","BACKUP_AUTO","BACKUP_WHATSAPP","BACKUP_COMPROVANTES"]);
+const INT_CHAVES  = new Set(["ALERTA_HORA","ALERTA_DIAS_ANTES","FECHAMENTO_HORA","BACKUP_HORA","BACKUP_MANTER"]);
 const PASS_CHAVES = new Set(["WHATSAPP_API_TOKEN","FIPE_API_TOKEN"]);
 
 async function viewConfiguracoes(v) {
@@ -3740,7 +3745,7 @@ async function viewConfiguracoes(v) {
       </div>`;
   }
 
-  setTimeout(() => { _exStatus(); _bandGrade(); }, 0);
+  setTimeout(() => { _exStatus(); _bandGrade(); _bkCarregar(); }, 0);
   v.innerHTML = `
     <div class="card card-pad" style="margin-bottom:16px">
       <div class="card-h"><span class="card-ico i-green">${icon("download")}</span>
@@ -3750,6 +3755,7 @@ async function viewConfiguracoes(v) {
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="bk-comp"> Incluir comprovantes (arquivo maior)</label>
       </div>
       <div class="campo-dica" style="margin-top:8px">Senhas não vão no arquivo. Só administradores podem baixar.</div>
+      <div class="bk-auto" id="bk-auto"><div class="sub">Carregando backups automáticos...</div></div>
     </div>
     ${_bandCard()}
     <div class="card card-pad ex-card" id="ex-card" style="margin-bottom:16px">
@@ -6548,6 +6554,45 @@ async function baixarBackup() {
 }
 
 
+/* ── Backups automáticos (Configurações) ── */
+async function _bkCarregar() {
+  const box = document.getElementById("bk-auto"); if (!box) return;
+  let d;
+  try { d = await api("/api/backup/automaticos"); }
+  catch (e) { box.innerHTML = `<div class="sub">${esc(e.message)}</div>`; return; }
+  const c = d.config;
+  const quando = iso => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  box.innerHTML = `
+    <div class="bk-topo">
+      <div><b>Backup automático</b> <span class="bk-st ${c.ativo ? "on" : ""}">${c.ativo ? `ligado · todo dia às ${String(c.hora).padStart(2, "0")}:30` : "desligado"}</span>
+        <small>Guarda os últimos ${c.manter}${c.whatsapp ? " e manda uma cópia no grupo do WhatsApp" : ". Para ter uma cópia fora do servidor, ligue o envio pelo WhatsApp abaixo"}.</small></div>
+      <button class="btn btn-ghost btn-sm" id="bk-agora" onclick="_bkAgora()">${icon("refresh")}Fazer backup agora</button>
+    </div>
+    ${d.ultimo_erro ? `<div class="bk-erro">${icon("alert")}Último backup automático falhou: ${esc(d.ultimo_erro)}</div>` : ""}
+    ${d.itens.length ? `<div class="bk-lista">${d.itens.map(b => `
+      <div class="bk-item"><span class="bk-ic">${icon("shield")}</span>
+        <div class="grow"><b>${quando(b.criado_em)}</b><small>${b.origem === "manual" ? "feito agora" : "automático"} · ${_kb(b.tamanho)} · ${b.lancamentos} lançamentos${b.com_comprovantes ? " · com comprovantes" : ""}${b.enviado_whatsapp ? " · enviado no WhatsApp" : ""}</small></div>
+        <button class="btn btn-ghost btn-sm" onclick="_bkBaixar(${b.id})" title="Baixar">${icon("download")}</button></div>`).join("")}</div>`
+      : `<div class="sub" style="margin-top:8px">Nenhum backup automático ainda. O primeiro sai hoje de madrugada, ou toque em "Fazer backup agora".</div>`}`;
+}
+async function _bkAgora() {
+  const bt = document.getElementById("bk-agora"); if (bt) { bt.disabled = true; bt.innerHTML = `${icon("refresh", "spin")}Fazendo...`; }
+  try {
+    const r = await api("/api/backup/automaticos/agora", { method: "POST" });
+    toast(`Backup feito (${_kb(r.tamanho)})${r.enviado_whatsapp ? " e enviado no WhatsApp" : ""}`, r.enviado_whatsapp ? "wa" : "ok");
+  } catch (e) { toast(e.message, "err"); }
+  _bkCarregar();
+}
+async function _bkBaixar(id) {
+  try {
+    const r = await fetch(_url(`/api/backup/automaticos/${id}`), { headers: { Authorization: `Bearer ${State.token}` } });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.detail || "Não foi possível baixar."); }
+    const blob = await r.blob(), url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/)?.[1] || "backup-tomelin.json.gz";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) { toast(e.message, "err"); }
+}
+
 /* ── Botão "+" em leque ──────────────────────────────────────── */
 function abrirFabMenu() {
   if (document.getElementById("leque")) return fecharLeque();
@@ -7739,7 +7784,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

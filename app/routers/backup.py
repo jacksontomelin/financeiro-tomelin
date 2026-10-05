@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/backup", tags=["backup"])
 # nunca saem no arquivo
 COLUNAS_FORA = {("usuarios", "senha_hash")}
 LINHAS_FORA = {("configuracoes", "_chave_sessao")}
-TABELAS_FORA = {"login_historico"}
+TABELAS_FORA = {"login_historico", "backups_auto"}
 
 
 def _json(v):
@@ -32,11 +32,8 @@ def _json(v):
     return v
 
 
-@router.get("")
-def baixar(comprovantes: bool = False, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
-    av = db.get(models.UsuarioAvatar, me.id)
-    if not av or av.papel != "admin":
-        raise HTTPException(403, "Só administradores podem baixar o backup.")
+def gerar(db: Session, gerado_por: str, comprovantes: bool = False) -> dict:
+    """Monta o backup completo (usado no botão e no backup automático)."""
     dados, contagem = {}, {}
     for t in Base.metadata.sorted_tables:
         if t.name in TABELAS_FORA:
@@ -51,8 +48,52 @@ def baixar(comprovantes: bool = False, me: models.Usuario = Depends(usuario_atua
             linhas.append({k: _json(v) for k, v in row.items()})
         dados[t.name] = linhas
         contagem[t.name] = len(linhas)
-    doc = {"sistema": "Tomelin Gestão Financeira", "formato": 1, "gerado_em": datetime.now().isoformat(timespec="seconds"),
-           "gerado_por": me.email, "com_comprovantes": comprovantes, "contagem": contagem, "dados": dados}
+    return {"sistema": "Tomelin Gestão Financeira", "formato": 1, "gerado_em": datetime.now().isoformat(timespec="seconds"),
+            "gerado_por": gerado_por, "com_comprovantes": comprovantes, "contagem": contagem, "dados": dados}
+
+
+def _exigir_admin(db, me):
+    av = db.get(models.UsuarioAvatar, me.id)
+    if not av or av.papel != "admin":
+        raise HTTPException(403, "Só administradores podem mexer nos backups.")
+
+
+@router.get("")
+def baixar(comprovantes: bool = False, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    doc = gerar(db, me.email, comprovantes)
     nome = f"backup-tomelin-{date.today().isoformat()}.json"
     return Response(json.dumps(doc, ensure_ascii=False, indent=1), media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{nome}"', "Cache-Control": "no-store"})
+
+
+@router.get("/automaticos")
+def listar_automaticos(me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    from .. import backup_auto, cfg
+    itens = (db.query(models.BackupAuto.id, models.BackupAuto.criado_em, models.BackupAuto.origem, models.BackupAuto.tamanho,
+                      models.BackupAuto.contagem, models.BackupAuto.com_comprovantes, models.BackupAuto.enviado_whatsapp)
+             .order_by(models.BackupAuto.criado_em.desc()).all())
+    return {"config": backup_auto.config(db), "ultimo_erro": cfg.get(db, "_backup_erro", "") or None,
+            "itens": [{"id": b.id, "criado_em": b.criado_em.isoformat() + "Z", "origem": b.origem, "tamanho": b.tamanho,
+                       "lancamentos": (b.contagem or {}).get("lancamentos", 0), "com_comprovantes": b.com_comprovantes,
+                       "enviado_whatsapp": b.enviado_whatsapp} for b in itens]}
+
+
+@router.post("/automaticos/agora")
+def backup_agora(me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    from .. import backup_auto
+    b = backup_auto.fazer(db, origem="manual", gerado_por=me.email)
+    return {"ok": True, "id": b.id, "tamanho": b.tamanho, "enviado_whatsapp": b.enviado_whatsapp}
+
+
+@router.get("/automaticos/{bid}")
+def baixar_automatico(bid: int, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    b = db.get(models.BackupAuto, bid)
+    if not b:
+        raise HTTPException(404, "Backup não encontrado (pode ter sido apagado por ser antigo).")
+    nome = f"backup-tomelin-{b.criado_em.strftime('%Y-%m-%d-%H%M')}.json.gz"
+    return Response(b.arquivo, media_type="application/gzip",
                     headers={"Content-Disposition": f'attachment; filename="{nome}"', "Cache-Control": "no-store"})

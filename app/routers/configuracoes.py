@@ -36,7 +36,7 @@ def listar(me: models.Usuario = Depends(usuario_atual), db: Session = Depends(ge
 def salvar(dados: dict, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
     exigir_admin(db, me)
     cfg.set_many(db, dados)
-    if {"ALERTA_HORA", "FECHAMENTO_HORA"} & set(dados):
+    if {"ALERTA_HORA", "FECHAMENTO_HORA", "BACKUP_HORA"} & set(dados):
         from ..main import reagendar
         reagendar()
     return {"ok": True}

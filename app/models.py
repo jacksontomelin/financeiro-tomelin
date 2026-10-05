@@ -468,3 +468,18 @@ class DocumentoEmitido(Base):
     pdf = Column(LargeBinary, nullable=False)
     tamanho = Column(Integer, nullable=False)
     emitido_em = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class BackupAuto(Base):
+    """Cópia completa dos dados (JSON compactado) feita todo dia pelo sistema.
+    Guarda as últimas N; protege contra exclusão ou erro, não contra perder o
+    servidor: para isso existe a opção de mandar no WhatsApp."""
+    __tablename__ = "backups_auto"
+    id = Column(Integer, primary_key=True)
+    criado_em = Column(DateTime, default=datetime.utcnow, index=True)
+    origem = Column(String(20), nullable=False, default="automatico")   # automatico | manual
+    tamanho = Column(Integer, nullable=False)
+    contagem = Column(JSON, nullable=True)
+    com_comprovantes = Column(Boolean, default=False)
+    enviado_whatsapp = Column(Boolean, default=False)
+    arquivo = Column(LargeBinary, nullable=False)                      # .json.gz
