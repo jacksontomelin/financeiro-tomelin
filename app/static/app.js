@@ -416,7 +416,9 @@ function toast(msg, tipo = "") {
   const el = document.createElement("div");
   el.className = `toast ${tipo}`;
   const ic = tipo === "ok" ? "checkCircle" : (tipo === "err" || tipo === "warn") ? "alert" : "bell";
-  el.innerHTML = icon(ic) + `<span>${esc(msg)}</span>`;
+  el.innerHTML = tipo === "wa"
+    ? `<span class="toast-wa-ic">${waDesenho()}</span><span>${esc(msg)}</span><span class="toast-ticks">${_WA_TICKS}</span>`
+    : icon(ic) + `<span>${esc(msg)}</span>`;
   $("#toasts").appendChild(el);
   // erro fica mais tempo (dá pra ler a mensagem inteira); clique fecha
   const dur = (tipo === "err" || tipo === "warn") ? Math.min(12000, 5000 + String(msg).length * 40) : 3200;
@@ -710,6 +712,7 @@ function _atalhoClick(btn) {
   else if (a === "transferir") _leqTransferir();
   else if (a === "repeticoes") abrirRecorrencias();
   else if (a === "importar") formImportar();
+  else if (a === "zap") abrirZap();
   else setView(a);
 }
 
@@ -1018,6 +1021,8 @@ async function viewDashboard(v) {
                 border-radius:16px;padding:14px 18px 0;margin-bottom:12px;position:relative;overflow:hidden">
       <div class="hero-circle-1"></div>
       <div class="hero-circle-2"></div>
+      <button class="hero-zap" onclick="event.stopPropagation();waEnviar('resumo', this)" title="Mandar o resumo do mês no WhatsApp" aria-label="Mandar o resumo do mês no WhatsApp">
+        <span class="wa-ic">${waDesenho()}</span><span class="hero-zap-rot">Resumo</span><span class="wa-ticks">${_WA_TICKS}</span></button>
       <!-- spark line decorativa -->
       <svg viewBox="0 0 60 30" preserveAspectRatio="none"
            class="hero-spark" style="position:absolute;right:0;bottom:0;width:55%;height:70%">
@@ -1071,6 +1076,7 @@ async function viewDashboard(v) {
         ["repeat",    "Repetições",   "repeticoes",  "#1C6E8C", "#38A3C9"],
         ["download",  "Extrato",      "importar",    "#24507A", "#4F8BC9"],
         ["chart",     "Relatório",    "relatorios",  "#3F3D9E", "#7C7AE6"],
+        ["whatsapp",  "WhatsApp",     "zap",         "#075E54", "#25D366"],
       ].map(([ic, lab, acao, c1, c2], i) => `
         <button class="atalho" data-acao="${acao}" onclick="vibrar(10);_atalhoClick(this)" style="--c1:${c1};--c2:${c2};--i:${i}">
           <span class="atalho-ic">${icon(ic)}</span><span class="atalho-rot">${lab}</span>
@@ -1762,7 +1768,7 @@ async function confirmarBaixa(id) {
 async function reciboWhats(id) {
   try {
     const r = await api(`/api/lancamentos/${id}/recibo/whatsapp`, { method: "POST" });
-    toast(r.enviado ? "Recibo enviado no grupo do WhatsApp" : "WhatsApp desativado: configure a integração", r.enviado ? "ok" : "err");
+    toast(r.enviado ? "Recibo enviado no grupo do WhatsApp" : "WhatsApp desativado: configure a integração", r.enviado ? "wa" : "err");
   } catch (e) { toast(e.message, "err"); }
 }
 async function estornar(id) {
@@ -1807,6 +1813,10 @@ async function viewVencimentos(v) {
   const totAtraso = venc.atrasados.reduce((s, x) => s + (x.tipo === 'despesa' ? x.valor : 0), 0);
   setTimeout(() => _calVenc(), 0);
   v.innerHTML = `
+    <div class="wa-faixa">
+      <div class="wa-faixa-txt"><b>Avisar a família</b><small>Manda a lista de contas a vencer no grupo do WhatsApp.</small></div>
+      ${btnWA("Mandar no WhatsApp", "waEnviar('vencer', this)")}
+    </div>
     <div class="card card-pad cal-card" id="cal-venc" style="margin-bottom:16px"><div class="sub">Montando o calendário...</div></div>
     <div class="kpi-grid">
       <div class="kpi red" style="cursor:pointer" onclick="setView('pagar')" title="Ver contas a pagar atrasadas"><div class="lab"><span class="i i-red">${icon("alert")}</span>Atrasados</div><div class="val mono-num">${venc.atrasados.length}</div><div class="meta">${money(totAtraso)} a pagar vencido</div></div>
@@ -2114,6 +2124,8 @@ function renderContatos() {
       <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();_editarContato(${c.id})">${icon("edit")} Editar</button>
         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();FILTRO.contato=${c.id};FILTRO.status='';window._tipoFixo='';setView('lancamentos')">${icon("terminal")} Extrato</button>
+        ${_waNumero(c.telefone) ? `<a class="btn btn-wa btn-sm btn-wa-mini" href="${esc(_waLink(c.telefone))}" target="_blank" rel="noopener"
+            onclick="event.stopPropagation()" title="Conversar no WhatsApp" aria-label="Conversar no WhatsApp"><span class="wa-ic">${waDesenho()}</span></a>` : ""}
         <button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="event.stopPropagation();excluirContato(${c.id})">${icon("trash")}</button>
       </div>
     </div>`;
@@ -2232,6 +2244,7 @@ async function verContato(id) {
           ${c.email    ? `<div style="display:flex;gap:8px"><span style="color:var(--ink-3);min-width:70px">E-mail</span>${esc(c.email)}</div>` : ""}
           ${end        ? `<div style="display:flex;gap:8px"><span style="color:var(--ink-3);min-width:70px">Endereço</span><span style="flex:1">${esc(end)}</span></div>` : ""}
         </div>` : ""}
+        ${_waContatoBotoes(c, r)}
 
         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:8px">
           Últimos lançamentos
@@ -2566,8 +2579,7 @@ async function viewWhatsapp(v) {
     <div style="position:absolute;right:30px;bottom:-30px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
 
     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
-      <div style="width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.15);
-           display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff">${WA_SVG}</div>
+      <span class="zap-logo wa-hero-logo"><i class="wa-onda"></i><i class="wa-onda o2"></i>${waDesenho(36)}</span>
       <div>
         <div style="font-size:19px;font-weight:900;color:#fff;line-height:1.1">Central WhatsApp</div>
         <div style="font-size:12.5px;color:rgba(255,255,255,.65);margin-top:3px">Comandos financeiros no grupo</div>
@@ -2586,9 +2598,9 @@ async function viewWhatsapp(v) {
     <!-- mini-stats -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden">
       ${[
-        ["Escuta","a cada 4s"],
-        ["PDFs","no grupo"],
-        ["Respostas","instantâneas"],
+        ["Escuta","a cada 4s","lê o grupo sozinho"],
+        ["PDFs","no grupo","recibos e relatórios"],
+        ["Respostas","instantâneas","pelo webhook"],
       ].map(([e,t,s])=>`
         <div style="background:rgba(0,0,0,.2);padding:12px 10px;text-align:center">
           <div style="font-size:clamp(14px,4.6vw,20px);margin-bottom:4px;overflow-wrap:anywhere">${e}</div>
@@ -2600,17 +2612,12 @@ async function viewWhatsapp(v) {
 
   <!-- BOTÕES DE AÇÃO RÁPIDA -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-    <button onclick="testarWhatsapp(this)" ${st.ativo&&st.grupo?"":'disabled style="opacity:.45"'}
-      style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;
-             background:#25D366;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;
-             box-shadow:0 4px 14px rgba(37,211,102,.4);transition:all .15s">
-      ${WA_SVG} Testar agora
-    </button>
+    ${btnWA("Testar agora", "testarWhatsapp(this)", `style="padding:14px;border-radius:14px;font-size:14px" ${st.ativo&&st.grupo?"":'disabled'}`)}
     <button onclick="rodarDiagnosticoWA()"
       style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:14px;
              background:var(--card);color:var(--navy);font-weight:700;font-size:14px;
              border:1.5px solid var(--line);cursor:pointer;transition:all .15s">
-      ${icon("shield")} Diagnóstico
+      <span class="wa-diag-ic">${icon("shield")}</span> Diagnóstico
     </button>
   </div>
 
@@ -3263,12 +3270,13 @@ async function salvarNumeroWA() {
 }
 
 async function testarWhatsapp(btn) {
-  const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = icon("refresh", "spin") + "Enviando...";
-  try {
-    const r = await api("/api/whatsapp/teste", { method: "POST" });
-    toast(r.enviado ? "Mensagem de teste enviada ao grupo" : "Gateway não confirmou o envio", r.enviado ? "ok" : "err");
-  } catch (e) { toast(e.message, "err"); }
-  btn.disabled = false; btn.innerHTML = orig;
+  return _waBotao(btn, async () => {
+    try {
+      const r = await api("/api/whatsapp/teste", { method: "POST" });
+      toast(r.enviado ? "Mensagem de teste enviada ao grupo" : "Gateway não confirmou o envio", r.enviado ? "wa" : "err");
+      return !!r.enviado;
+    } catch (e) { toast(e.message, "err"); return false; }
+  });
 }
 
 /* ============================================================
@@ -3772,7 +3780,7 @@ async function viewConfiguracoes(v) {
           <div class="card-h">
             <span class="card-ico ${g.cor}">${icon(g.ic)}</span>
             <div class="grow"><h3>${g.titulo}</h3><div class="sub">${g.desc}</div></div>
-            ${g.titulo === "WhatsApp" ? `<button class="btn btn-ghost btn-sm" onclick="testarWhatsappCfg()">${icon("whatsapp")}Testar</button>` : ""}
+            ${g.titulo === "WhatsApp" ? btnWA("Testar", "testarWhatsappCfg(this)", 'style="padding:7px 12px;font-size:12.5px"') : ""}
           </div>
           <div class="cfg-campos">
             ${g.chaves.map(k => campo(map[k] || {chave:k,valor:"",descricao:k})).join("")}
@@ -3805,13 +3813,15 @@ async function salvarConfiguracoes() {
   } catch(e) { toast(e.message, "err"); }
 }
 
-async function testarWhatsappCfg() {
-  // salva primeiro, depois testa
-  await salvarConfiguracoes();
-  try {
-    const r = await api("/api/configuracoes/whatsapp/testar");
-    toast(r.enviado ? "Mensagem enviada no grupo!" : "Falha: verifique URL, token e grupo.", r.enviado ? "ok" : "err");
-  } catch(e) { toast(e.message, "err"); }
+async function testarWhatsappCfg(btn) {
+  return _waBotao(btn, async () => {
+    await salvarConfiguracoes();   // salva primeiro, depois testa
+    try {
+      const r = await api("/api/configuracoes/whatsapp/testar");
+      toast(r.enviado ? "Mensagem enviada no grupo!" : "Falha: verifique URL, token e grupo.", r.enviado ? "wa" : "err");
+      return !!r.enviado;
+    } catch (e) { toast(e.message, "err"); return false; }
+  });
 }
 
 
@@ -6867,7 +6877,7 @@ function _menuLanc(id) {
     { rot: "Comprovante", ic: "clip", c1: "#B35C1E", c2: "#E59A4B", f: `_lancComprovante(${id})` },
     { rot: "Recibo", ic: "doc", c1: "#2F5D50", c2: "#4E9C84", f: `abrirPDF('/api/lancamentos/${id}/recibo.pdf')` },
     { rot: "Compartilhar", ic: "send", c1: "#1E7A4A", c2: "#25B26A", f: `_lancCompartilhar(${id})` },
-    { rot: "Recibo no WhatsApp", ic: "whatsapp", c1: "#2F5D50", c2: "#3FCB7E", f: `reciboWhats(${id})` },
+    { rot: "Recibo no WhatsApp", ic: "whatsapp", c1: "#DDF8E8", c2: "#B4EFCD", f: `reciboWhats(${id})` },
     { rot: "Excluir", ic: "trash", c1: "#8E3326", c2: "#D0624E", f: `excluirLanc(${id})` },
   ];
   document.getElementById("menu-lanc")?.remove();
@@ -7567,8 +7577,154 @@ async function _fatPagar() {
   } catch (e) { toast(e.message, "err"); }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   WhatsApp desenhado + mais interações
+   ══════════════════════════════════════════════════════════════ */
+
+/* Balão verde com o telefone: desenho próprio, colorido, em qualquer tamanho.
+   tam = null: o tamanho vem do CSS (igual aos outros ícones). */
+let _waSeq = 0;
+function waDesenho(tam = null, cls = "") {
+  const g = "wag" + (++_waSeq);
+  const dim = tam ? ` width="${tam}" height="${tam}"` : "";
+  return `<svg class="wa-desenho ${cls}" viewBox="0 0 48 48"${dim} aria-hidden="true">
+    <defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6CF59C"/><stop offset=".5" stop-color="#25D366"/><stop offset="1" stop-color="#0B8F6A"/></linearGradient></defs>
+    <path class="wa-balao" d="M24 3.5C12.7 3.5 3.6 12.3 3.6 23.2c0 3.9 1.2 7.5 3.2 10.6L4.3 43.6l10.2-2.7c2.8 1.5 6.1 2.4 9.5 2.4 11.3 0 20.4-8.8 20.4-19.9S35.3 3.5 24 3.5z" fill="url(#${g})"/>
+    <ellipse cx="16" cy="12.5" rx="8.5" ry="3.6" fill="#fff" opacity=".28" transform="rotate(-28 16 12.5)"/>
+    <g class="wa-fone" transform="translate(24.4 23.2) scale(1.32) translate(-12.2 -12.1)">
+      <path fill="#fff" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+    </g>
+  </svg>`;
+}
+const _WA_TICKS = `<svg viewBox="0 0 26 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8.5l4 4L14 3"/><path d="M10 12.5L20.5 3"/></svg>`;
+
+/* Todo ícone "whatsapp" do sistema (menu, telas, configurações) vira o desenho colorido */
+const _iconTraco = icon;
+icon = function (name, cls = "") { return name === "whatsapp" ? waDesenho(null, cls) : _iconTraco(name, cls); };
+
+/* Botão verde do WhatsApp: balão que balança enquanto envia e ✓✓ azuis quando chega */
+function btnWA(rotulo, acao, extra = "") {
+  return `<button class="btn btn-wa" onclick="${acao}" ${extra}><span class="wa-ic">${waDesenho()}</span><span class="wa-rot">${rotulo}</span><span class="wa-ticks">${_WA_TICKS}</span></button>`;
+}
+async function _waBotao(btn, fn) {
+  if (!btn) return fn();
+  if (btn.classList.contains("enviando")) return false;
+  btn.classList.remove("enviado", "falhou"); btn.classList.add("enviando");
+  let ok = false;
+  try { ok = await fn(); }
+  finally {
+    btn.classList.remove("enviando");
+    btn.classList.add(ok ? "enviado" : "falhou");
+    if (ok) { vibrar(14); _waVoo(btn); } else vibrar(40);
+    clearTimeout(btn._waT); btn._waT = setTimeout(() => btn.classList.remove("enviado", "falhou"), 2800);
+  }
+  return ok;
+}
+/* Balãozinho voando do botão para o canto da tela */
+function _waVoo(el) {
+  if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const r = el.getBoundingClientRect();
+  const b = document.createElement("div"); b.className = "wa-voo"; b.innerHTML = waDesenho(30);
+  b.style.left = (r.left + r.width / 2 - 15) + "px"; b.style.top = (r.top + r.height / 2 - 15) + "px";
+  document.body.appendChild(b);
+  const dx = innerWidth - 60 - (r.left + r.width / 2), dy = 40 - (r.top + r.height / 2);
+  b.animate([
+    { transform: "translate(0,0) scale(.6) rotate(0)", opacity: 0 },
+    { transform: `translate(${dx * .25}px,${dy * .25 - 40}px) scale(1.15) rotate(-14deg)`, opacity: 1, offset: .3 },
+    { transform: `translate(${dx}px,${dy}px) scale(.4) rotate(12deg)`, opacity: 0 },
+  ], { duration: 900, easing: "cubic-bezier(.3,.7,.4,1)" }).onfinish = () => b.remove();
+}
+
+/* Manda resumos e relatórios para o grupo direto do app */
+async function waEnviar(oque, btn) {
+  return _waBotao(btn, async () => {
+    try {
+      const r = await api(`/api/whatsapp/enviar/${oque}`, { method: "POST" });
+      if (r.enviado) { toast(`${r.nome}: enviado no grupo`, "wa"); return true; }
+      toast(r.motivo || "Não foi enviado.", "warn"); return false;
+    } catch (e) { toast(e.message, "err"); return false; }
+  });
+}
+
+/* Folha "Mandar no WhatsApp" (atalho do painel) */
+const _ZAP_OPCOES = [
+  ["resumo", "Resumo do mês", "chart", "#1F6F5C", "#3EC28F"],
+  ["vencer", "A vencer", "clock", "#8A6D1E", "#E2C46E"],
+  ["saldo", "Saldos", "wallet", "#24507A", "#4F8BC9"],
+  ["pagar", "A pagar", "arrowUp", "#A2412F", "#E07A5F"],
+  ["receber", "A receber", "arrowDown", "#1C6E8C", "#38A3C9"],
+  ["gastos", "Gastos", "pie", "#A0285F", "#E35D9A"],
+  ["metas", "Metas", "target", "#5B3FA0", "#8B6BD8"],
+  ["projecao", "Projeção", "trendUp", "#3F3D9E", "#7C7AE6"],
+  ["balancete", "Balancete PDF", "doc", "#B35C1E", "#F0A04B"],
+  ["patrimonio", "Patrimônio PDF", "bank", "#2F5D50", "#4E9C84"],
+];
+function abrirZap() {
+  document.getElementById("menu-lanc")?.remove();
+  const el = document.createElement("div"); el.id = "menu-lanc"; el.className = "folha folha-zap";
+  el.innerHTML = `
+    <div class="folha-fundo" onclick="_folhaFechar()"></div>
+    <div class="folha-caixa">
+      <div class="folha-alca"></div>
+      <div class="zap-cab">
+        <span class="zap-logo"><i class="wa-onda"></i><i class="wa-onda o2"></i>${waDesenho(36)}</span>
+        <div class="folha-tit"><b>Mandar no WhatsApp</b><small>Vai direto para o grupo da família. Toque e pronto.</small></div>
+      </div>
+      <div class="folha-grade">
+        ${_ZAP_OPCOES.map(([k, rot, ic, c1, c2], i) => `<button class="folha-bt zap-bt" style="--c1:${c1};--c2:${c2};--i:${i}" onclick="waEnviar('${k}', this)">
+            <span class="folha-bt-ic">${icon(ic)}<span class="zap-mini">${waDesenho()}</span><span class="zap-ok">${_WA_TICKS}</span></span><span>${rot}</span></button>`).join("")}
+      </div>
+      <button class="btn btn-ghost zap-config" onclick="_folhaFechar();setView('whatsapp')">${icon("cog")}Configurar o WhatsApp</button>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("aberta"));
+  _DLG_ATUAL_FOLHA = true; vibrar(10);
+}
+
+/* Contatos: abrir conversa e lembrar de valor em aberto */
+function _waNumero(tel) {
+  let d = String(tel || "").replace(/\D/g, "");
+  if (d.length === 10 || d.length === 11) d = "55" + d;
+  return d.length >= 12 && d.length <= 13 ? d : "";
+}
+function _waLink(tel, texto = "") {
+  const n = _waNumero(tel);
+  return n ? `https://wa.me/${n}${texto ? `?text=${encodeURIComponent(texto)}` : ""}` : "";
+}
+function _waContatoBotoes(c, r) {
+  if (!_waNumero(c.telefone)) return "";
+  const nome = esc((c.nome || "").split(" ")[0]);
+  const aberto = c.tipo === "cliente" ? Number(r?.a_receber || 0) : 0;
+  const msg = `Olá ${(c.nome || "").split(" ")[0]}, tudo bem? Passando para lembrar do valor de ${money(aberto)} em aberto. Qualquer dúvida, me chama!`;
+  return `<div class="wa-contato">
+    <a class="btn btn-wa btn-sm" href="${esc(_waLink(c.telefone))}" target="_blank" rel="noopener"><span class="wa-ic">${waDesenho()}</span>Conversar com ${nome}</a>
+    ${aberto > 0 ? `<a class="btn btn-wa-claro btn-sm" href="${esc(_waLink(c.telefone, msg))}" target="_blank" rel="noopener"><span class="wa-ic">${waDesenho()}</span>Lembrar ${money(aberto)}</a>` : ""}
+  </div>`;
+}
+
+/* Brilho que segue o mouse nos cards (só com mouse; no toque não faz nada) */
+document.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse") return;
+  const c = e.target.closest?.(".card, .kpi, .atalho");
+  if (!c) return;
+  const r = c.getBoundingClientRect();
+  c.style.setProperty("--mx", (e.clientX - r.left) + "px");
+  c.style.setProperty("--my", (e.clientY - r.top) + "px");
+}, { passive: true });
+
+/* Ondinha também nos botões claros */
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn-ghost");
+  if (!btn || btn.classList.contains("btn-icon")) return;
+  const r = document.createElement("span"); r.className = "ripple";
+  const rect = btn.getBoundingClientRect(); const size = Math.max(rect.width, rect.height) * 1.5;
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px`;
+  btn.appendChild(r); r.addEventListener("animationend", () => r.remove());
+});
+
 Object.assign(window, {
-  abrirFatura, _fatPagar, _voltarTela,
+  abrirFatura, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

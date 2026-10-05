@@ -170,6 +170,44 @@ def teste(db: Session = Depends(get_db)):
     return {"enviado": ok}
 
 
+# O que dá para mandar ao grupo direto pelo app (só consultas: nada que lance ou baixe)
+ENVIOS = {
+    "resumo": ("resumo", "Resumo do mês"),
+    "vencer": ("vencer", "Contas a vencer"),
+    "saldo": ("saldo", "Saldo das contas"),
+    "pagar": ("pagar", "Contas a pagar"),
+    "receber": ("receber", "Contas a receber"),
+    "gastos": ("gastos", "Top gastos do mês"),
+    "metas": ("metas", "Metas"),
+    "projecao": ("projecao", "Projeção"),
+    "balancete": ("balancete", "Balancete em PDF"),
+    "patrimonio": ("patrimonio pdf", "Patrimônio em PDF"),
+}
+
+
+@router.post("/enviar/{oque}", dependencies=[Depends(usuario_atual)])
+def enviar_ao_grupo(oque: str, db: Session = Depends(get_db)):
+    if oque not in ENVIOS:
+        raise HTTPException(404, "Não sei enviar isso.")
+    c = zapapi.config(db)
+    if not c["ativo"]:
+        return {"enviado": False, "motivo": "O envio pelo WhatsApp está desligado. Ative na tela do WhatsApp."}
+    if not c["grupo"]:
+        return {"enviado": False, "motivo": "Escolha o grupo na tela do WhatsApp."}
+    comando, nome = ENVIOS[oque]
+    arq = whatsapp.processar_arquivo(comando, db)
+    if arq and arq[0] != "ERRO":
+        pdf, arquivo, legenda = arq
+        ok = zapapi.enviar_arquivo(pdf, arquivo, "application/pdf", legenda, db=db)
+    else:
+        texto = whatsapp.processar_comando(comando, db)
+        ok = bool(texto) and zapapi.enviar_texto(texto, db=db)
+    if ok:
+        _log(f"[app] {nome}", "enviado pelo app")
+    return {"enviado": bool(ok), "nome": nome,
+            "motivo": None if ok else "O gateway não confirmou o envio. Veja o diagnóstico."}
+
+
 @router.get("/diagnostico", dependencies=[Depends(usuario_atual)])
 def diagnostico(db: Session = Depends(get_db)):
     c = zapapi.config(db)

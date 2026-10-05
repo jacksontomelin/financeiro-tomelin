@@ -3843,3 +3843,169 @@ html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card))
   .fv-resumo .fat-total { font-size: 30px; }
   .fv-grade { grid-template-columns: 1fr; } .fv-lado { position: static; order: -1; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Cards mais coloridos, brilho que segue o mouse e WhatsApp desenhado
+   ══════════════════════════════════════════════════════════════ */
+
+/* cor de destaque de cada card vem do ícone do cabeçalho */
+.card { --acc: #305C74; --acc2: #082D51;
+  background-image: radial-gradient(460px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--acc) 11%, transparent), transparent 45%);
+  transition: transform .25s var(--suave), box-shadow .25s; }
+.card-ico.i-navy,  .card:has(> .card-h > .card-ico.i-navy)  { --acc: #3F86C4; --acc2: #082D51; }
+.card-ico.i-green, .card:has(> .card-h > .card-ico.i-green) { --acc: #3EC28F; --acc2: #1F6F5C; }
+.card-ico.i-teal,  .card:has(> .card-h > .card-ico.i-teal)  { --acc: #38B9C9; --acc2: #1C6E8C; }
+.card-ico.i-gold,  .card:has(> .card-h > .card-ico.i-gold)  { --acc: #E2B84E; --acc2: #8A6D1E; }
+.card-ico.i-red,   .card:has(> .card-h > .card-ico.i-red)   { --acc: #E07A5F; --acc2: #9E3A2C; }
+.card:has(> .card-h > .card-ico) {
+  box-shadow: inset 0 3px 0 0 var(--acc), var(--shadow-sm);
+  background-image:
+    radial-gradient(460px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--acc) 12%, transparent), transparent 45%),
+    linear-gradient(180deg, color-mix(in srgb, var(--acc) 7%, transparent), transparent 110px);
+}
+.card-ico.i-navy, .card-ico.i-green, .card-ico.i-teal, .card-ico.i-gold, .card-ico.i-red {
+  color: #fff;
+  background: radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,.35), transparent 55%), linear-gradient(135deg, var(--acc2), var(--acc));
+  box-shadow: 0 8px 16px -8px var(--acc2), inset 0 0 0 1px rgba(255,255,255,.18);
+  transition: transform .35s var(--mola);
+}
+.card:hover > .card-h > .card-ico { transform: rotate(-8deg) scale(1.07); }
+/* cards que abrem algo: sobem um pouco e afundam no toque */
+.card[onclick] { cursor: pointer; }
+@media (hover: hover) { .card[onclick]:hover { transform: translateY(-3px); box-shadow: inset 0 3px 0 0 var(--acc), 0 18px 32px -18px color-mix(in srgb, var(--acc2) 60%, transparent); } }
+.card[onclick]:active { transform: scale(.985); }
+
+/* KPIs e atalhos: faixa de luz ao passar */
+.kpi::before, .atalho::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.28) 50%, transparent 65%);
+  transform: translateX(-120%); transition: transform .8s var(--suave); }
+.kpi:hover::before, .atalho:hover::before { transform: translateX(120%); }
+.kpi > * { position: relative; z-index: 1; }
+.kpi { transition: transform .25s var(--mola), box-shadow .25s; }
+@media (hover: hover) { .kpi:hover { transform: translateY(-3px) rotate(-.4deg); box-shadow: 0 18px 30px -18px rgba(8,45,81,.5); } }
+.kpi:active { transform: scale(.97); }
+
+/* ondinha nos botões claros */
+.btn-ghost .ripple { background: color-mix(in srgb, var(--navy) 16%, transparent); }
+html.dark .btn-ghost .ripple { background: rgba(255,255,255,.18); }
+
+/* ── desenho do WhatsApp ── */
+.wa-desenho { display: block; overflow: visible; flex-shrink: 0; }
+.wa-desenho .wa-fone { transform-box: fill-box; transform-origin: center; }
+svg.wa-desenho:not([width]) { width: 20px; height: 20px; }
+.nav-item:hover .wa-desenho .wa-fone, .card:hover .wa-desenho .wa-fone { animation: waToca .7s ease-in-out; }
+@keyframes waToca { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-16deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } }
+
+/* botão verde */
+.btn-wa { color: #fff !important; text-decoration: none; justify-content: center; gap: 9px;
+  background: linear-gradient(135deg, #0B7A5C 0%, #1DB45F 55%, #3EDB82 100%);
+  box-shadow: 0 10px 20px -12px #0B7A5C, inset 0 0 0 1px rgba(255,255,255,.2);
+  transition: transform .2s var(--mola), box-shadow .2s, filter .2s, background .3s; }
+.btn-wa::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.45) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .75s var(--suave); }
+.btn-wa:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 26px -12px #0B7A5C; filter: saturate(1.12); }
+.btn-wa:hover::before { transform: translateX(120%); }
+.btn-wa:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.5); }
+.btn-wa .wa-ic, .hero-zap .wa-ic { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .35s var(--mola); position: relative; z-index: 1; }
+.btn-wa .wa-ic svg, .hero-zap .wa-ic svg { width: 20px; height: 20px; }
+.btn-wa.btn-sm .wa-ic { width: 22px; height: 22px; } .btn-wa.btn-sm .wa-ic svg { width: 17px; height: 17px; }
+.btn-wa:hover .wa-ic { transform: rotate(-12deg) scale(1.12); }
+.btn-wa .wa-rot { position: relative; z-index: 1; }
+.btn-wa .wa-ticks, .hero-zap .wa-ticks { display: none; color: #8EDCFF; }
+.btn-wa.enviando, .hero-zap.enviando { pointer-events: none; }
+.btn-wa.enviando .wa-ic, .hero-zap.enviando .wa-ic, .zap-bt.enviando .folha-bt-ic { animation: waBalanca .55s ease-in-out infinite; }
+.btn-wa.enviando .wa-rot::after { content: "…"; }
+.btn-wa.enviado { background: linear-gradient(135deg, #075E54, #128C7E); }
+.btn-wa.enviado .wa-ticks, .hero-zap.enviado .wa-ticks { display: inline-flex; animation: icoPop .5s var(--mola); }
+.btn-wa.falhou, .hero-zap.falhou, .zap-bt.falhou .folha-bt-ic { animation: waTreme .4s; }
+@keyframes waBalanca { 0%,100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-14deg) scale(1.08); } 75% { transform: rotate(14deg) scale(1.08); } }
+@keyframes waTreme { 0%,100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+
+/* versão clara e só-ícone */
+.btn-wa-claro { background: #E4F9EC; color: #0B7A55 !important; text-decoration: none; gap: 8px; box-shadow: inset 0 0 0 1.5px #A6EBC4; }
+.btn-wa-claro:hover { background: #D2F5E0; transform: translateY(-1px); }
+.btn-wa-claro .wa-ic { display: grid; place-items: center; } .btn-wa-claro .wa-ic svg { width: 18px; height: 18px; }
+html.dark .btn-wa-claro { background: rgba(37,211,102,.12); color: #7FE3AE !important; box-shadow: inset 0 0 0 1.5px rgba(37,211,102,.35); }
+.btn-wa-mini { padding: 5px 8px; }
+.btn-wa-mini .wa-ic { width: 22px; height: 22px; }
+
+/* toast verde com ✓✓ */
+.toast.wa { background: linear-gradient(135deg, #075E54, #128C7E 60%, #25D366); }
+.toast-wa-ic { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex-shrink: 0; animation: icoPop .55s var(--mola) .1s backwards; }
+.toast-wa-ic svg { width: 20px; height: 20px; animation: none; }
+.toast-ticks { display: inline-flex; color: #8EDCFF; animation: icoPop .5s var(--mola) .45s backwards; }
+.toast-ticks svg { width: 20px; height: 13px; }
+
+/* balão voando até o canto */
+.wa-voo { position: fixed; z-index: 10000; pointer-events: none; width: 30px; height: 30px; filter: drop-shadow(0 6px 10px rgba(7,94,84,.35)); }
+
+/* logo com ondas (folha e tela do WhatsApp) */
+.zap-logo { position: relative; width: 54px; height: 54px; border-radius: 18px; background: #fff; display: grid; place-items: center; flex-shrink: 0;
+  box-shadow: 0 10px 22px -10px #128C7E, inset 0 0 0 1px rgba(18,140,126,.15); }
+.zap-logo .wa-desenho { position: relative; z-index: 1; filter: drop-shadow(0 3px 4px rgba(7,94,84,.25)); animation: waFlutua 3.2s ease-in-out infinite; }
+.wa-onda { position: absolute; inset: 0; border-radius: inherit; border: 2px solid #25D366; opacity: 0; animation: waOnda 2.6s ease-out infinite; }
+.wa-onda.o2 { animation-delay: 1.3s; }
+@keyframes waOnda { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.55); opacity: 0; } }
+@keyframes waFlutua { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.wa-hero-logo { box-shadow: 0 10px 24px -8px rgba(0,0,0,.35); }
+.wa-hero-logo .wa-onda { border-color: rgba(255,255,255,.7); }
+
+/* folha "Mandar no WhatsApp" */
+.zap-cab { display: flex; align-items: center; gap: 14px; margin: 4px 2px 18px; }
+.folha-zap .folha-caixa { background-image: linear-gradient(180deg, rgba(37,211,102,.10), transparent 140px); }
+.folha-zap .folha-grade { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 520px) { .folha-zap .folha-grade { grid-template-columns: repeat(4, 1fr); } }
+.zap-bt .folha-bt-ic { position: relative; }
+.zap-mini { position: absolute; left: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.zap-mini svg { width: 16px; height: 16px; }
+.zap-ok { position: absolute; right: -7px; bottom: -7px; width: 26px; height: 22px; border-radius: 11px; background: #fff; color: #34B7F1;
+  display: none; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.zap-ok svg { width: 18px; height: 12px; }
+.zap-bt.enviado .zap-ok { display: grid; animation: icoPop .5s var(--mola); }
+.zap-bt.enviado > span:last-child { color: #128C7E; }
+.zap-config { width: 100%; justify-content: center; margin-top: 16px; }
+/* item "Recibo no WhatsApp" do menu do lançamento: balão sobre fundo claro */
+.folha-bt-ic .wa-desenho { width: 30px !important; height: 30px !important; filter: drop-shadow(0 2px 3px rgba(7,94,84,.3)); }
+
+/* faixa de envio (Vencimentos) */
+.wa-faixa { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; padding: 14px 16px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(37,211,102,.14), rgba(18,140,126,.06)); border: 1.5px solid rgba(37,211,102,.35); }
+.wa-faixa-txt { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.wa-faixa-txt b { color: #0B6E52; font-size: 14px; } .wa-faixa-txt small { color: var(--ink-3); font-size: 12px; }
+html.dark .wa-faixa-txt b { color: #7FE3AE; }
+
+/* contato */
+.wa-contato { display: flex; gap: 8px; flex-wrap: wrap; margin: -4px 0 16px; }
+
+/* botão do resumo no topo do painel */
+.hero-zap { position: absolute; top: 12px; right: 12px; z-index: 3; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 4px 11px 4px 4px; border-radius: 20px; border: none; font: inherit; font-size: 12px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, #128C7E, #25D366); box-shadow: 0 8px 18px -8px #25D366, inset 0 0 0 1px rgba(255,255,255,.25);
+  transition: transform .2s var(--mola), box-shadow .2s; }
+.hero-zap:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 12px 22px -8px #25D366; }
+.hero-zap:active { transform: scale(.94); }
+.hero-zap.enviado { background: linear-gradient(135deg, #075E54, #128C7E); }
+.atalho[data-acao="zap"] .atalho-ic { background: #fff; }
+.atalho[data-acao="zap"] .atalho-ic svg { width: 26px; height: 26px; }
+.atalho[data-acao="zap"]:hover .atalho-ic .wa-fone { animation: waToca .7s ease-in-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .kpi, .btn-wa, .hero-zap { transform: none !important; }
+  .wa-onda { display: none; }
+}
+/* o balão do WhatsApp não leva contorno e fica sobre fundo branco nos ícones de cabeçalho */
+svg.wa-desenho, .card .card-ico svg.wa-desenho, .modal-h .card-ico svg.wa-desenho { stroke: none; }
+.card-ico:has(.wa-desenho) { background: #fff !important; box-shadow: 0 8px 16px -8px #128C7E, inset 0 0 0 1px rgba(18,140,126,.18); }
+.card-ico .wa-desenho { width: 24px !important; height: 24px !important; }
+.wa-diag-ic { display: inline-flex; } .wa-diag-ic svg { width: 20px; height: 20px; }
+/* 12 atalhos: duas linhas de 6 no computador */
+@media (min-width: 900px) { .atalhos { grid-template-columns: repeat(6, 1fr); } }
+/* no celular o botão do resumo vira só o balão, para não cobrir a data */
+@media (max-width: 640px) {
+  .hero-zap { padding: 4px; top: 10px; right: 10px; }
+  .hero-zap .hero-zap-rot { display: none; }
+  .hero-zap.enviado .wa-ticks { position: absolute; right: -8px; bottom: -8px; background: #fff; border-radius: 9px; padding: 2px 3px; color: #34B7F1; }
+}
