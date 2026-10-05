@@ -602,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.141.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.142.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1209,6 +1209,7 @@ async function viewLancamentos(v, tipoFixo) {
   const titulo = tipoFixo === "despesa" ? "Contas a pagar" : tipoFixo === "receita" ? "Contas a receber" : "Todos os lançamentos";
   const cats = State.cats.filter(c => !tipoFixo || c.tipo === tipoFixo);
   v.innerHTML = `
+    <div id="lanc-banner" class="lanc-banner"></div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div class="seg" id="seg-status" style="flex:1;min-width:0">
@@ -1268,6 +1269,7 @@ async function recarregarTabela() {
   const [itens] = await Promise.all([api("/api/lancamentos" + q), _anxContagem()]);
   itens.forEach(l => _LANC_CACHE.set(l.id, l));
   setTimeout(() => { const ls = document.getElementById("lanc-lista"); _swipeIniciar(ls); _seguraIniciar(ls); _swipeDica(ls); }, 0);
+  _lancBanner(itens, window._tipoFixo);
 
   const lista = document.getElementById("lanc-lista");
   if (!lista) return;
@@ -1786,7 +1788,9 @@ async function viewVencimentos(v) {
     };
   }
   const totAtraso = venc.atrasados.reduce((s, x) => s + (x.tipo === 'despesa' ? x.valor : 0), 0);
+  setTimeout(() => _calVenc(), 0);
   v.innerHTML = `
+    <div class="card card-pad cal-card" id="cal-venc" style="margin-bottom:16px"><div class="sub">Montando o calendário...</div></div>
     <div class="kpi-grid">
       <div class="kpi red" style="cursor:pointer" onclick="setView('pagar')" title="Ver contas a pagar atrasadas"><div class="lab"><span class="i i-red">${icon("alert")}</span>Atrasados</div><div class="val mono-num">${venc.atrasados.length}</div><div class="meta">${money(totAtraso)} a pagar vencido</div></div>
       <div class="kpi gold" style="cursor:pointer" onclick="setView('lancamentos')" title="Ver todos os lançamentos"><div class="lab"><span class="i i-gold">${icon("clock")}</span>Próximos 15 dias</div><div class="val mono-num">${venc.proximos.length}</div><div class="meta">Contas a vencer</div></div>
@@ -1929,23 +1933,29 @@ async function excluirConta(id) {
    VIEW: CATEGORIAS
    ============================================================ */
 async function viewCategorias(v) {
-  const cats = await api("/api/categorias");
-  const rec = cats.filter(c => c.tipo === "receita");
-  const desp = cats.filter(c => c.tipo === "despesa");
-  const bloco = (titulo, arr, ic, cls) => `
+  const [cats, orc] = await Promise.all([api("/api/categorias"), api("/api/orcamento").catch(() => null)]);
+  const gasto = Object.fromEntries((orc?.itens || []).map(i => [i.categoria_id, i]));
+  const rec = cats.filter(c => c.tipo === "receita"), desp = cats.filter(c => c.tipo === "despesa");
+  const tile = (c, i) => {
+    const g = gasto[c.id], cor = _corOk(c.cor, "#7E8C9A");
+    const pct = g?.limite ? Math.min(100, g.pct || 0) : null;
+    return `<div class="cat-tile" style="--cor:${cor};--i:${i}" role="button" tabindex="0"
+        onclick="window._filtroInicial={cat:${c.id}};window._tipoFixo='';setView('lancamentos')" onkeydown="if(event.key==='Enter')this.click()"
+        title="Ver lançamentos de ${esc(c.nome)}">
+      <div class="cat-tile-acoes">
+        <button class="cat-bt" onclick="event.stopPropagation();_editarCategoria(${c.id})" title="Editar">${icon("edit")}</button>
+        <button class="cat-bt" onclick="event.stopPropagation();excluirCategoria(${c.id})" title="Excluir">${icon("trash")}</button></div>
+      <span class="cat-tile-ic">${icon(c.icone || "tag")}</span>
+      <b>${esc(c.nome)}</b>
+      ${g ? `<small class="mono-num">${money(g.gasto)} este mês</small>` : `<small>Ver lançamentos</small>`}
+      ${pct != null ? `<div class="cat-barra" title="${Math.round(g.pct)}% do limite"><i style="width:${pct}%"></i></div><span class="cat-pct">${Math.round(g.pct)}% de ${money0(g.limite)}</span>` : ""}
+    </div>`;
+  };
+  const bloco = (titulo, arr, ic, cls, tipo) => `
     <div class="card card-pad">
-      <div class="card-h"><span class="card-ico ${cls}">${icon(ic)}</span><div class="grow"><h3>${titulo}</h3><div class="sub">${arr.length} categoria(s)</div></div></div>
-      <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">
-        ${arr.map(c => `
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px;transition:background .15s"
-               onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"
-               onclick="window._filtroInicial={cat:${c.id}};window._tipoFixo='';setView('lancamentos')" title="Ver lançamentos de ${esc(c.nome)}">
-            <span class="card-ico" style="width:34px;height:34px;background:${c.cor}22;color:${c.cor}">${icon(c.icone || "tag")}</span>
-            <div class="grow"><div class="nm">${esc(c.nome)}</div><div class="sub" style="font-size:11px">Toque para ver os lançamentos</div></div>
-            <button class="btn-icon" onclick="event.stopPropagation();_editarCategoria(${c.id})">${icon("edit")}</button>
-            <button class="btn-icon" onclick="event.stopPropagation();excluirCategoria(${c.id})"><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' width='15' height='15'><polyline points='3 6 5 6 21 6'/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-          </div>`).join("") || `<div class="empty" style="padding:20px">${ilus("tag")}<p>Nenhuma categoria ainda.</p></div>`}
-      </div>
+      <div class="card-h"><span class="card-ico ${cls}">${icon(ic)}</span><div class="grow"><h3>${titulo}</h3><div class="sub">${arr.length} categoria(s)</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="formCategoria(null,'${tipo}')">${icon("plus")}Nova</button></div>
+      <div class="cat-mosaico">${arr.map(tile).join("") || `<div class="empty" style="padding:20px">${ilus("tag")}<p>Nenhuma categoria ainda.</p></div>`}</div>
     </div>`;
   v.innerHTML = `
     <div class="toolbar"><div class="grow"></div>
@@ -1953,8 +1963,8 @@ async function viewCategorias(v) {
       <button class="btn btn-primary" onclick="formCategoria(null,'despesa')">${icon("plus")}Categoria de despesa</button>
     </div>
     <div class="grid-2 grid-2-igual">
-      ${bloco("Receitas", rec, "arrowDown", "i-green")}
-      ${bloco("Despesas", desp, "arrowUp", "i-red")}
+      ${bloco("Despesas", desp, "arrowUp", "i-red", "despesa")}
+      ${bloco("Receitas", rec, "arrowDown", "i-green", "receita")}
     </div>`;
 }
 function formCategoria(c, tipoPad) {
@@ -1965,21 +1975,24 @@ function formCategoria(c, tipoPad) {
     <div class="modal">
       <div class="modal-h"><span class="card-ico i-navy">${icon("tag")}</span><h3>${c ? "Editar categoria" : "Nova categoria"}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
       <div class="modal-b"><div class="frm">
-        <div class="campo full"><label>Nome</label><input id="k-nome" value="${e.nome || ""}" placeholder="Nome da categoria"></div>
-        <div class="campo"><label>Tipo</label><select id="k-tipo">
+        <div class="campo full"><div class="cat-tile cat-prev" id="k-prev"></div></div>
+        <div class="campo full"><label>Nome</label><input id="k-nome" value="${esc(e.nome || "")}" placeholder="Nome da categoria" oninput="_catPrev()"></div>
+        <div class="campo"><label>Tipo</label><select id="k-tipo" onchange="_catPrev()">
           <option value="despesa"${tipo === "despesa" ? " selected" : ""}>Despesa</option>
           <option value="receita"${tipo === "receita" ? " selected" : ""}>Receita</option>
         </select></div>
-        <div class="campo"><label>Cor</label><input id="k-cor" type="color" value="${e.cor || (tipo === "receita" ? "#3E9079" : "#C9A94E")}"></div>
-        <div class="campo full"><label>Ícone</label><select id="k-icone">
-          ${icones.map(i => `<option value="${i}"${(e.icone || "tag") === i ? " selected" : ""}>${i}</option>`).join("")}
-        </select></div>
+        <div class="campo"><label>Cor</label><input id="k-cor" type="color" value="${e.cor || (tipo === "receita" ? "#3E9079" : "#C9A94E")}" oninput="_catPrev()"></div>
+        <div class="campo full"><div class="cor-grid" id="k-cores">${CAT_CORES.map(c => `<button type="button" class="cor-opt" data-cor="${c}" style="background:${c}" aria-label="Cor ${c}"
+            onclick="document.getElementById('k-cor').value='${c}';_catPrev()"></button>`).join("")}</div></div>
+        <div class="campo full"><label>Ícone</label><input type="hidden" id="k-icone" value="${esc(e.icone || "tag")}">
+          <div class="av-grid" id="k-ic-grade">${CAT_ICONES.map(i => `<button type="button" class="av-opt" data-ic="${i}" onclick="document.getElementById('k-icone').value='${i}';_catPrev()">${icon(i)}</button>`).join("")}</div></div>
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="salvarCategoria(${c ? e.id : "null"})">${icon("check")}Salvar</button>
       </div>
     </div>`);
+  _catPrev();
 }
 async function salvarCategoria(id) {
   const body = { nome: $("#k-nome").value.trim(), tipo: $("#k-tipo").value, cor: $("#k-cor").value, icone: $("#k-icone").value };
@@ -6097,6 +6110,7 @@ function _saudeFatores(k, orc, prev, venc) {
 
 function _saudeCard(k, orc, prev, venc) {
   const F = _saudeFatores(k, orc, prev, venc);
+  _MC_DICAS = _mascoteDicas(k, orc, prev, venc); _MC_I = 0;
   const nota = F.reduce((s, f) => s + f.pts, 0);
   const faixa = nota >= 85 ? ["Excelente", "#2F9E7E"] : nota >= 65 ? ["Boa", "#2F817A"] : nota >= 40 ? ["Atenção", "#C9A94E"] : ["Crítica", "#B4503E"];
   const corF = p => p >= 20 ? "url(#sdVerde)" : p >= 10 ? "url(#sdOuro)" : "url(#sdVerm)";
@@ -6114,7 +6128,9 @@ function _saudeCard(k, orc, prev, venc) {
   return `
     <div class="card card-pad sd-card" style="margin-bottom:16px" onmouseleave="_saudeSai()">
       <div class="card-h"><span class="card-ico i-green">${icon("heart")}</span>
-        <div class="grow"><h3>Saúde financeira</h3><div class="sub">Toque num fator para ver os detalhes</div></div></div>
+        <div class="grow"><h3>Saúde financeira</h3><div class="sub">Toque num fator para ver os detalhes</div></div>
+        <button type="button" class="mascote" onclick="_mascoteToque(this)" title="Toque para uma dica" aria-label="Mascote: toque para uma dica">
+          ${_mascoteSVG(nota)}<span class="mc-fala" role="status"></span></button></div>
       <div class="sd-corpo">
         <svg class="sd" viewBox="0 0 220 128" role="img" aria-label="Saúde financeira: ${nota} de 100, ${faixa[0]}">
           <defs>
@@ -6903,7 +6919,154 @@ function _periodo(k) {
   vibrar(8); recarregarTabela();
 }
 
+
+/* ── Mascote: cofrinho que reage à saúde financeira e dá dicas ── */
+function _mascoteSVG(nota) {
+  const humor = nota >= 65 ? "feliz" : nota >= 40 ? "atento" : "preocupado";
+  const boca = humor === "feliz" ? "M50 60q8 7 16 0" : humor === "atento" ? "M51 62h14" : "M50 64q8-6 16 0";
+  return `<svg viewBox="0 0 120 100" class="mc mc-${humor}" aria-hidden="true">
+    <defs><radialGradient id="mcCorpo" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#FFC6D4"/><stop offset="1" stop-color="#E7799A"/></radialGradient></defs>
+    <g class="mc-moeda"><circle cx="62" cy="10" r="7" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5"/><path d="M59 10h6" stroke="#8C6D24" stroke-width="1.5" stroke-linecap="round"/></g>
+    <g class="mc-corpo">
+      <path d="M96 52c8-2 12 4 9 9" fill="none" stroke="#D86889" stroke-width="3" stroke-linecap="round" class="mc-rabo"/>
+      <ellipse cx="58" cy="58" rx="40" ry="31" fill="url(#mcCorpo)"/>
+      <path d="M36 32l-4-14 14 8z" fill="#E7799A"/><path d="M38 29l-2-7 7 4z" fill="#FFC6D4"/>
+      <rect x="50" y="29" width="16" height="4" rx="2" fill="#B9506F"/>
+      <rect x="34" y="82" width="9" height="11" rx="4" fill="#D86889"/><rect x="72" y="82" width="9" height="11" rx="4" fill="#D86889"/>
+      <ellipse cx="22" cy="60" rx="10" ry="8" fill="#F7A3BA" stroke="#D86889" stroke-width="2"/>
+      <circle cx="19" cy="60" r="1.8" fill="#B9506F"/><circle cx="25" cy="60" r="1.8" fill="#B9506F"/>
+      <g class="mc-olho"><circle cx="46" cy="48" r="7" fill="#fff"/><circle class="mc-pupila" cx="46" cy="48" r="3.4" fill="#2A1B24"/></g>
+      <g class="mc-olho"><circle cx="70" cy="48" r="7" fill="#fff"/><circle class="mc-pupila" cx="70" cy="48" r="3.4" fill="#2A1B24"/></g>
+      <rect class="mc-palpebra" x="38" y="40" width="40" height="0" fill="#E7799A"/>
+      <circle cx="38" cy="60" r="4" fill="#FF8FAE" opacity=".7"/><circle cx="78" cy="60" r="4" fill="#FF8FAE" opacity=".7"/>
+      <path d="${boca}" fill="none" stroke="#7A2D47" stroke-width="2.6" stroke-linecap="round"/>
+      ${humor === "preocupado" ? `<path class="mc-gota" d="M86 34c3 5 4 7 1 9s-6-1-4-4z" fill="#8FD3F4"/>` : ""}
+    </g></svg>`;
+}
+function _mascoteDicas(k, orc, prev, venc) {
+  const d = [];
+  const res = (k.receitas_mes || 0) - (k.despesas_mes || 0);
+  const atras = (venc?.atrasados || []).filter(l => l.tipo === "despesa").length;
+  const neg = prev?.primeiro_negativo?.lancado || prev?.primeiro_negativo?.estimado;
+  if (atras) d.push(`Você tem ${atras} conta(s) vencida(s). Toque em Vencer, lá embaixo, para resolver.`);
+  if (neg) d.push(`Atenção: pela previsão, o saldo fica negativo em ${_dm(neg)}.`);
+  if (orc?.estourados) d.push(`${orc.estourados} categoria(s) passaram do limite este mês.`);
+  if (res > 0) d.push(`Sobrou ${money0(res)} este mês. Que tal guardar uma parte numa meta?`);
+  if (res < 0) d.push(`Este mês saiu ${money0(-res)} a mais do que entrou.`);
+  if (!orc?.limite_total) d.push("Defina limites no Orçamento e eu aviso quando estiver perto de passar.");
+  d.push("Segure o dedo num lançamento para ver todas as ações.", "Deslize um lançamento para a direita para dar baixa rapidinho.", "Puxe a tela para baixo para atualizar.");
+  return d;
+}
+let _MC_DICAS = [], _MC_I = 0;
+function _mascoteToque(el) {
+  vibrar(12);
+  el.classList.remove("pula"); void el.offsetWidth; el.classList.add("pula");
+  const fala = el.querySelector(".mc-fala"); if (!fala || !_MC_DICAS.length) return;
+  fala.textContent = _MC_DICAS[_MC_I++ % _MC_DICAS.length];
+  fala.classList.remove("mostra"); void fala.offsetWidth; fala.classList.add("mostra");
+}
+addEventListener("pointermove", e => {                      // olhos acompanham o dedo ou o mouse
+  if (window._mcRaf) return;
+  window._mcRaf = requestAnimationFrame(() => {
+    window._mcRaf = null;
+    document.querySelectorAll(".mc .mc-olho").forEach(o => {
+      const c = o.querySelector("circle"), p = o.querySelector(".mc-pupila"), r = c.getBoundingClientRect();
+      if (!r.width) return;
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2), d = Math.hypot(dx, dy) || 1, m = Math.min(3, d / 30);
+      p.setAttribute("transform", `translate(${(dx / d * m).toFixed(2)} ${(dy / d * m).toFixed(2)})`);
+    });
+  });
+}, { passive: true });
+
+/* ── Calendário de vencimentos: próximos 30 dias ── */
+let _CAL = null;
+async function _calVenc() {
+  const box = document.getElementById("cal-venc"); if (!box) return;
+  let v; try { v = await api("/api/dashboard/vencimentos?dias=30"); } catch { box.remove(); return; }
+  if (!document.getElementById("cal-venc")) return;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const porDia = {};
+  (v.proximos || []).forEach(l => { const k = String(l.vencimento).slice(0, 10); (porDia[k] = porDia[k] || []).push(l); });
+  const dias = [{ k: "atrasados", rot: "Vencidas", num: "!", itens: v.atrasados || [], especial: true }]
+    .concat(Array.from({ length: 31 }, (_, i) => { const d = new Date(hoje.getTime() + i * 864e5);
+      return { k: iso(d), rot: i === 0 ? "Hoje" : i === 1 ? "Amanhã" : d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+               num: d.getDate(), itens: porDia[iso(d)] || [], fds: d.getDay() === 0 || d.getDay() === 6 }; }));
+  const max = Math.max(1, ...dias.map(d => d.itens.reduce((s, l) => s + (l.tipo === "despesa" ? l.valor : 0), 0)));
+  _CAL = dias;
+  box.innerHTML = `
+    <div class="card-h"><span class="card-ico i-gold">${icon("calendar")}</span>
+      <div class="grow"><h3>Calendário dos próximos 30 dias</h3><div class="sub">Bolha maior, conta maior. Toque num dia para ver as contas.</div></div></div>
+    <div class="cal-faixa">${dias.map((d, i) => {
+      const pagar = d.itens.filter(l => l.tipo === "despesa").reduce((s, l) => s + l.valor, 0);
+      const receber = d.itens.some(l => l.tipo === "receita");
+      const tam = pagar ? 12 + Math.sqrt(pagar / max) * 22 : (receber ? 12 : 0);
+      return `<button class="cal-dia${d.especial ? " especial" : ""}${d.fds ? " fds" : ""}${!d.itens.length ? " vazio" : ""}" data-i="${i}" style="--i:${i}" onclick="_calDia(${i})">
+          <span class="cal-rot">${d.rot}</span><span class="cal-num">${d.num}</span>
+          <span class="cal-bolha-area">${d.itens.length ? `<span class="cal-bolha ${d.especial ? "atras" : pagar ? "pagar" : "receber"}" style="--t:${tam.toFixed(0)}px">${d.itens.length > 1 ? d.itens.length : ""}</span>` : ""}</span>
+        </button>`; }).join("")}</div>
+    <div class="cal-det" id="cal-det"></div>`;
+  const primeiro = dias.findIndex(d => d.itens.length);
+  if (primeiro >= 0) _calDia(primeiro, true);
+}
+function _calDia(i, silencioso) {
+  const d = _CAL?.[i]; if (!d) return;
+  if (!silencioso) vibrar(8);
+  document.querySelectorAll(".cal-dia").forEach(b => b.classList.toggle("on", Number(b.dataset.i) === i));
+  const det = document.getElementById("cal-det"); if (!det) return;
+  det.innerHTML = d.itens.length ? `<div class="cal-det-tit">${d.especial ? "Contas vencidas" : (d.rot === "Hoje" || d.rot === "Amanhã" ? d.rot : `Dia ${d.num}`)} · ${d.itens.length} conta(s)</div>`
+    + d.itens.map((l, j) => `<div class="cal-item" style="--j:${j}">
+        <span class="cal-item-ic ${l.tipo}">${icon(l.tipo === "receita" ? "arrowDown" : "arrowUp")}</span>
+        <div class="cal-item-txt"><b>${esc(l.descricao)}</b><small>${esc(l.categoria || "Sem categoria")}${d.especial ? ` · venceu ${_dm(String(l.vencimento).slice(0, 10))}` : ""}</small></div>
+        <span class="mono-num cal-item-val ${l.tipo}">${money(l.valor)}</span>
+        <button class="btn btn-sm ${l.tipo === "receita" ? "btn-green" : "btn-primary"}" onclick="formBaixaId(${l.id})">${icon("check")}${l.tipo === "receita" ? "Recebi" : "Paguei"}</button>
+      </div>`).join("")
+    : `<div class="cal-vazio">${icon("checkCircle")}Nenhuma conta neste dia.</div>`;
+}
+
+/* ── Banner colorido das listas (a pagar, a receber, extrato) ── */
+function _lancBanner(itens, tipo) {
+  const box = document.getElementById("lanc-banner"); if (!box || FILTRO.status) return;
+  const h = new Date(), mes = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`;
+  const val = l => Number(l.valor_total ?? l.valor ?? 0);
+  const soma = f => itens.filter(f).reduce((s, l) => s + val(l), 0), conta = f => itens.filter(f).length;
+  const pend = l => !l.data_pagamento && l.status !== "atrasado", atr = l => !l.data_pagamento && l.status === "atrasado";
+  const pago = l => l.data_pagamento && String(l.data_pagamento).slice(0, 7) === mes;
+  const rec = tipo === "receita";
+  const fig = tipo === "despesa" ? `<svg viewBox="0 0 140 100" class="lb-fig"><g class="lb-moedas">${[0, 1, 2].map(i => `<circle class="lb-m m${i}" cx="${84 + i * 14}" cy="30" r="8" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5"/>`).join("")}</g>
+      <rect x="22" y="38" width="86" height="54" rx="12" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="3.5"/><path d="M108 56h-18a9 9 0 0 0 0 18h18" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="3.5"/><circle cx="92" cy="65" r="3" fill="#fff"/></svg>`
+    : rec ? `<svg viewBox="0 0 140 100" class="lb-fig"><g class="lb-cai">${[0, 1, 2].map(i => `<circle class="lb-c c${i}" cx="70" cy="8" r="8" fill="#F4D27A" stroke="#8C6D24" stroke-width="1.5"/>`).join("")}</g>
+      <path d="M30 52h80l-8 38H38z" fill="rgba(255,255,255,.2)" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M24 52h92" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>`
+    : `<svg viewBox="0 0 140 100" class="lb-fig"><path d="M20 88h104" stroke="#fff" stroke-width="3" stroke-linecap="round"/>${[[30, 30, "#7FD3C2"], [52, 50, "#F4D27A"], [74, 38, "#7FD3C2"], [96, 62, "#F4D27A"]].map(([x, hh, c], i) => `<rect class="lb-b b${i}" x="${x}" y="${86 - hh}" width="14" height="${hh}" rx="4" fill="${c}"/>`).join("")}
+      <path class="lb-linha" d="M34 50l22-18 22 10 22-24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pathLength="100"/></svg>`;
+  const chip = (s, rot, valor, n, cls) => `<button class="lb-chip ${cls}" onclick="filtroStatus('${s}');vibrar(8)"><small>${rot}</small><b class="mono-num">${money(valor)}</b><span>${n} lanç.</span></button>`;
+  box.className = `lanc-banner lb-${tipo || "todos"}`;
+  box.innerHTML = `
+    <div class="lb-txt"><b>${tipo === "despesa" ? "Contas a pagar" : rec ? "Contas a receber" : "Extrato completo"}</b>
+      <span>${FILTRO.de ? "No período escolhido" : "Toque num número para filtrar"}</span></div>
+    ${fig}
+    <div class="lb-chips">
+      ${chip("pendente", rec ? "A receber" : "A pagar", soma(pend), conta(pend), "c-pend")}
+      ${chip("atrasado", "Atrasado", soma(atr), conta(atr), "c-atr")}
+      ${chip("pago", rec ? "Recebido no mês" : "Pago no mês", soma(pago), conta(pago), "c-pago")}
+    </div>`;
+}
+
+/* ── Formulário de categoria: ícones desenhados, paleta e prévia ── */
+const CAT_ICONES = ["tag", "home", "car", "heart", "shield", "cash", "wallet", "bank", "receipt", "doc", "users", "user", "star", "target",
+  "trendUp", "pie", "chart", "calendar", "clock", "bell", "send", "repeat", "map", "cog"];
+const CAT_CORES = ["#C9573F", "#E59A4B", "#C9A94E", "#3EA88A", "#2F817A", "#38A3C9", "#305C74", "#5B3FA0", "#A0285F", "#7E8C9A"];
+function _catPrev() {
+  const p = document.getElementById("k-prev"); if (!p) return;
+  const cor = $("#k-cor").value, ic = $("#k-icone").value, nome = $("#k-nome").value.trim() || "Nova categoria";
+  p.style.setProperty("--cor", cor);
+  p.innerHTML = `<span class="cat-tile-ic">${icon(ic)}</span><b>${esc(nome)}</b><small>${$("#k-tipo").value === "receita" ? "Receita" : "Despesa"}</small>`;
+  document.querySelectorAll("#k-ic-grade .av-opt").forEach(b => b.classList.toggle("sel", b.dataset.ic === ic));
+  document.querySelectorAll("#k-cores .cor-opt").forEach(b => b.classList.toggle("sel", b.dataset.cor.toLowerCase() === cor.toLowerCase()));
+}
+
 Object.assign(window, {
+  _mascoteToque, _calDia, _catPrev,
   vibrar, _menuLanc, _folhaFechar, _lancDuplicar, _lancRepetir, _lancComprovante, _lancCompartilhar, _periodo,
   confirmar,
   fecharLeque, _leqTransferir,

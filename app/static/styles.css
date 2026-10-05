@@ -3283,3 +3283,126 @@ html, body { overscroll-behavior-y: contain; }
 .puxa.girando svg { animation: puxaGira .7s linear infinite; }
 @keyframes puxaGira { to { transform: rotateY(360deg); } }
 .puxa.ok { color: #1F6F5C; }
+
+/* ══════════════════════════════════════════════════════
+   MAIS COR E DESENHOS INTERATIVOS
+   ══════════════════════════════════════════════════════ */
+/* ── mascote ── */
+.mascote { position: relative; width: 74px; height: 62px; border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; }
+.mascote .mc { width: 100%; height: 100%; overflow: visible; }
+.mc-corpo { transform-origin: 58px 90px; animation: mcRespira 3.2s ease-in-out infinite; }
+@keyframes mcRespira { 50% { transform: scale(1.03, .97); } }
+.mascote.pula .mc-corpo { animation: mcPula .6s var(--mola); }
+@keyframes mcPula { 30% { transform: translateY(-14px) rotate(-6deg); } 60% { transform: translateY(0) scale(1.08, .92); } }
+.mc-palpebra { animation: mcPisca 4.5s infinite; }
+@keyframes mcPisca { 0%, 92%, 100% { height: 0; } 95% { height: 16px; } }
+.mc-rabo { transform-origin: 96px 52px; animation: mcRabo 1.4s ease-in-out infinite; }
+@keyframes mcRabo { 50% { transform: rotate(14deg); } }
+.mc-moeda { animation: mcMoeda 2.6s ease-in infinite; }
+@keyframes mcMoeda { 0% { transform: translateY(-12px); opacity: 0; } 25% { opacity: 1; } 60% { transform: translateY(18px); opacity: 1; } 70%, 100% { transform: translateY(20px); opacity: 0; } }
+.mc-preocupado .mc-moeda { display: none; }
+.mc-gota { animation: mcGota 1.8s ease-in infinite; }
+@keyframes mcGota { 0% { transform: translateY(-3px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+.mc-pupila { transition: transform .12s ease-out; }
+.mc-fala { position: absolute; right: 4px; top: calc(100% + 6px); width: max-content; max-width: 240px; padding: 9px 12px; border-radius: 14px 4px 14px 14px;
+  background: linear-gradient(135deg, #082D51, #2F817A); color: #fff; font-size: 12.5px; font-weight: 600; line-height: 1.35; text-align: left; z-index: 5;
+  box-shadow: 0 10px 24px -8px rgba(8,45,81,.5); opacity: 0; transform: translateY(-6px) scale(.9); transform-origin: top right; pointer-events: none;
+  transition: opacity .2s, transform .3s var(--mola); }
+.mc-fala.mostra { opacity: 1; transform: none; animation: mcFalaSome 6s forwards; }
+@keyframes mcFalaSome { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── calendário de vencimentos ── */
+.cal-faixa { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.cal-dia { flex: 0 0 58px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 10px; border-radius: 16px;
+  border: 1.5px solid var(--line); background: var(--card); cursor: pointer; font: inherit; transition: transform .2s var(--mola), border-color .2s, background .2s;
+  animation: itemEntra .35s var(--suave) backwards; animation-delay: calc(min(var(--i), 12) * 25ms); }
+.cal-dia:hover { transform: translateY(-3px); }
+.cal-dia:active { transform: scale(.94); }
+.cal-dia.vazio { opacity: .55; }
+.cal-dia.fds .cal-rot { color: var(--teal); }
+.cal-dia.especial { background: linear-gradient(160deg, #B4503E1c, transparent); border-color: #C9573F55; }
+.cal-dia.on { border-color: transparent; background: linear-gradient(160deg, #082D51, #2F817A); color: #fff; box-shadow: 0 10px 20px -10px #082D51; }
+.cal-dia.on .cal-rot, .cal-dia.on .cal-num { color: #fff; }
+.cal-rot { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.cal-num { font-family: "Numeros", var(--font); font-size: 19px; font-weight: 800; color: var(--ink); }
+.cal-bolha-area { height: 36px; display: flex; align-items: center; justify-content: center; }
+.cal-bolha { width: var(--t); height: var(--t); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10.5px; font-weight: 800;
+  animation: calBolha .5s var(--mola) backwards; animation-delay: calc(min(var(--i), 12) * 25ms + .2s); }
+@keyframes calBolha { from { transform: scale(0); } }
+.cal-bolha.pagar { background: radial-gradient(circle at 30% 30%, #F4D27A, #C9A94E); box-shadow: 0 4px 10px -4px #C9A94E; }
+.cal-bolha.receber { background: radial-gradient(circle at 30% 30%, #7FE0B7, #2F9E7E); }
+.cal-bolha.atras { background: radial-gradient(circle at 30% 30%, #F2A08F, #C9573F); animation: calBolha .5s var(--mola) backwards, tcBate 1.6s 1s ease-in-out infinite; }
+.cal-det-tit { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin: 4px 0 8px; }
+.cal-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); animation: itemEntra .3s var(--suave) backwards; animation-delay: calc(var(--j) * 40ms); }
+.cal-item-ic { width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; }
+.cal-item-ic.despesa { background: linear-gradient(135deg, #A2412F, #E07A5F); } .cal-item-ic.receita { background: linear-gradient(135deg, #1F6F5C, #3EC28F); }
+.cal-item-ic svg { width: 16px; height: 16px; }
+.cal-item-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cal-item-txt b { font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-item-txt small { font-size: 11.5px; color: var(--ink-3); }
+.cal-item-val { font-size: 14px; white-space: nowrap; } .cal-item-val.despesa { color: var(--red); } .cal-item-val.receita { color: #1F6F5C; }
+.cal-vazio { display: flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; padding: 8px 0; }
+.cal-vazio svg { width: 18px; height: 18px; color: var(--teal); }
+@media (max-width: 640px) { .cal-item { flex-wrap: wrap; } .cal-item .btn { margin-left: 42px; } }
+
+/* ── banner das listas ── */
+.lanc-banner:empty { display: none; }
+.lanc-banner { position: relative; overflow: hidden; border-radius: 22px; padding: 16px 18px; margin-bottom: 14px; color: #fff;
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "txt fig" "chips chips"; gap: 6px 10px;
+  box-shadow: 0 16px 34px -18px rgba(8,45,81,.6); animation: telaEntra .45s var(--suave) backwards; }
+.lanc-banner::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(60% 90% at 100% 0%, rgba(255,255,255,.25), transparent 60%), radial-gradient(50% 70% at 0% 100%, rgba(0,0,0,.18), transparent 60%); }
+.lb-despesa { background: linear-gradient(135deg, #7E2C20, #C9573F 50%, #E59A4B); }
+.lb-receita { background: linear-gradient(135deg, #14594C, #2F9E7E 55%, #7FD3C2); }
+.lb-todos   { background: linear-gradient(135deg, #061E38, #305C74 50%, #2F817A); }
+.lb-txt { grid-area: txt; display: flex; flex-direction: column; gap: 2px; position: relative; }
+.lb-txt b { font-size: 19px; font-weight: 800; letter-spacing: -.01em; } .lb-txt span { font-size: 12px; opacity: .85; }
+.lb-fig { grid-area: fig; width: 120px; height: 80px; position: relative; overflow: visible; margin: -6px -4px -10px 0; }
+.lb-m { animation: lbVoa 2.6s ease-out infinite; } .lb-m.m1 { animation-delay: .5s; } .lb-m.m2 { animation-delay: 1s; }
+@keyframes lbVoa { 0% { transform: translate(-30px, 34px) scale(.5); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(10px, -26px) scale(1); opacity: 0; } }
+.lb-c { animation: lbCai 2.4s cubic-bezier(.5,0,.75,0) infinite; } .lb-c.c1 { animation-delay: .8s; } .lb-c.c2 { animation-delay: 1.6s; }
+@keyframes lbCai { 0% { transform: translateY(-10px); opacity: 0; } 15% { opacity: 1; } 80% { transform: translateY(58px); opacity: 1; } 100% { transform: translateY(62px); opacity: 0; } }
+.lb-b { transform-box: fill-box; transform-origin: 50% 100%; animation: tcBarra 2.6s ease-in-out infinite; }
+.lb-b.b1 { animation-delay: .2s; } .lb-b.b2 { animation-delay: .4s; } .lb-b.b3 { animation-delay: .6s; }
+.lb-linha { stroke-dasharray: 100; animation: cfDesenha 4s ease-in-out infinite; }
+.lb-chips { grid-area: chips; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
+.lb-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 10px 12px; border-radius: 14px; border: none; cursor: pointer; text-align: left;
+  color: #fff; font: inherit; background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); backdrop-filter: blur(6px);
+  transition: transform .2s var(--mola), background .2s; }
+.lb-chip:hover { background: rgba(255,255,255,.26); transform: translateY(-2px); } .lb-chip:active { transform: scale(.95); }
+.lb-chip small { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; opacity: .85; }
+.lb-chip b { font-size: 17px; white-space: nowrap; } .lb-chip span { font-size: 11px; opacity: .8; }
+.lb-chip.c-atr b { color: #FFE0D6; }
+@media (max-width: 640px) { .lb-chip b { font-size: 14px; } .lb-chip { padding: 8px 9px; } .lb-fig { width: 96px; height: 66px; } }
+
+/* ── categorias em mosaico ── */
+.cat-mosaico { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 6px; }
+.cat-tile { position: relative; overflow: hidden; border-radius: 18px; padding: 14px 14px 12px; min-height: 118px; cursor: pointer; color: #fff;
+  display: flex; flex-direction: column; gap: 3px;
+  background: radial-gradient(90% 80% at 100% 0%, rgba(255,255,255,.3), transparent 60%), linear-gradient(140deg, var(--cor), color-mix(in srgb, var(--cor) 55%, #000));
+  box-shadow: 0 12px 24px -14px var(--cor); transition: transform .25s var(--mola), box-shadow .25s;
+  animation: telaEntra .45s var(--suave) backwards; animation-delay: calc(min(var(--i, 0), 12) * 35ms); }
+.cat-tile::after { content: ""; position: absolute; width: 90px; height: 90px; right: -30px; bottom: -40px; border-radius: 50%; background: rgba(255,255,255,.12); }
+.cat-tile:hover { transform: translateY(-4px) rotate(-.6deg); box-shadow: 0 18px 30px -14px var(--cor); }
+.cat-tile:active { transform: scale(.96); }
+.cat-tile-ic { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.22);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); margin-bottom: 4px; transition: transform .3s var(--mola); }
+.cat-tile:hover .cat-tile-ic { transform: rotate(-10deg) scale(1.1); }
+.cat-tile-ic svg { width: 20px; height: 20px; }
+.cat-tile b { font-size: 14px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; position: relative; z-index: 1; }
+.cat-tile small { font-size: 12px; opacity: .9; position: relative; z-index: 1; }
+.cat-barra { height: 6px; border-radius: 6px; background: rgba(255,255,255,.25); overflow: hidden; margin-top: 6px; position: relative; z-index: 1; }
+.cat-barra i { display: block; height: 100%; border-radius: 6px; background: #fff; transform-origin: left; animation: encher 1s cubic-bezier(.2,.8,.2,1) .3s backwards; }
+.cat-pct { font-size: 10.5px; font-weight: 700; opacity: .85; position: relative; z-index: 1; }
+.cat-tile-acoes { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 2; opacity: 0; transition: opacity .2s; }
+.cat-tile:hover .cat-tile-acoes, .cat-tile:focus-within .cat-tile-acoes { opacity: 1; }
+@media (hover: none) { .cat-tile-acoes { opacity: 1; } }
+.cat-bt { width: 28px; height: 28px; border-radius: 9px; border: none; background: rgba(255,255,255,.22); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.cat-bt:hover { background: rgba(255,255,255,.38); } .cat-bt svg { width: 14px; height: 14px; }
+.cat-prev { cursor: default; max-width: 220px; margin: 0 auto; min-height: 104px; animation: none; }
+#k-ic-grade { grid-template-columns: repeat(8, 1fr); }
+@media (max-width: 640px) { .cat-mosaico { grid-template-columns: repeat(2, 1fr); } #k-ic-grade { grid-template-columns: repeat(6, 1fr); } }
+
+/* celular e tablet: grades de 2 colunas viram 1 (uma regra de tela cheia forçava 2 colunas
+   em qualquer largura e espremia Categorias e outros blocos no celular) */
+@media (max-width: 1024px) { .grid-2-igual { grid-template-columns: 1fr !important; } }
