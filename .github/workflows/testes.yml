@@ -28,6 +28,22 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: python -m pytest -q
+      - run: python -m pytest -q --junitxml=resultado.xml
+      - name: Resumo dos testes
+        if: always()
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET, os
+          if not os.path.exists("resultado.xml"):
+              print("::error::pytest não gerou resultado"); raise SystemExit
+          r = ET.parse("resultado.xml").getroot()
+          s = r if r.tag == "testsuite" else r.find("testsuite")
+          print(f"::notice::{s.get('tests')} testes, {s.get('failures')} falhas, {s.get('errors')} erros, {s.get('skipped')} pulados")
+          for tc in s.iter("testcase"):
+              for f in list(tc.findall("failure")) + list(tc.findall("error")):
+                  msg = (f.get("message") or "") + " | " + (f.text or "")[-900:]
+                  msg = msg.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+                  print(f"::error title={tc.get('classname')}.{tc.get('name')}::{msg}")
+          PY
       - name: Sintaxe do app.js
         run: node --check app/static/app.js
