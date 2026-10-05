@@ -478,3 +478,58 @@ def patrimonio(contas, veiculos, total_contas, total_veic, total_financ) -> byte
               resumo=f"Posição em {date.today().strftime('%d/%m/%Y')}", valor=total_contas + total_veic - total_financ,
               detalhes={"contas": float(total_contas), "veiculos": float(total_veic), "financiamentos": float(total_financ)})
     return pdf_bytes
+
+
+# ---------------------------------------------------------------- IMPOSTO DE RENDA
+_COR_IR = {"saude": "#2F9E7E", "educacao": "#305C74", "previdencia": "#C9A94E", "pensao": "#7F3F98"}
+
+
+def imposto_renda(d: dict) -> bytes:
+    """Despesas dedutíveis do ano, por tipo e por quem recebeu, com o que falta conferir."""
+    ss = _styles()
+    ano = d["ano"]
+    buf, doc = _doc_colorido(f"Imposto de Renda {ano}")
+    auth = _hash("imposto_renda", ano, d["total"], d["qtd"], date.today())
+    els = [_cartoes(ss, [("Total dedutível", brl(d["total"]), "#2F9E7E"), ("Pagamentos", str(d["qtd"]), "#305C74"),
+                         ("Sem comprovante", str(d["sem_comprovante"]), "#C9573F" if d["sem_comprovante"] else "#2F9E7E")])]
+    if not d["grupos"]:
+        els += [Spacer(1, 10), _aviso(ss, f"Nenhuma despesa dedutível paga em {ano}. Marque as categorias de saúde, educação, "
+                                          f"previdência ou pensão em <b>Categorias</b> para elas entrarem aqui.", "#C2742A")]
+    if d["sem_documento"]:
+        els += [Spacer(1, 8), _aviso(ss, "Falta CPF/CNPJ válido de: <b>" + ", ".join(d["sem_documento"][:12]) +
+                                     "</b>. A Receita pede o documento de quem recebeu: complete no cadastro do contato.", "#C9573F")]
+    if d["sem_comprovante"]:
+        els += [Spacer(1, 6), _aviso(ss, f"<b>{d['sem_comprovante']}</b> pagamento(s) sem comprovante anexado. "
+                                         "Guarde os recibos: a Receita pode pedir.", "#C2742A")]
+    for g in d["grupos"]:
+        cor = _COR_IR.get(g["tipo"], "#305C74")
+        els.append(_secao(ss, f"{g['nome']} · {brl(g['total'])}", cor))
+        els.append(_aviso(ss, g["dica"], cor))
+        els.append(Spacer(1, 6))
+        linhas = [(p["nome"], p["documento"] or "<font color='#C9573F'>falta</font>", str(len(p["lancamentos"])), brl(p["total"]))
+                  for p in g["prestadores"]]
+        els.append(_tabela_colorida(ss, ["Quem recebeu", "CPF/CNPJ", "Pagtos", "Total"], linhas,
+                                    ("Total", "", str(sum(len(p["lancamentos"]) for p in g["prestadores"])), brl(g["total"])),
+                                    cor, [None, 42 * mm, 16 * mm, 32 * mm]))
+        det = []
+        for p in g["prestadores"]:
+            for l in p["lancamentos"]:
+                a, m, dd = l["data"].split("-")
+                det.append((f"{dd}/{m}/{a}", f"{l['descricao']} <font color='#7E8C9A'>· {p['nome']}</font>",
+                            "sim" if l["comprovantes"] else "<font color='#C9573F'>não</font>", brl(l["valor"])))
+        det.sort(key=lambda x: x[0][6:] + x[0][3:5] + x[0][:2])
+        els.append(Spacer(1, 6))
+        els.append(_tabela_colorida(ss, ["Data", "Descrição", "Comprov.", "Valor"], det, None, "#5B6876",
+                                    [22 * mm, None, 18 * mm, 30 * mm], com_cor=False))
+    els += [Spacer(1, 10), _aviso(ss, "Relatório organizado pelo sistema para ajudar na declaração. As regras e os limites "
+                                      "de dedução mudam todo ano: confira com a Receita Federal ou com seu contador.", "#305C74")]
+    from .urls import verificar
+    els += _rodape(ss, auth, verificar(auth))
+    doc.build(els, onFirstPage=_pagina("Imposto de Renda", f"Despesas dedutíveis pagas em {ano}", "verde"),
+              onLaterPages=_pagina("Imposto de Renda", f"Ano {ano}", "verde"))
+    pdf_bytes = buf.getvalue()
+    from .documentos import registrar
+    registrar(auth, pdf_bytes, tipo="imposto_renda", titulo=f"Despesas dedutíveis do IR {ano}",
+              resumo=f"{d['qtd']} pagamentos de saúde, educação, previdência e pensão", valor=d["total"],
+              detalhes={g["nome"]: g["total"] for g in d["grupos"]})
+    return pdf_bytes

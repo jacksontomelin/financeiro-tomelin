@@ -58,6 +58,7 @@ class Categoria(Base):
     cor = Column(String(9), default="#2f9e6f")
     icone = Column(String(40), default="tag")
     orcamento_mensal = Column(Numeric(14, 2), nullable=True)  # limite de gasto por mês (só despesas)
+    ir_tipo = Column(String(20), nullable=True)   # dedução no IR: saude | educacao | previdencia | pensao
     criado_em = Column(DateTime, default=datetime.utcnow)
 
     lancamentos = relationship("Lancamento", back_populates="categoria")

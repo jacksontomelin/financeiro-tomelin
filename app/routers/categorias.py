@@ -18,8 +18,21 @@ def listar(tipo: str | None = None, db: Session = Depends(get_db)):
     return q.order_by(models.Categoria.nome).all()
 
 
+def _ir_ok(dados: schemas.CategoriaIn):
+    from ..imposto_renda import TIPOS
+    if dados.ir_tipo == "":
+        dados.ir_tipo = None          # só quando veio vazio de propósito (limpar)
+    if dados.ir_tipo is None:
+        return
+    if dados.ir_tipo not in TIPOS:
+        raise HTTPException(422, "Imposto de Renda: escolha saúde, educação, previdência ou pensão.")
+    if dados.tipo != "despesa":
+        raise HTTPException(422, "Imposto de Renda: só categorias de despesa podem ser dedutíveis.")
+
+
 @router.post("", response_model=schemas.CategoriaOut)
 def criar(dados: schemas.CategoriaIn, db: Session = Depends(get_db)):
+    _ir_ok(dados)
     c = models.Categoria(**dados.model_dump())
     db.add(c); db.commit(); db.refresh(c)
     return c
@@ -30,7 +43,8 @@ def editar(cid: int, dados: schemas.CategoriaIn, db: Session = Depends(get_db)):
     c = db.get(models.Categoria, cid)
     if not c:
         raise HTTPException(404, "Categoria não encontrada.")
-    for k, v in dados.model_dump().items():
+    _ir_ok(dados)
+    for k, v in dados.model_dump(exclude_unset=True).items():   # campo não enviado não é apagado
         setattr(c, k, v)
     db.commit(); db.refresh(c)
     return c

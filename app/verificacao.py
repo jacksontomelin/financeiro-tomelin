@@ -26,6 +26,7 @@ _TIPOS = {
     "recibo": ("Recibo", "#2F9E7E", "#1F6F5C"),
     "balancete": ("Balancete", "#305C74", "#082D51"),
     "patrimonio": ("Patrimônio", "#C9A94E", "#8A6D1E"),
+    "imposto_renda": ("Relatório do IR", "#2F9E7E", "#14594C"),
 }
 
 
@@ -126,12 +127,15 @@ def verificar(code: str, db: Session = Depends(get_db)):
         linhas.append(("Situação na emissão", sit))
     if d.tipo == "balancete":
         linhas += [("Receitas", _brl(det.get("receitas"))), ("Despesas", _brl(det.get("despesas")))]
+    if d.tipo == "imposto_renda":
+        linhas += [(k, _brl(v)) for k, v in det.items()]
     if d.tipo == "patrimonio":
         linhas += [("Contas", _brl(det.get("contas"))), ("Veículos", _brl(det.get("veiculos"))),
                    ("Financiamentos", _brl(det.get("financiamentos")))]
     linhas += [("Emitido em", _quando(d.emitido_em)), ("Modelo", "Cupom (bobina)" if d.estilo == "cupom" else "Padrão (A4)"),
                ("Emitido por", settings.EMPRESA_NOME)]
-    rot_valor = {"recibo": "Valor", "balancete": "Resultado do período", "patrimonio": "Patrimônio líquido"}.get(d.tipo, "Valor")
+    rot_valor = {"recibo": "Valor", "balancete": "Resultado do período", "patrimonio": "Patrimônio líquido",
+                 "imposto_renda": "Total dedutível"}.get(d.tipo, "Valor")
     corpo = "".join(f'<div class="linha"><span>{e(k)}</span><b>{e(str(v))}</b></div>' for k, v in linhas)
     return _pagina(f"""<div class="topo">{_LOGO}<span class="selo">{_OK} Documento autêntico</span>
         <h1>{e(nome)} verificado</h1><div class="sub">Emitido pelo sistema Tomelin Gestão Financeira</div></div>

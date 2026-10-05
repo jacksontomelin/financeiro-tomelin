@@ -50,6 +50,7 @@ class CategoriaIn(BaseModel):
     tipo: str  # receita | despesa
     cor: str = "#2f9e6f"
     icone: str = "tag"
+    ir_tipo: Optional[str] = None   # saude | educacao | previdencia | pensao
 
 
 class CategoriaOut(CategoriaIn):

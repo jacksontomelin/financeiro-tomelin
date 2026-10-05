@@ -2016,6 +2016,10 @@ function formCategoria(c, tipoPad) {
           <option value="receita"${tipo === "receita" ? " selected" : ""}>Receita</option>
         </select></div>
         <div class="campo"><label>Cor</label><input id="k-cor" type="color" value="${e.cor || (tipo === "receita" ? "#3E9079" : "#C9A94E")}" oninput="_catPrev()"></div>
+        <div class="campo full" id="k-ir-campo"><label>Imposto de Renda</label><select id="k-ir">
+          ${[["", "Não entra no IR"], ["saude", "Dedutível: saúde"], ["educacao", "Dedutível: educação"], ["previdencia", "Dedutível: previdência privada"], ["pensao", "Dedutível: pensão alimentícia"]]
+            .map(([v, t]) => `<option value="${v}"${(e.ir_tipo || "") === v ? " selected" : ""}>${t}</option>`).join("")}
+        </select><small class="campo-dica">Os pagamentos desta categoria entram no relatório do Imposto de Renda (Relatórios).</small></div>
         <div class="campo full"><div class="cor-grid" id="k-cores">${CAT_CORES.map(c => `<button type="button" class="cor-opt" data-cor="${c}" style="background:${c}" aria-label="Cor ${c}"
             onclick="document.getElementById('k-cor').value='${c}';_catPrev()"></button>`).join("")}</div></div>
         <div class="campo full"><label>Ícone</label><input type="hidden" id="k-icone" value="${esc(e.icone || "tag")}">
@@ -2029,7 +2033,8 @@ function formCategoria(c, tipoPad) {
   _catPrev();
 }
 async function salvarCategoria(id) {
-  const body = { nome: $("#k-nome").value.trim(), tipo: $("#k-tipo").value, cor: $("#k-cor").value, icone: $("#k-icone").value };
+  const body = { nome: $("#k-nome").value.trim(), tipo: $("#k-tipo").value, cor: $("#k-cor").value, icone: $("#k-icone").value,
+                 ir_tipo: $("#k-tipo").value === "despesa" ? ($("#k-ir")?.value || "") : "" };
   if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   try {
     if (id) await api(`/api/categorias/${id}`, { method: "PUT", body: JSON.stringify(body) });
@@ -3523,6 +3528,8 @@ async function viewRelatorios(v) {
           <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#2F817A"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><rect class="pdf-b" x="8" y="34" width="5" height="12" rx="1" fill="#2F9E7E"/><rect class="pdf-b b2" x="16" y="28" width="5" height="18" rx="1" fill="#C9A94E"/><rect class="pdf-b b3" x="24" y="38" width="5" height="8" rx="1" fill="#C9573F"/><path d="M8 20h26M8 24h18" stroke="#C9D3DC" stroke-width="2" stroke-linecap="round"/></svg><span><b>Balancete</b><small>Receitas, despesas e gráficos do período</small></span>${icon("download")}</button>
         <button class="pdf-card" style="--c1:#7A5E16;--c2:#D4B25A" onclick="vibrar(10);abrirPDF('/api/relatorios/patrimonio.pdf')">
           <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#C9A94E"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><circle cx="21" cy="36" r="9" fill="none" stroke="#E6ECF1" stroke-width="5"/><circle class="pdf-anel" cx="21" cy="36" r="9" fill="none" stroke="#C9A94E" stroke-width="5" stroke-dasharray="40 57" transform="rotate(-90 21 36)"/><path d="M8 20h26" stroke="#C9D3DC" stroke-width="2" stroke-linecap="round"/></svg><span><b>Patrimônio</b><small>Contas, veículos e financiamentos</small></span>${icon("download")}</button>
+        <button class="pdf-card" style="--c1:#14594C;--c2:#3EC28F" onclick="vibrar(10);abrirIR()">
+          <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#2F9E7E"/><text x="16" y="11" font-size="8" font-weight="800" fill="#fff" text-anchor="middle" font-family="Arial">IR</text><circle cx="21" cy="35" r="10" fill="#E8F7F0"/><path d="M15.5 35.5l3.6 3.6 7.4-8" fill="none" stroke="#2F9E7E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Imposto de Renda</b><small>Saúde, educação e outras despesas dedutíveis do ano</small></span>${icon("download")}</button>
         <button class="pdf-card" style="--c1:#3A4654;--c2:#7E8C9A" onclick="vibrar(10);abrirPDF('/api/relatorios/balancete.pdf?de=${PERIODO.de}&ate=${PERIODO.ate}&estilo=matricial')">
           <svg viewBox="0 0 44 54" class="pdf-doc" aria-hidden="true"><path d="M4 2h26l10 10v38a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#fff"/><path d="M30 2v10h10" fill="#E6ECF1"/><rect x="2" y="2" width="28" height="12" rx="2" fill="#5B6876"/><rect x="6" y="6" width="10" height="4" rx="1" fill="#fff" opacity=".9"/><path d="M8 20h26M8 25h22M8 30h26M8 35h16M8 40h26" stroke="#9AA7B4" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 2"/></svg><span><b>Cupom</b><small>Para impressora térmica (preto e branco)</small></span>${icon("download")}</button>
       </div>
@@ -6554,6 +6561,38 @@ async function baixarBackup() {
 }
 
 
+/* ── Imposto de Renda (Relatórios) ── */
+const _IR_COR = { saude: ["#14594C", "#3EC28F"], educacao: ["#082D51", "#4F8BC9"], previdencia: ["#8A6D1E", "#E2C46E"], pensao: ["#5B3FA0", "#8B6BD8"] };
+async function abrirIR(ano) {
+  const atual = new Date().getFullYear();
+  ano = ano || atual - 1;
+  abrirModal(`<div class="modal" style="max-width:640px"><div class="modal-h"><span class="card-ico i-green">${icon("doc")}</span><h3>Imposto de Renda</h3>
+    <button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div><div class="modal-b" id="ir-corpo">${ilusCarregando(70)}</div></div>`);
+  let d;
+  try { d = await api(`/api/relatorios/imposto-renda?ano=${ano}`); }
+  catch (e) { document.getElementById("ir-corpo").innerHTML = `<p>${esc(e.message)}</p>`; return; }
+  const anos = [atual, atual - 1, atual - 2, atual - 3];
+  document.getElementById("ir-corpo").innerHTML = `
+    <div class="ir-anos">${anos.map(a => `<button class="ir-ano${a === ano ? " on" : ""}" onclick="abrirIR(${a})">${a}</button>`).join("")}</div>
+    <div class="ir-total"><small>Despesas dedutíveis pagas em ${ano}</small><b class="mono-num">${money(d.total)}</b><span>${d.qtd} pagamento(s)</span></div>
+    ${d.sem_documento.length ? `<div class="ir-alerta">${icon("alert")}<span>Falta CPF/CNPJ de <b>${d.sem_documento.map(esc).join(", ")}</b>. Complete no cadastro do contato: a Receita pede.</span></div>` : ""}
+    ${d.sem_comprovante ? `<div class="ir-alerta amarelo">${icon("clip")}<span><b>${d.sem_comprovante}</b> pagamento(s) sem comprovante anexado.</span></div>` : ""}
+    ${d.grupos.length ? d.grupos.map(g => { const [c1, c2] = _IR_COR[g.tipo] || ["#305C74", "#4F8BC9"]; return `
+      <div class="ir-grupo" style="--c1:${c1};--c2:${c2}">
+        <div class="ir-g-topo"><b>${esc(g.nome)}</b><span class="mono-num">${money(g.total)}</span></div>
+        ${g.prestadores.map(p => `<div class="ir-prest"><div class="grow"><b>${esc(p.nome)}</b>
+          <small>${p.documento ? esc(p.documento) : `<em>sem CPF/CNPJ</em>`} · ${p.lancamentos.length} pagamento(s)</small></div>
+          <span class="mono-num">${money(p.total)}</span></div>`).join("")}
+      </div>`; }).join("")
+      : `<div class="empty" style="padding:20px">${ilus("doc")}<p>Nenhuma despesa dedutível paga em ${ano}.</p></div>`}
+    <div class="ir-cats"><small>Entram no relatório as categorias marcadas como dedutíveis:</small>
+      ${d.categorias_marcadas.length ? d.categorias_marcadas.map(c => `<span class="ir-chip">${esc(c.nome)}</span>`).join("") : "<em>nenhuma ainda</em>"}
+      <button class="btn btn-ghost btn-sm" onclick="fecharModal();setView('categorias')">${icon("tag")}Marcar categorias</button></div>
+    <div class="modal-f" style="padding:14px 0 0"><button class="btn btn-ghost" onclick="fecharModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="abrirPDF('/api/relatorios/imposto-renda.pdf?ano=${ano}')"${d.qtd ? "" : " disabled"}>${icon("download")}Baixar PDF</button></div>
+    <small class="campo-dica">Organiza os valores para a declaração. As regras e limites mudam todo ano: confira com a Receita ou seu contador.</small>`;
+}
+
 /* ── Backups automáticos (Configurações) ── */
 async function _bkCarregar() {
   const box = document.getElementById("bk-auto"); if (!box) return;
@@ -7189,6 +7228,7 @@ const CAT_ICONES = ["tag", "home", "car", "heart", "shield", "cash", "wallet", "
   "trendUp", "pie", "chart", "calendar", "clock", "bell", "send", "repeat", "map", "cog"];
 const CAT_CORES = ["#C9573F", "#E59A4B", "#C9A94E", "#3EA88A", "#2F817A", "#38A3C9", "#305C74", "#5B3FA0", "#A0285F", "#7E8C9A"];
 function _catPrev() {
+  const irc = document.getElementById("k-ir-campo"); if (irc) irc.style.display = document.getElementById("k-tipo")?.value === "receita" ? "none" : "";
   const p = document.getElementById("k-prev"); if (!p) return;
   const cor = $("#k-cor").value, ic = $("#k-icone").value, nome = $("#k-nome").value.trim() || "Nova categoria";
   p.style.setProperty("--cor", cor);
@@ -7784,7 +7824,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, abrirIR, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

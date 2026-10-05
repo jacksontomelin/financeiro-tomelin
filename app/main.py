@@ -124,6 +124,7 @@ def _migrar(engine):
         "ALTER TABLE contatos ALTER COLUMN complemento TYPE VARCHAR(200)",
         "ALTER TABLE contatos ALTER COLUMN bairro TYPE VARCHAR(150)",
         "ALTER TABLE contatos ALTER COLUMN cidade TYPE VARCHAR(150)",
+        "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS ir_tipo VARCHAR(20)",
     ]
     # Cada comando na sua própria transação: no PostgreSQL, um erro aborta
     # a transação inteira e os comandos seguintes falhariam em silêncio.
@@ -183,6 +184,11 @@ async def lifespan(app: FastAPI):
     from .database import SessionLocal as _SL
     from . import cfg as _cfg
     _db = _SL(); _cfg.seed_defaults(_db); _db.close()
+    try:   # primeira vez: marca Saúde, Escola etc. como dedutíveis no IR
+        from . import imposto_renda as _ir
+        _db = _SL(); _ir.marcar_padrao(_db); _db.close()
+    except Exception as e:
+        print("aviso: categorias do IR não marcadas:", e)
 
     # alerta diário de vencimentos
     scheduler.add_job(whatsapp.job_alerta_vencimentos,

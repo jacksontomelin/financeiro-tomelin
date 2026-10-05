@@ -83,3 +83,18 @@ def patrimonio_pdf(estilo: str = "padrao", db: Session = Depends(get_db)):
         data = pdfgen.patrimonio(contas, veic, p["total_contas"],
                                  p["total_veiculos"], p["total_financiamentos"])
     return _pdf(data, "patrimonio.pdf")
+
+
+@router.get("/imposto-renda")
+def imposto_renda(ano: int | None = None, db: Session = Depends(get_db)):
+    from .. import imposto_renda as ir
+    return ir.relatorio(db, ano or date.today().year - 1)
+
+
+@router.get("/imposto-renda.pdf")
+def imposto_renda_pdf(ano: int | None = None, db: Session = Depends(get_db)):
+    from .. import imposto_renda as ir
+    a = ano or date.today().year - 1
+    data = pdfgen.imposto_renda(ir.relatorio(db, a))
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="imposto-renda-{a}.pdf"'})
