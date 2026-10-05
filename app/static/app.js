@@ -603,7 +603,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.145.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.146.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -7020,12 +7020,16 @@ function _calDia(i, silencioso) {
   document.querySelectorAll(".cal-dia").forEach(b => b.classList.toggle("on", Number(b.dataset.i) === i));
   const det = document.getElementById("cal-det"); if (!det) return;
   det.innerHTML = d.itens.length ? `<div class="cal-det-tit">${d.especial ? "Contas vencidas" : (d.rot === "Hoje" || d.rot === "Amanhã" ? d.rot : `Dia ${d.num}`)} · ${d.itens.length} conta(s)</div>`
-    + d.itens.map((l, j) => `<div class="cal-item" style="--j:${j}">
-        <span class="cal-item-ic ${l.tipo}">${icon(l.tipo === "receita" ? "arrowDown" : "arrowUp")}</span>
-        <div class="cal-item-txt"><b>${esc(l.descricao)}</b><small>${esc(l.categoria || "Sem categoria")}${d.especial ? ` · venceu ${_dm(String(l.vencimento).slice(0, 10))}` : ""}</small></div>
-        <span class="mono-num cal-item-val ${l.tipo}">${money(l.valor)}</span>
-        <button class="btn btn-sm ${l.tipo === "receita" ? "btn-green" : "btn-primary"}" onclick="formBaixaId(${l.id})">${icon("check")}${l.tipo === "receita" ? "Recebi" : "Paguei"}</button>
-      </div>`).join("")
+    + d.itens.map((l, j) => {
+        const venc = String(l.vencimento).slice(0, 10), rec = l.tipo === "receita";
+        const atras = d.especial ? Math.max(1, Math.round((new Date().setHours(0, 0, 0, 0) - new Date(venc + "T00:00:00")) / 864e5)) : 0;
+        return `<div class="cal-item ${l.tipo}" style="--j:${j}">
+        <span class="cal-item-ic">${icon(rec ? "arrowDown" : "arrowUp")}</span>
+        <b class="cal-item-nome">${esc(l.descricao)}</b>
+        <span class="mono-num cal-item-val">${money(l.valor)}</span>
+        <span class="cal-item-meta"><span>${esc(l.categoria || "Sem categoria")}</span>${atras ? `<em class="cal-atras">${icon("clock")}${atras === 1 ? "venceu ontem" : `venceu há ${atras} dias`}</em>` : ""}</span>
+        <button class="cal-item-bt" onclick="formBaixaId(${l.id})">${icon("check")}${rec ? "Recebi" : "Paguei"}</button>
+      </div>`; }).join("")
     : `<div class="cal-vazio">${icon("checkCircle")}Nenhuma conta neste dia.</div>`;
 }
 

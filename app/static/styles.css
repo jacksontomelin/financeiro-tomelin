@@ -3554,3 +3554,34 @@ html.dark .topbar .btn-tema { background: linear-gradient(135deg, #C2742A, #F4C2
 /* busca do topo com borda em gradiente ao digitar */
 .busca-input:focus { border-color: transparent !important; outline: none;
   background: linear-gradient(var(--card), var(--card)) padding-box, var(--grad-marca) border-box !important; box-shadow: 0 4px 16px rgba(47,129,122,.16); }
+
+/* ══ Calendário: dias e contas redesenhados (nome inteiro, duas linhas) ══ */
+.cal-faixa { padding: 6px 4px 18px; gap: 7px; }
+.cal-dia { flex: 0 0 62px; }
+.cal-dia.especial { flex-basis: 80px; }
+.cal-rot { font-size: 9.5px; letter-spacing: .03em; white-space: nowrap; }
+.cal-dia.on { box-shadow: 0 6px 12px -8px #082D51; }
+.cal-dia.vazio .cal-bolha-area::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+.cal-bolha-area { height: 34px; }
+.cal-item { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; grid-template-areas: "ic nome val" "ic meta bt";
+  column-gap: 12px; row-gap: 6px; align-items: center; padding: 12px 14px; margin-bottom: 8px; border: none !important; border-radius: 16px;
+  --tc: #C9573F; background: color-mix(in srgb, var(--tc) 7%, var(--card)); box-shadow: inset 4px 0 0 var(--tc); }
+.cal-item.receita { --tc: #2F9E7E; }
+.cal-item-ic { grid-area: ic; width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 75%, #000), var(--tc)); box-shadow: 0 6px 12px -6px var(--tc); }
+.cal-item-ic svg { width: 18px; height: 18px; }
+.cal-item-nome { grid-area: nome; font-size: 14.5px; font-weight: 800; color: var(--ink); line-height: 1.25; overflow-wrap: anywhere; }
+.cal-item-val { grid-area: val; font-size: 16px; font-weight: 800; white-space: nowrap; color: var(--tc); justify-self: end; }
+.cal-item.receita .cal-item-val { color: #1F7A55; }
+.cal-item-meta { grid-area: meta; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; color: var(--ink-3); min-width: 0; }
+.cal-atras { display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 700; font-size: 11px; color: #B4503E;
+  background: #C9573F1a; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.cal-atras svg { width: 12px; height: 12px; }
+.cal-item-bt { grid-area: bt; justify-self: end; display: inline-flex; align-items: center; gap: 5px; border: none; cursor: pointer; white-space: nowrap;
+  padding: 7px 13px; border-radius: 20px; font: inherit; font-size: 12.5px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 70%, #000), var(--tc)); box-shadow: 0 6px 14px -8px var(--tc);
+  transition: transform .2s var(--mola); }
+.cal-item-bt svg { width: 14px; height: 14px; }
+.cal-item-bt:hover { transform: translateY(-1px); } .cal-item-bt:active { transform: scale(.94); }
+html.dark .cal-item { background: color-mix(in srgb, var(--tc) 12%, var(--card)); }
+@media (max-width: 640px) { .cal-item .btn { margin-left: 0; } .cal-item { flex-wrap: nowrap; } }
