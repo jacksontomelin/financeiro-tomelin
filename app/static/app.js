@@ -602,7 +602,7 @@ function renderApp() {
         <div>
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
-          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.143.0</div>
+          <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.144.0</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -5279,22 +5279,26 @@ function _orcLinha(i, compacto = false) {
     : `${money(i.gasto)} de ${money(i.limite)} · restam ${money(i.restante)}`;
   const ritmo = i.vai_estourar && !compacto ? `<div class="orc-ritmo">Pelo padrão dos últimos meses, deve fechar em ${money(i.previsto_fim_mes)}</div>` : "";
   const c = _corOk(i.cor);
-  return `<div class="orc-item st-${i.status}">
-    <span class="card-ico" style="background:${c}22;color:${c}">${icon(i.icone || "tag")}</span>
+  const sug = _ORC_SUG?.sugestao?.[i.categoria_id];
+  return `<div class="orc-item st-${i.status}" data-cat="${i.categoria_id}" style="--cc:${c}">
+    <span class="card-ico orc-ic">${icon(i.icone || "tag")}</span>
     <div class="orc-meio">
       <div class="orc-topo"><b>${esc(i.nome)}</b>${i.pct != null ? `<span class="orc-pct" style="color:${cor}">${Math.round(pct)}%</span>` : ""}</div>
       <div class="orc-barra"><div style="width:${i.limite == null ? 0 : Math.min(100, pct)}%;background:${cor}"></div></div>
       <div class="orc-info">${info}</div>${ritmo}
     </div>
-    ${compacto ? "" : `<div class="orc-limite"><label for="orc-${i.categoria_id}">Limite</label>
-      <input id="orc-${i.categoria_id}" type="number" step="0.01" min="0" inputmode="decimal" value="${i.limite ?? ""}" placeholder="Sem limite"
-             data-cat="${i.categoria_id}" data-orig="${i.limite ?? ""}" onkeydown="if(event.key==='Enter')this.blur()" onchange="_orcSalvar(this)"></div>`}
+    ${compacto ? "" : (i.limite != null
+      ? `<button type="button" class="orc-chip" onclick="_orcEditar(${i.categoria_id})" aria-label="Mudar o limite de ${esc(i.nome)}">
+           <small>Limite</small><b class="mono-num">${money(i.limite)}</b><span class="orc-chip-ic">${icon("edit")}</span></button>`
+      : `<button type="button" class="orc-chip vazio" onclick="_orcEditar(${i.categoria_id})" aria-label="Definir limite de ${esc(i.nome)}">
+           <span class="orc-chip-mais">${icon("plus")}Definir limite</span>${sug ? `<small>sugestão ${money0(sug)}</small>` : ""}</button>`)}
   </div>`;
 }
 
 async function viewOrcamento(v) {
   const mes = _ORC_MES || hojeISO().slice(0, 7);
-  const o = _ORC = await api(`/api/orcamento?mes=${mes}`);
+  const [o, sg] = await Promise.all([api(`/api/orcamento?mes=${mes}`), api(`/api/orcamento/sugestao?mes=${mes}`).catch(() => null)]);
+  _ORC = o; _ORC_SUG = sg;
   const [a, m] = mes.split("-").map(Number);
   const nm = new Date(a, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const nomeMes = nm.charAt(0).toUpperCase() + nm.slice(1);   // "Outubro de 2026"
@@ -5327,7 +5331,7 @@ async function viewOrcamento(v) {
     </div></div>` : ""}
     <div class="card card-pad">
       <div class="card-h"><span class="card-ico i-gold">${icon("target")}</span>
-        <div class="grow"><h3>Categorias de despesa</h3><div class="sub">Digite o limite e tecle Enter. Deixe vazio para tirar o limite.</div></div></div>
+        <div class="grow"><h3>Categorias de despesa</h3><div class="sub">Toque no limite para definir ou mudar. Há atalhos com a média dos últimos meses.</div></div></div>
       ${o.itens.map(i => _orcLinha(i)).join("") || `<div class="empty">${ilus("tag")}<p>Nenhuma categoria de despesa ainda.</p></div>`}
       <div class="orc-rodape">Gasto total do mês: <b>${money(o.gasto_total)}</b>${o.sem_categoria ? ` · sem categoria: ${money(o.sem_categoria)}` : ""}. Conta pela competência, pagos e pendentes.</div>
     </div>`;
@@ -7065,7 +7069,78 @@ function _catPrev() {
   document.querySelectorAll("#k-cores .cor-opt").forEach(b => b.classList.toggle("sel", b.dataset.cor.toLowerCase() === cor.toLowerCase()));
 }
 
+
+/* ── Editor do limite do orçamento (abre dentro da linha) ── */
+let _ORC_SUG = null;
+const _numBR = t => {                              // "1.450,50" | "1450.5" | "R$ 1.450" -> 1450.5
+  let s = String(t || "").replace(/[^\d,.-]/g, "");
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(s); return Number.isFinite(n) ? n : NaN;
+};
+const _fmtBR = n => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function _orcEditar(cid) {
+  const linha = document.querySelector(`.orc-item[data-cat="${cid}"]`); if (!linha) return;
+  const aberto = linha.nextElementSibling?.classList.contains("orc-editor");
+  _orcFecharEditor();
+  if (aberto) return;
+  const i = (_ORC?.itens || []).find(x => x.categoria_id === cid); if (!i) return;
+  const sug = _ORC_SUG?.sugestao?.[cid];
+  const ed = document.createElement("div");
+  ed.className = "orc-editor"; ed.dataset.cat = cid;
+  ed.innerHTML = `
+    <div class="oe-tit">Limite mensal de <b>${esc(i.nome)}</b></div>
+    <div class="oe-campo"><span>R$</span><input id="oe-valor" inputmode="decimal" autocomplete="off" placeholder="0,00"
+         value="${i.limite != null ? _fmtBR(i.limite) : ""}" aria-label="Limite mensal em reais"></div>
+    <div class="oe-rapidos">
+      ${sug ? `<button type="button" class="oe-chip media" data-v="${sug}">${icon("chart")}Média 3 meses <b>${money0(sug)}</b></button>` : ""}
+      ${i.gasto ? `<button type="button" class="oe-chip gasto" data-v="${Math.ceil(i.gasto / 10) * 10}">${icon("receipt")}Gasto do mês <b>${money0(i.gasto)}</b></button>` : ""}
+      <button type="button" class="oe-chip ajuste" data-p="1.1">+10%</button>
+      <button type="button" class="oe-chip ajuste" data-p="0.9">−10%</button>
+    </div>
+    <div class="oe-bts">
+      ${i.limite != null ? `<button type="button" class="btn btn-ghost btn-sm oe-tirar">${icon("trash")}Tirar limite</button>` : ""}
+      <span class="grow"></span>
+      <button type="button" class="btn btn-ghost btn-sm oe-cancelar">Cancelar</button>
+      <button type="button" class="btn btn-primary btn-sm oe-salvar">${icon("check")}Salvar</button>
+    </div>`;
+  linha.after(ed); linha.classList.add("editando");
+  const inp = ed.querySelector("#oe-valor");
+  const pega = () => _numBR(inp.value);
+  ed.querySelectorAll(".oe-chip[data-v]").forEach(b => b.onclick = () => { inp.value = _fmtBR(Number(b.dataset.v)); inp.focus(); vibrar(8); _oeMarca(b); });
+  ed.querySelectorAll(".oe-chip[data-p]").forEach(b => b.onclick = () => {
+    const base = pega() || i.limite || sug || i.gasto || 0; if (!base) return;
+    inp.value = _fmtBR(Math.round(base * Number(b.dataset.p) / 10) * 10); inp.focus(); vibrar(8); _oeMarca(b); });
+  inp.addEventListener("blur", () => { const n = pega(); if (inp.value.trim() && Number.isFinite(n)) inp.value = _fmtBR(n); });
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); ed.querySelector(".oe-salvar").click(); }
+    if (e.key === "Escape") { e.preventDefault(); _orcFecharEditor(); }
+  });
+  ed.querySelector(".oe-cancelar").onclick = _orcFecharEditor;
+  ed.querySelector(".oe-tirar")?.addEventListener("click", () => _orcAplicar(cid, null));
+  ed.querySelector(".oe-salvar").onclick = () => {
+    const n = pega();
+    if (!inp.value.trim()) return _orcAplicar(cid, null);
+    if (!Number.isFinite(n) || n < 0) { inp.closest(".oe-campo").classList.add("erro"); toast("Limite: digite um valor, ex.: 1.450,00", "err"); return; }
+    _orcAplicar(cid, n);
+  };
+  requestAnimationFrame(() => { ed.classList.add("aberto"); inp.focus(); inp.select(); });
+}
+function _oeMarca(b) { b.parentElement.querySelectorAll(".oe-chip").forEach(x => x.classList.toggle("on", x === b)); }
+function _orcFecharEditor() {
+  document.querySelectorAll(".orc-editor").forEach(e => e.remove());
+  document.querySelectorAll(".orc-item.editando").forEach(e => e.classList.remove("editando"));
+}
+async function _orcAplicar(cid, valor) {
+  try {
+    const r = await api(`/api/orcamento/${cid}`, { method: "PUT", body: JSON.stringify({ limite: valor }) });
+    vibrar(12);
+    toast(r.limite == null ? `Limite de ${r.nome} removido` : `Limite de ${r.nome}: ${money(r.limite)} por mês`, "ok");
+    setView("orcamento");
+  } catch (e) { toast(e.message, "err"); }
+}
+
 Object.assign(window, {
+  _orcEditar, _orcFecharEditor,
   _mascoteToque, _calDia, _catPrev,
   vibrar, _menuLanc, _folhaFechar, _lancDuplicar, _lancRepetir, _lancComprovante, _lancCompartilhar, _periodo,
   confirmar,
