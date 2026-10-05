@@ -241,6 +241,10 @@ function ilusAlerta(tam = 64) {
   </svg>`;
 }
 const LOGO_MARK = '<img class="brand-mark" src="/static/icons/logo-mark.png" alt="Tomelin" width="164" height="217">';
+/* Crédito de quem criou o sistema */
+function creditoDev(cls = "") {
+  return `<div class="credito-dev ${cls}">Criado pela <b>UniController</b> · Dev <b>Jackson Tomelin</b></div>`;
+}
 const LOGO_LOCKUP = '<img class="login-lockup" src="/static/icons/logo-lockup.png" alt="Tomelin Gestão Financeira">';
 const SVG_HOUSE = '<svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 80 L100 20 L180 80 L180 150 L20 150 Z" fill="white" opacity=".6"/><rect x="70" y="100" width="30" height="50" fill="white" opacity=".8"/><rect x="120" y="85" width="35" height="30" fill="white" opacity=".5"/><circle cx="160" cy="35" r="18" fill="white" opacity=".3"/></svg>';
 
@@ -551,6 +555,7 @@ function renderLogin() {
 
       <!-- rodapé -->
       <div class="login-app-footer">
+        ${creditoDev("cd-login")}
         <span id="sb-version-login" style="font-size:11px;opacity:.5">v2.0</span>
       </div>
     </div>`;
@@ -607,6 +612,7 @@ function renderApp() {
           <div class="t">Tomelin</div>
           <div class="s">Gestão Financeira</div>
           <div id="sb-version" style="font-size:10px;opacity:.4;margin-top:2px;font-weight:600;letter-spacing:.06em">v2.152.0</div>
+          <div class="sb-cred">UniController · Dev Jackson Tomelin</div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -752,6 +758,7 @@ function abrirMenuMais() {
               ${it.nome}
             </button>`).join("")}
         </div>
+        ${creditoDev("cd-mais")}
       </div>
     </div>`);
 }
@@ -3789,6 +3796,14 @@ async function viewConfiguracoes(v) {
     </div>
     <div class="card card-pad" style="margin-top:4px">
       <div class="meta"> As configurações são salvas no banco de dados e valem na hora, sem reiniciar o sistema. Se alguma chave não estiver salva aqui, o sistema usa o valor definido no servidor.</div>
+    </div>
+    <div class="card card-pad sobre-card">
+      <span class="sobre-logo">${LOGO_MARK}</span>
+      <div class="grow">
+        <h3>Tomelin Gestão Financeira</h3>
+        ${creditoDev("cd-sobre")}
+        <div class="sub" id="sobre-versao">Versão ${esc(document.getElementById("sb-version")?.textContent || "")}</div>
+      </div>
     </div>`;
 
   // toggle label ao clicar

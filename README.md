@@ -1,5 +1,7 @@
 # Tomelin Gestão Financeira
 
+> Criado pela **UniController** · Dev **Jackson Tomelin**
+
 Sistema de gestão financeira **self-hosted**, sem dependências de serviços pagos ou APIs externas de IA. Backend em **FastAPI + PostgreSQL**, frontend em **JavaScript puro (PWA)** — instala como app no celular e roda no computador. Gráficos SVG desenhados à mão, no estilo visual do ecossistema UniController, com as cores da marca Tomelin (azul-marinho, dourado e verde).
 
 ---

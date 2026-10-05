@@ -4009,3 +4009,20 @@ svg.wa-desenho, .card .card-ico svg.wa-desenho, .modal-h .card-ico svg.wa-desenh
   .hero-zap .hero-zap-rot { display: none; }
   .hero-zap.enviado .wa-ticks { position: absolute; right: -8px; bottom: -8px; background: #fff; border-radius: 9px; padding: 2px 3px; color: #34B7F1; }
 }
+
+/* ── crédito: UniController · Dev Jackson Tomelin ── */
+.credito-dev { font-size: 11.5px; color: var(--ink-3); letter-spacing: .01em; line-height: 1.4; }
+.credito-dev b { font-weight: 800; color: var(--navy); }
+html.dark .credito-dev b { color: #E9F0F7; }
+.cd-login { color: rgba(255,255,255,.62); margin-bottom: 4px; }
+.cd-login b { color: #E2C46E; }
+html.dark .cd-login b { color: #E2C46E; }
+.cd-mais { text-align: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.sb-cred { font-size: 9.5px; opacity: .45; margin-top: 2px; font-weight: 600; letter-spacing: .03em; white-space: nowrap; }
+.sobre-card { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.sobre-card h3 { font-size: 15px; font-weight: 800; color: var(--navy); margin: 0 0 3px; }
+html.dark .sobre-card h3 { color: #E9F0F7; }
+.sobre-card .credito-dev { font-size: 13px; }
+.sobre-logo { width: 46px; height: 46px; border-radius: 14px; background: #fff; display: grid; place-items: center; flex-shrink: 0;
+  box-shadow: 0 8px 18px -10px rgba(8,45,81,.5), inset 0 0 0 1px var(--line); }
+.sobre-logo img { width: 26px; height: auto; }
