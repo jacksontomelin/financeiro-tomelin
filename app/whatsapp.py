@@ -307,12 +307,21 @@ def _lancar(db: Session, tipo: str, texto: str) -> str:
 
     emoji = "💵" if tipo == "receita" else "💸"
     cat_str = f" · {cat.nome}" if cat else ""
+    aviso = ""
+    if tipo == "despesa" and cat:
+        try:
+            from .orcamento_aviso import verificar
+            t = verificar(db, cat.id, hoje, enviar=False)   # vai junto na resposta
+            aviso = f"\n\n{t}" if t else ""
+        except Exception:
+            pass
     return (
         f"{emoji} *{tipo.title()} lançada!*\n\n"
         f"📌 #{l.id}: {l.descricao}\n"
         f"💰 {_brl(valor)}{cat_str}\n"
         f"📅 {hoje.strftime('%d/%m/%Y')}\n\n"
         f"Status: *pendente* · Dê baixa com `baixa {l.id}`"
+        + aviso
     )
 
 

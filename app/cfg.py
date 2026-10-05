@@ -25,6 +25,7 @@ DEFS = [
     ("RESUMO_SEMANAL",           "Enviar resumo semanal (segunda-feira)",                             "true"),
     ("FECHAMENTO_DIARIO",        "Enviar fechamento do dia com contas pagas",                         "true"),
     ("FECHAMENTO_HORA",          "Hora do fechamento do dia (0-23)",                                  "20"),
+    ("ORCAMENTO_AVISO",          "Avisar no WhatsApp quando uma categoria passar de 80% ou estourar o orçamento", "true"),
     # ---- FIPE ----
     ("FIPE_ATIVO",               "Ativar consulta automática de FIPE",                                "false"),
     ("FIPE_API_URL",             "URL da sua API FIPEConsulta",                                       ""),

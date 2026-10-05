@@ -82,6 +82,7 @@ def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
     db.add(l); db.commit(); db.refresh(l)
     if l.data_pagamento:
         _auto_recibo(l, db=db)
+    _aviso_orcamento(l)
     return _out(l)
 
 
@@ -96,6 +97,7 @@ def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db))
     db.commit(); db.refresh(l)
     if l.data_pagamento and not era_pago:
         _auto_recibo(l, db=db)
+    _aviso_orcamento(l)
     return _out(l)
 
 
@@ -138,6 +140,12 @@ def excluir(lid: int, db: Session = Depends(get_db)):
     db.query(models.Anexo).filter(models.Anexo.lancamento_id == lid).delete()   # comprovantes vão junto
     db.delete(l); db.commit()
     return {"ok": True}
+
+
+def _aviso_orcamento(l: models.Lancamento):
+    if l.tipo == models.TipoMov.despesa and l.categoria_id:
+        from ..orcamento_aviso import em_segundo_plano
+        em_segundo_plano(l.categoria_id, l.data_competencia)
 
 
 def _ctx(l):
