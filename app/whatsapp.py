@@ -275,7 +275,7 @@ def _texto_contas(db: Session) -> str:
     return "\n".join(linhas)
 
 
-def _lancar(db: Session, tipo: str, texto: str) -> str:
+def _lancar(db: Session, tipo: str, texto: str, remetente: str | None = None) -> str:
     """
     Lança despesa ou receita a partir de texto livre.
     Exemplos: 'despesa 150 mercado', 'receita 3000 salario janeiro'
@@ -304,6 +304,8 @@ def _lancar(db: Session, tipo: str, texto: str) -> str:
         categoria_id=cat.id if cat else None,
     )
     db.add(l); db.commit(); db.refresh(l)
+    from .zap_midia import lembrar_lancamento
+    lembrar_lancamento(remetente, l.id)   # foto mandada logo depois vira comprovante dele
 
     emoji = "💵" if tipo == "receita" else "💸"
     cat_str = f" · {cat.nome}" if cat else ""
@@ -445,17 +447,23 @@ def processar_comando(texto: str, db: Session | None = None,
         _tem_valor = len(_p) >= 2 and _parse_valor(_p[1]) is not None
         if t_low.startswith("despesa ") or t_low.startswith("gasto ") or (t_low.startswith("d ") and _tem_valor):
             partes = t.split(None, 1)
-            return _lancar(db, "despesa", partes[0] + " " + partes[1] if len(partes) > 1 else "despesa")
+            return _lancar(db, "despesa", partes[0] + " " + partes[1] if len(partes) > 1 else "despesa", remetente)
 
         # ── Cadastro rápido: receita ──────────────────────────────────────────
         if t_low.startswith("receita ") or t_low.startswith("recebimento ") or (t_low.startswith("r ") and _tem_valor):
             partes = t.split(None, 1)
-            return _lancar(db, "receita", partes[0] + " " + partes[1] if len(partes) > 1 else "receita")
+            return _lancar(db, "receita", partes[0] + " " + partes[1] if len(partes) > 1 else "receita", remetente)
 
         # ── Dar baixa em lançamento ───────────────────────────────────────────
         if t_low.startswith("baixa ") or ((t_low.startswith("paguei ") or t_low.startswith("pago ")) and len(_p) >= 2 and _p[1].lstrip("#").isdigit()):
             partes = t.split(None, 1)
             return _dar_baixa(db, partes[1] if len(partes) > 1 else "")
+
+        # ── Remover comprovante mandado pelo WhatsApp ────────────────────────
+        _m = re.match(r"^(remover|tirar|apagar) (anexo|comprovante) #?(\d+)$", t_low)
+        if _m:
+            from .zap_midia import remover
+            return remover(db, int(_m.group(3)))
 
         # ── Buscar lançamentos ────────────────────────────────────────────────
         if t_low.startswith("buscar ") or t_low.startswith("busca ") or t_low.startswith("ver "):

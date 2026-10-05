@@ -47,6 +47,13 @@ def _lembrar(texto: str):
     _ENVIADOS[texto.strip()[:500]] = agora
 
 
+_ULTIMO_ARQUIVO = 0.0
+
+
+def arquivo_recente_do_sistema(segundos: int = 90) -> bool:
+    return time.time() - _ULTIMO_ARQUIVO < segundos
+
+
 def foi_enviado_pelo_sistema(texto: str) -> bool:
     t = _ENVIADOS.get((texto or "").strip()[:500])
     return bool(t and time.time() - t < 120)
@@ -151,6 +158,9 @@ def enviar_arquivo(conteudo: bytes, nome: str, mimetype: str, legenda: str = "",
     if not destino:
         return False
     try:
+        _lembrar(legenda or "[arquivo]")   # o eco do próprio arquivo não vira comprovante
+        global _ULTIMO_ARQUIVO
+        _ULTIMO_ARQUIVO = time.time()
         _req("POST", "/api/v1/enviar-anexo", db,
              data={**_destino(destino), "caption": legenda},
              files={"arquivo": (nome, conteudo, mimetype)})

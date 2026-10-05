@@ -53,9 +53,10 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     de_mim   = bool(body.get("deMim", False))
     autor_num = str(body.get("autorNumero") or "")
     evento   = str(body.get("evento") or "")
+    midia    = body.get("midia") or body.get("media")
 
-    # ignora eventos sem texto (status, leitura, etc)
-    if not texto:
+    # ignora eventos sem texto nem arquivo (status, leitura, etc)
+    if not texto and not midia:
         _log(f"[{evento}] sem texto", "ignorado", "")
         return {"ok": True, "ignorado": f"sem texto (evento={evento})"}
 
@@ -78,11 +79,28 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         return {"ok": True, "ignorado": "não é o dono"}
 
     # ignora respostas do próprio bot (anti-loop)
-    if de_mim and zapapi.foi_enviado_pelo_sistema(texto):
+    if de_mim and texto and zapapi.foi_enviado_pelo_sistema(texto):
         return {"ok": True, "ignorado": "eco do bot"}
 
     # --- processa e responde (sempre no grupo configurado) ---
     destino = grupo
+
+    # foto ou PDF: comprovante de um lançamento
+    if midia:
+        if de_mim and zapapi.arquivo_recente_do_sistema():
+            return {"ok": True, "ignorado": "arquivo enviado pelo sistema"}
+        from .. import zap_midia
+        try:
+            resp = zap_midia.processar(midia, texto, db, remetente=autor_limpo or destino)
+        except Exception as e:
+            _log(texto or "[arquivo]", f"erro comprovante: {e}")
+            return {"ok": False}
+        if resp:
+            zapapi.enviar_texto(resp, destino, db=db)
+            _log(texto or "[arquivo]", "comprovante", autor_limpo)
+            return {"ok": True}
+        _log(texto or "[arquivo]", "arquivo ignorado", autor_limpo)
+        return {"ok": True, "ignorado": "arquivo sem pedido de anexo"}
 
     # comando que gera PDF
     arq = None
