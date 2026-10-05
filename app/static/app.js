@@ -3707,7 +3707,7 @@ const CFG_GRUPOS = [
   {
     titulo: "PDFs e recibos", ic: "doc", cor: "i-gold",
     desc: "Nome e dados da empresa que aparecem no cabeçalho e rodapé dos PDFs gerados.",
-    chaves: ["EMPRESA_NOME","EMPRESA_DOC","EMPRESA_CIDADE"],
+    chaves: ["EMPRESA_NOME","EMPRESA_DOC","EMPRESA_CIDADE","APP_URL"],
   },
 ];
 const BOOL_CHAVES = new Set(["WHATSAPP_ATIVO","RECIBO_WHATSAPP_AUTO","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FIPE_ATIVO"]);

@@ -44,7 +44,7 @@ def brl(v) -> str:
 
 def _hash(*args) -> str:
     seed = "|".join(str(a) for a in args) + "|" + uuid.uuid4().hex[:8]
-    return hashlib.sha256(seed.encode()).hexdigest()[:16].upper()
+    return hashlib.sha256(seed.encode()).hexdigest()[:20].upper()   # 20: o tamanho que /verificar aceita
 
 
 # Largura útil em caracteres. Calculado para Courier 8.3pt em bobina 80mm
@@ -153,29 +153,9 @@ def _serrilha(largura=COLS):
 
 
 def _qr_mini(text: str, size=16*mm):
-    d = Drawing(size, size)
-    n = 21
-    cell = size / n
-    h = hashlib.sha256(text.encode()).digest()
-    d.add(Rect(0, 0, size, size, fillColor=colors.white, strokeColor=None))
-    for ox, oy in [(0, n-7), (n-7, n-7), (0, 0)]:
-        for i in range(7):
-            for j in range(7):
-                if i in (0,6) or j in (0,6) or (2<=i<=4 and 2<=j<=4):
-                    d.add(Rect((ox+i)*cell, (oy+j)*cell, cell, cell, fillColor=PRETO, strokeColor=None))
-    bits = []
-    for b in h:
-        for bit in range(8):
-            bits.append((b >> bit) & 1)
-    idx = 0
-    for i in range(n):
-        for j in range(n):
-            if (i<8 and j>n-9) or (i>n-9 and j>n-9) or (i<8 and j<8):
-                continue
-            if idx < len(bits) and bits[idx]:
-                d.add(Rect(i*cell, j*cell, cell, cell, fillColor=PRETO, strokeColor=None))
-            idx = (idx + 1) % len(bits)
-    return d
+    """QR code real (antes era só um desenho a partir do código e não lia no celular)."""
+    from .pdf import _qr_drawing
+    return _qr_drawing(text, size)
 
 
 def _cabecalho_bobina(mono, bold, center, center_b, title, tiny, titulo, subtitulo=""):
@@ -203,7 +183,8 @@ def _rodape_bobina(mono, bold, center, tiny, auth):
     els.append(Paragraph(_centralizar("CRIADO PELA UNICONTROLLER"), tiny))
     els.append(Paragraph(_centralizar("DEV JACKSON TOMELIN"), tiny))
     els.append(Spacer(1, 6))
-    qr = _qr_mini(auth, size=18*mm)
+    from .urls import verificar
+    qr = _qr_mini(verificar(auth), size=18*mm)
     qr_t = Table([[qr]], colWidths=[LARGURA_BOBINA - 2*MARGEM])
     qr_t.setStyle(TableStyle([("ALIGN", (0,0), (-1,-1), "CENTER")]))
     els.append(qr_t)

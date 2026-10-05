@@ -34,6 +34,7 @@ DEFS = [
     ("EMPRESA_NOME",             "Nome que aparece nos PDFs e recibos",                               "Tomelin Gestão Financeira"),
     ("EMPRESA_DOC",              "CPF/CNPJ (opcional, aparece no rodapé dos PDFs)",                   ""),
     ("EMPRESA_CIDADE",           "Cidade/UF (rodapé dos PDFs)",                                       "Blumenau/SC"),
+    ("APP_URL",                  "Endereço do sistema para o QR code dos PDFs (ex.: https://financeiro.seudominio.com.br). Vazio = detecta sozinho", ""),
 ]
 
 _ENV_MAP = {

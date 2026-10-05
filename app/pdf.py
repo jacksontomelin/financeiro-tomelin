@@ -108,11 +108,17 @@ def _qr_drawing(url: str, size=14*mm):
         from reportlab.platypus import Image as RLImage
         return RLImage(buf, width=size, height=size)
     except Exception:
-        # fallback: quadrado simples
-        d = Drawing(size, size)
-        d.add(Rect(0, 0, size, size, fillColor=colors.white, strokeColor=LINE, strokeWidth=.5))
-        d.add(Rect(2, 2, size-4, size-4, fillColor=NAVY, strokeColor=None))
-        return d
+        return qr_reportlab(url, size, NAVY)
+
+
+def qr_reportlab(texto: str, size, cor=colors.black):
+    """QR code de verdade feito só com o reportlab (sem depender do pacote qrcode)."""
+    from reportlab.graphics.barcode.qr import QrCodeWidget
+    w = QrCodeWidget(texto, barLevel="M", barFillColor=cor, barBorder=1)
+    x0, y0, x1, y1 = w.getBounds()
+    d = Drawing(size, size, transform=[size / (x1 - x0), 0, 0, size / (y1 - y0), 0, 0])
+    d.add(w)
+    return d
 
 
 def _rodape(ss, auth=None, verify_url=None):
@@ -322,8 +328,8 @@ def recibo(l, categoria="", conta="", contato="") -> bytes:
     ss = _styles()
     buf, doc = _doc_colorido(f"Recibo #{l.id:04d}")
     auth = _hash("recibo", l.id, l.valor_total)
-    base = getattr(settings, "APP_URL", "").rstrip("/") or "http://localhost:8000"
-    verify_url = f"{base}/verificar/{auth}"
+    from .urls import verificar
+    verify_url = verificar(auth)
     rec = l.tipo.value == "receita"
     tema, cor = ("verde", "#2F9E7E") if rec else ("laranja", "#C9573F")
     tipo_lbl = "Recebimento" if rec else "Pagamento"
@@ -409,7 +415,8 @@ def balancete(periodo_label, receitas, despesas, tot_rec, tot_desp, juros_total=
         maior = max(despesas, key=lambda x: x[1])
         if maior[1] / tot_desp > 0.3:
             els += [Spacer(1, 6), _aviso(ss, f"A categoria <b>{maior[0]}</b> concentra <b>{pct(maior[1], tot_desp)}</b> das despesas do período.")]
-    els += _rodape(ss, auth)
+    from .urls import verificar
+    els += _rodape(ss, auth, verificar(auth))
     doc.build(els, onFirstPage=_pagina("Balancete Financeiro", periodo_label, "azul"),
               onLaterPages=_pagina("Balancete Financeiro", periodo_label, "azul"))
     return buf.getvalue()
@@ -450,7 +457,8 @@ def patrimonio(contas, veiculos, total_contas, total_veic, total_financ) -> byte
     els.append(rt)
     if total_ativos:
         els += [Spacer(1, 8), _aviso(ss, f"Os financiamentos representam <b>{total_financ / total_ativos * 100:.1f}%</b> do total de ativos.")]
-    els += _rodape(ss, auth)
+    from .urls import verificar
+    els += _rodape(ss, auth, verificar(auth))
     doc.build(els, onFirstPage=_pagina("Demonstrativo de Patrimônio", date.today().strftime("%d/%m/%Y"), "dourado"),
               onLaterPages=_pagina("Demonstrativo de Patrimônio", date.today().strftime("%d/%m/%Y"), "dourado"))
     return buf.getvalue()
