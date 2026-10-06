@@ -57,7 +57,8 @@ def _parece_midia(v, nivel: int = 0) -> bool:
     """Só conta como arquivo o que tem conteúdo ou link de verdade (nunca um campo vazio ou um texto curto)."""
     if isinstance(v, str):
         t = v.strip()
-        return t.startswith(("data:", "http://", "https://")) or (len(t) > 200 and bool(_B64.fullmatch(t[:400])))
+        return t.startswith(("data:", "http://", "https://")) or (
+            len(t) >= 16 and len(t) % 4 == 0 and bool(_B64_ESTRITO.fullmatch(t[:4000])))
     if isinstance(v, dict) and nivel < 2:
         if any(v.get(k) for k in _CHAVES_DADO + _CHAVES_URL):
             return True
@@ -82,6 +83,7 @@ def achar_midia(body: dict):
 
 
 _B64 = re.compile(r"[A-Za-z0-9+/=\s]+")
+_B64_ESTRITO = re.compile(r"[A-Za-z0-9+/]+={0,2}")
 
 
 def formato(v, nivel: int = 0):
