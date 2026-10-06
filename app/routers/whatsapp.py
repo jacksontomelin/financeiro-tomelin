@@ -43,14 +43,15 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
             ok = zapapi.enviar_texto(resp, destino, db=sdb)
         seg = f"{_t.time() - t0:.1f}".replace(".", ",")
         atraso = _ATRASO.get("ultimo")
-        extra = f" · a mensagem levou {atraso} s para chegar do WhatsApp" if atraso else ""
+        extra = f" · a mensagem levou {atraso} s para chegar (via {_ATRASO.get('via') or 'gateway'})" if atraso \
+            else f" · via {_ATRASO.get('via') or 'gateway'}"
         ent["resultado"] = (f"{como} em {seg} s{extra}" if ok
                             else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)")
         return ok
     zap_fila.disparar("Resposta no grupo", tarefa)
 
 
-_ATRASO: dict = {"ultimo": None, "webhook_em": 0.0}
+_ATRASO: dict = {"ultimo": None, "webhook_em": 0.0, "via": None}
 
 
 def _id_msg(body: dict) -> str:
@@ -95,12 +96,14 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     })
 
     from starlette.concurrency import run_in_threadpool
-    return await run_in_threadpool(_tratar, body, db)
+    via = "Sentinela" if req.headers.get("x-encaminhado-por") == "sentinela" else "gateway"
+    return await run_in_threadpool(_tratar, body, db, via)
 
 
-def _tratar(body: dict, db: Session):
+def _tratar(body: dict, db: Session, via: str = "gateway"):
     import time as _t
     inicio = _t.time()
+    _ATRASO["via"] = via
     # mesma mensagem lida pela escuta do grupo: não responde duas vezes
     ts_msg = _ts_aware(body.get("ts"))
     if str(body.get("jid") or "").endswith("@g.us"):
