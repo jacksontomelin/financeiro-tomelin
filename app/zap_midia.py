@@ -46,10 +46,23 @@ def _campo(d: dict, *nomes):
 
 # ── Diagnóstico: o que o gateway mandou e o que aconteceu ───────────
 ULTIMAS: deque = deque(maxlen=12)
-_CHAVES_MIDIA = ("midia", "media", "arquivo", "imagem", "image", "documento", "document", "file", "anexo", "attachment")
+_CHAVES_MIDIA = ("midia", "media", "arquivo", "imagem", "image", "documento", "document", "file", "anexo", "attachment",
+                 "imageMessage", "documentMessage")
 _CHAVES_DADO = ("base64", "data", "b64", "conteudo", "content", "buffer", "dados")
 _CHAVES_URL = ("url", "link", "mediaUrl", "media_url", "href", "urlArquivo", "downloadUrl", "download_url", "directPath")
 _CHAVES_NOME = ("fileName", "filename", "file_name", "nome", "name", "nomeArquivo")
+
+
+def _parece_midia(v, nivel: int = 0) -> bool:
+    """Só conta como arquivo o que tem conteúdo ou link de verdade (nunca um campo vazio ou um texto curto)."""
+    if isinstance(v, str):
+        t = v.strip()
+        return t.startswith(("data:", "http://", "https://")) or (len(t) > 200 and bool(_B64.fullmatch(t[:400])))
+    if isinstance(v, dict) and nivel < 2:
+        if any(v.get(k) for k in _CHAVES_DADO + _CHAVES_URL):
+            return True
+        return any(_parece_midia(x, nivel + 1) for x in v.values() if isinstance(x, dict))
+    return False
 
 
 def achar_midia(body: dict):
@@ -57,7 +70,7 @@ def achar_midia(body: dict):
     if not isinstance(body, dict):
         return None
     for k in _CHAVES_MIDIA:
-        if body.get(k):
+        if _parece_midia(body.get(k)):
             return body[k]
     for k in ("mensagem", "message", "msg", "data", "payload"):
         v = body.get(k)

@@ -89,3 +89,21 @@ def test_foto_grande_cabe_e_debug_resume_base64(client, api):
     assert len(_anexos(api, l["id"])) == 1
     p = api.get("/api/whatsapp/debug").json()["ultimos_payloads"][0]["payload"]
     assert "caracteres" in p["midia"]["base64"] and len(p["midia"]["base64"]) < 200
+
+
+def test_comando_de_texto_com_campos_extras_responde(client):
+    """Payload de texto com campos vazios/brutos do gateway nunca vira 'arquivo'."""
+    r = _hook(client, texto="menu", midia=None, media="", tipo="texto",
+              message={"conversation": "menu", "messageContextInfo": {"deviceListMetadata": {}}},
+              data={"tipo": "texto", "file": None})
+    assert r == {"ok": True}, r
+
+
+def test_midia_sem_conteudo_com_texto_segue_como_comando(client):
+    r = _hook(client, texto="menu", midia={"mimetype": "image/jpeg"})
+    assert r == {"ok": True}, r
+
+
+def test_anexo_sem_foto_explica(client):
+    r = _hook(client, texto="Anexo 42")
+    assert r == {"ok": True}, r

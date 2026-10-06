@@ -99,21 +99,23 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     # --- processa e responde (sempre no grupo configurado) ---
     destino = grupo
 
-    # foto ou PDF: comprovante de um lançamento
-    if midia:
-        if de_mim and zapapi.arquivo_recente_do_sistema():
-            return {"ok": True, "ignorado": "arquivo enviado pelo sistema"}
+    # foto ou PDF: comprovante de um lançamento. Se não for pedido de anexo e
+    # houver texto, segue como comando normal (nunca deixa o grupo sem resposta).
+    if midia and not (de_mim and zapapi.arquivo_recente_do_sistema()):
+        resp = None
         try:
             resp = zap_midia.processar(midia, texto, db, remetente=autor_limpo or destino)
         except Exception as e:
             _log(texto or "[arquivo]", f"erro comprovante: {e}")
-            return {"ok": False}
         if resp:
             zapapi.enviar_texto(resp, destino, db=db)
             _log(texto or "[arquivo]", "comprovante", autor_limpo)
             return {"ok": True}
-        _log(texto or "[arquivo]", "arquivo ignorado", autor_limpo)
-        return {"ok": True, "ignorado": "arquivo sem pedido de anexo"}
+        if not texto:
+            _log("[arquivo]", "arquivo ignorado", autor_limpo)
+            return {"ok": True, "ignorado": "arquivo sem pedido de anexo"}
+    elif midia and not texto:
+        return {"ok": True, "ignorado": "arquivo enviado pelo sistema"}
 
     # comando que gera PDF
     arq = None
@@ -130,6 +132,15 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
             pdf, nome, legenda = arq
             zapapi.enviar_arquivo(pdf, nome, "application/pdf", legenda, destino, db=db)
             _log(texto, f"PDF {nome} enviado")
+        return {"ok": True}
+
+    # "anexo 42" chegou sem arquivo: explica como mandar
+    import re as _re
+    m = _re.match(r"^(anexo|anexar|comprovante)\s*#?(\d+)\s*$", whatsapp._sem_acento(texto.lower()))
+    if m and not midia:
+        zapapi.enviar_texto(f"📎 Para anexar no #{m.group(2)}, mande a *foto ou o PDF* com a legenda `anexo {m.group(2)}` "
+                            "(escreva na legenda da foto, na mesma mensagem).", destino, db=db)
+        _log(texto, "respondido: anexo sem arquivo", autor_limpo)
         return {"ok": True}
 
     # comando de texto
