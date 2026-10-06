@@ -6348,7 +6348,7 @@ function cartaoVisual(c, opts = {}) {
         <div class="cc-meio">${_CC_CHIP}${_CC_APROX}</div>
         <div class="cc-num">•••• •••• •••• ${esc(fin)}</div>
         <div class="cc-base"><div class="cc-nome"><small>Cartão</small><b>${esc(c.nome || "Novo cartão")}</b></div>
-          ${_bandImg(c.bandeira) ? `<span class="cc-band img"><img src="${_bandImg(c.bandeira)}" alt="${esc(band)}"></span>` : band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
+          ${_bandImg(c.bandeira) ? `<span class="cc-band img"><img src="${_bandImg(c.bandeira)}" alt="${esc(band)}" onload="_semFundo(this)"></span>` : band ? `<span class="cc-band">${esc(band)}</span>` : ""}</div>
         <div class="cc-brilho"></div>
         ${opts.semVerso ? "" : `<button type="button" class="cc-virar" title="Ver limite e fatura no verso" onclick="event.stopPropagation();_ccVira(this.closest('.cc'))">${icon("refresh")}</button>`}
       </div>${verso}
@@ -6747,12 +6747,14 @@ async function _bkCarregar() {
     <div class="bk-topo">
       <div><b>Backup automático</b> <span class="bk-st ${c.ativo ? "on" : ""}">${c.ativo ? `ligado · todo dia às ${String(c.hora).padStart(2, "0")}:30` : "desligado"}</span>
         <small>Guarda os últimos ${c.manter}${c.whatsapp ? " e manda uma cópia no grupo do WhatsApp" : ". Para ter uma cópia fora do servidor, ligue o envio pelo WhatsApp abaixo"}.</small></div>
-      <button class="btn btn-ghost btn-sm" id="bk-agora" onclick="_bkAgora()">${icon("refresh")}Fazer backup agora</button>
+      <div class="bk-bts"><button class="btn btn-ghost btn-sm" id="bk-agora" onclick="_bkAgora()">${icon("shield")}Fazer backup agora</button>
+        <button class="btn btn-ghost btn-sm" onclick="_bkRestaurar()">${icon("refresh")}Restaurar de um arquivo</button></div>
     </div>
     ${d.ultimo_erro ? `<div class="bk-erro">${icon("alert")}Último backup automático falhou: ${esc(d.ultimo_erro)}</div>` : ""}
     ${d.itens.length ? `<div class="bk-lista">${d.itens.map(b => `
       <div class="bk-item"><span class="bk-ic">${icon("shield")}</span>
-        <div class="grow"><b>${quando(b.criado_em)}</b><small>${b.origem === "manual" ? "feito agora" : "automático"} · ${_kb(b.tamanho)} · ${b.lancamentos} lançamentos${b.com_comprovantes ? " · com comprovantes" : ""}${b.enviado_whatsapp ? " · enviado no WhatsApp" : ""}</small></div>
+        <div class="grow"><b>${quando(b.criado_em)}</b><small>${{ manual: "feito na hora", antes_restaurar: "antes de restaurar" }[b.origem] || "automático"} · ${_kb(b.tamanho)} · ${b.lancamentos} lançamentos${b.com_comprovantes ? " · com comprovantes" : ""}${b.enviado_whatsapp ? " · enviado no WhatsApp" : ""}</small></div>
+        <button class="btn btn-ghost btn-sm" onclick="_bkRestaurar(${b.id}, '${quando(b.criado_em)}')" title="Voltar os dados para este ponto">${icon("refresh")}</button>
         <button class="btn btn-ghost btn-sm" onclick="_bkBaixar(${b.id})" title="Baixar">${icon("download")}</button></div>`).join("")}</div>`
       : `<div class="sub" style="margin-top:8px">Nenhum backup automático ainda. O primeiro sai hoje de madrugada, ou toque em "Fazer backup agora".</div>`}`;
 }
@@ -6763,6 +6765,56 @@ async function _bkAgora() {
     toast(`Backup feito (${_kb(r.tamanho)})${r.enviado_whatsapp ? " e enviado no WhatsApp" : ""}`, r.enviado_whatsapp ? "wa" : "ok");
   } catch (e) { toast(e.message, "err"); }
   _bkCarregar();
+}
+/* Restaurar: de um backup da lista (id) ou de um arquivo baixado antes */
+let _BK_ARQ = null;
+function _bkRestaurar(id, quando) {
+  _BK_ARQ = null;
+  abrirModal(`<div class="modal" style="max-width:520px"><div class="modal-h"><span class="card-ico i-red">${icon("refresh")}</span>
+    <h3>Restaurar backup</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+    <div class="modal-b">
+      ${id ? `<div class="bk-r-info">${icon("shield")}<span>Backup de <b>${esc(quando)}</b></span></div>`
+        : `<label class="bk-r-arq"><input type="file" accept=".json,.gz,application/json,application/gzip" onchange="_bkPrevia(this.files[0])">
+            ${icon("download")}<span><b>Escolher o arquivo do backup</b><small>.json ou .json.gz baixado do sistema</small></span></label>
+           <div id="bk-r-prev"></div>`}
+      <div class="bk-r-aviso">${icon("alert")}<div><b>Os dados voltam para como estavam no backup.</b> Lançamentos, contas, cartões, categorias, contatos, metas e veículos de agora são trocados pelos do arquivo.
+        Usuários e senhas não mudam. Antes de restaurar, o sistema guarda um backup de agora, para dar para desfazer.</div></div>
+      <label class="campo" style="margin-top:12px"><span style="font-size:12.5px;font-weight:700">Para confirmar, digite <b>RESTAURAR</b></span>
+        <input id="bk-r-conf" autocomplete="off" placeholder="RESTAURAR" oninput="document.getElementById('bk-r-bt').disabled=this.value.trim().toUpperCase()!=='RESTAURAR'||(!${id || 0}&&!_BK_ARQ)"></label>
+    </div>
+    <div class="modal-f"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" id="bk-r-bt" style="background:linear-gradient(135deg,#8E3326,#D0624E)" disabled onclick="_bkRestaurarIr(${id || 0})">${icon("refresh")}Restaurar</button></div></div>`);
+}
+async function _bkPrevia(arq) {
+  const box = document.getElementById("bk-r-prev"); if (!arq || !box) return;
+  _BK_ARQ = null; box.innerHTML = `<div class="sub" style="margin:8px 0">Lendo o arquivo...</div>`;
+  const fd = new FormData(); fd.append("arquivo", arq);
+  try {
+    const r = await fetch(_url("/api/backup/restaurar/previa"), { method: "POST", body: fd, headers: { Authorization: `Bearer ${State.token}` } });
+    const d = await r.json(); if (!r.ok) throw new Error(d.detail || "Arquivo inválido.");
+    _BK_ARQ = arq;
+    const c = d.contagem || {};
+    box.innerHTML = `<div class="bk-r-info ok">${icon("checkCircle")}<span>Backup de <b>${d.gerado_em ? new Date(d.gerado_em).toLocaleString("pt-BR") : "data desconhecida"}</b>
+      · ${c.lancamentos || 0} lançamentos · ${c.contas || 0} contas · ${c.categorias || 0} categorias${d.com_comprovantes ? " · com comprovantes" : ""}</span></div>
+      ${(d.avisos || []).map(a => `<div class="bk-r-info amarelo">${icon("alert")}<span>${esc(a)}</span></div>`).join("")}`;
+    document.getElementById("bk-r-conf").dispatchEvent(new Event("input"));
+  } catch (e) { box.innerHTML = `<div class="bk-r-info erro">${icon("alert")}<span>${esc(e.message)}</span></div>`; }
+}
+async function _bkRestaurarIr(id) {
+  const bt = document.getElementById("bk-r-bt"), conf = document.getElementById("bk-r-conf").value;
+  bt.disabled = true; bt.innerHTML = `${icon("refresh", "spin")}Restaurando...`;
+  try {
+    let r, d;
+    if (id) { d = await api(`/api/backup/automaticos/${id}/restaurar`, { method: "POST", body: JSON.stringify({ confirmar: conf }) }); }
+    else {
+      const fd = new FormData(); fd.append("arquivo", _BK_ARQ); fd.append("confirmar", conf);
+      r = await fetch(_url("/api/backup/restaurar"), { method: "POST", body: fd, headers: { Authorization: `Bearer ${State.token}` } });
+      d = await r.json(); if (!r.ok) throw new Error(d.detail || "Não foi possível restaurar.");
+    }
+    fecharModal(); celebrar("Dados restaurados!");
+    toast(`Restaurado: ${d.restaurados?.lancamentos ?? 0} lançamentos. Um backup de antes ficou guardado.`, "ok");
+    setTimeout(() => location.reload(), 1600);
+  } catch (e) { toast(e.message, "err"); bt.disabled = false; bt.innerHTML = `${icon("refresh")}Restaurar`; }
 }
 async function _bkBaixar(id) {
   try {
@@ -7613,6 +7665,52 @@ function _recorteDesenhar() {
   c.fillRect(0, 0, cv.width, y); c.fillRect(0, y + h, cv.width, cv.height - y - h); c.fillRect(0, y, x, h); c.fillRect(x + w, y, cv.width - x - w, h);
   c.setLineDash([6, 4]); c.lineWidth = 2; c.strokeStyle = "#E9B84E"; c.strokeRect(x + 1, y + 1, w - 2, h - 2); c.setLineDash([]);
 }
+/* Tira o fundo ligado às bordas (como o balde de tinta). d = ImageData já lido do contexto c. */
+function _fundoTransparente(c, w, h, tol, d) {
+  d = d || c.getImageData(0, 0, w, h);
+  const px = d.data;
+  const canto = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
+  const cs = [canto(0, 0), canto(w - 1, 0), canto(0, h - 1), canto(w - 1, h - 1)];
+  const bg = [0, 1, 2].map(j => cs.map(q => q[j]).sort((a, b) => a - b)[1] / 2 + cs.map(q => q[j]).sort((a, b) => a - b)[2] / 2);
+  const N = w * h;
+  const dist = p => Math.hypot(px[p * 4] - bg[0], px[p * 4 + 1] - bg[1], px[p * 4 + 2] - bg[2]);
+  // como o balde de tinta: só o fundo LIGADO às bordas some; partes claras de dentro do desenho ficam
+  const fora = new Uint8Array(N), fila = new Int32Array(N); let ini = 0, fim = 0;
+  const tenta = p => { if (!fora[p] && dist(p) < tol) { fora[p] = 1; fila[fim++] = p; } };
+  for (let x = 0; x < w; x++) { tenta(x); tenta((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { tenta(y * w); tenta(y * w + w - 1); }
+  while (ini < fim) {
+    const p = fila[ini++], x = p % w;
+    if (x > 0) tenta(p - 1); if (x < w - 1) tenta(p + 1); if (p >= w) tenta(p - w); if (p < N - w) tenta(p + w);
+  }
+  for (let p = 0; p < N; p++) {
+    if (fora[p]) { px[p * 4 + 3] = 0; continue; }
+    const x = p % w, vizinho = (x > 0 && fora[p - 1]) || (x < w - 1 && fora[p + 1]) || (p >= w && fora[p - w]) || (p < N - w && fora[p + w]);
+    const dd = dist(p);
+    if (vizinho && dd < tol * 1.6) px[p * 4 + 3] = Math.round(px[p * 4 + 3] * Math.max(0, dd - tol) / (tol * .6));   // borda suave
+  }
+  c.putImageData(d, 0, 0);
+}
+
+/* Bandeira no cartão: imagem antiga com fundo branco fica transparente na hora (uma vez por imagem) */
+const _SEM_FUNDO = new Map();
+function _semFundo(img) {
+  if (img.dataset.limpo) return;
+  img.dataset.limpo = "1";
+  const orig = img.getAttribute("src");
+  if (_SEM_FUNDO.has(orig)) { img.src = _SEM_FUNDO.get(orig); return; }
+  try {
+    const w = img.naturalWidth, h = img.naturalHeight; if (!w || !h) return;
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const c = cv.getContext("2d", { willReadFrequently: true }); c.drawImage(img, 0, 0);
+    const d = c.getImageData(0, 0, w, h), px = d.data;
+    const a = (x, y) => px[(y * w + x) * 4 + 3];
+    if ([a(0, 0), a(w - 1, 0), a(0, h - 1), a(w - 1, h - 1)].every(v => v < 20)) { _SEM_FUNDO.set(orig, orig); return; }   // já é transparente
+    _fundoTransparente(c, w, h, 66, d);
+    const limpo = cv.toDataURL("image/png");
+    _SEM_FUNDO.set(orig, limpo); img.src = limpo;
+  } catch { /* imagem de outro endereço: fica como está */ }
+}
 function _recorteProcessar() {
   const { img, sel, esc: k } = _RC;
   const [sx, sy, sw, sh] = sel ? sel.map(v => v / k) : [0, 0, img.naturalWidth, img.naturalHeight];
@@ -7620,29 +7718,7 @@ function _recorteProcessar() {
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const c = cv.getContext("2d"); c.imageSmoothingQuality = "high"; c.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
   const d = c.getImageData(0, 0, w, h), px = d.data;
-  if (_RC.fundo) {
-    const canto = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; };
-    const cs = [canto(0, 0), canto(w - 1, 0), canto(0, h - 1), canto(w - 1, h - 1)];
-    const bg = [0, 1, 2].map(j => cs.map(q => q[j]).sort((a, b) => a - b)[1] / 2 + cs.map(q => q[j]).sort((a, b) => a - b)[2] / 2);
-    const tol = _RC.tol * 2.2, N = w * h;
-    const dist = p => Math.hypot(px[p * 4] - bg[0], px[p * 4 + 1] - bg[1], px[p * 4 + 2] - bg[2]);
-    // como o balde de tinta: só o fundo LIGADO às bordas some; partes claras de dentro do desenho ficam
-    const fora = new Uint8Array(N), fila = new Int32Array(N); let ini = 0, fim = 0;
-    const tenta = p => { if (!fora[p] && dist(p) < tol) { fora[p] = 1; fila[fim++] = p; } };
-    for (let x = 0; x < w; x++) { tenta(x); tenta((h - 1) * w + x); }
-    for (let y = 0; y < h; y++) { tenta(y * w); tenta(y * w + w - 1); }
-    while (ini < fim) {
-      const p = fila[ini++], x = p % w;
-      if (x > 0) tenta(p - 1); if (x < w - 1) tenta(p + 1); if (p >= w) tenta(p - w); if (p < N - w) tenta(p + w);
-    }
-    for (let p = 0; p < N; p++) {
-      if (fora[p]) { px[p * 4 + 3] = 0; continue; }
-      const x = p % w, vizinho = (x > 0 && fora[p - 1]) || (x < w - 1 && fora[p + 1]) || (p >= w && fora[p - w]) || (p < N - w && fora[p + w]);
-      const dd = dist(p);
-      if (vizinho && dd < tol * 1.6) px[p * 4 + 3] = Math.round(px[p * 4 + 3] * Math.max(0, dd - tol) / (tol * .6));   // borda suave
-    }
-    c.putImageData(d, 0, 0);
-  }
+  if (_RC.fundo) _fundoTransparente(c, w, h, _RC.tol * 2.2, d);
   // corta as margens vazias
   let x0 = w, y0 = h, x1 = -1, y1 = -1;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
@@ -7967,7 +8043,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

@@ -3,7 +3,7 @@ import base64, json
 from datetime import date, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -97,3 +97,51 @@ def baixar_automatico(bid: int, me: models.Usuario = Depends(usuario_atual), db:
     nome = f"backup-tomelin-{b.criado_em.strftime('%Y-%m-%d-%H%M')}.json.gz"
     return Response(b.arquivo, media_type="application/gzip",
                     headers={"Content-Disposition": f'attachment; filename="{nome}"', "Cache-Control": "no-store"})
+
+
+MAX_ARQUIVO = 200 * 1024 * 1024
+
+
+def _restaurar(db, me, bruto: bytes, confirmar: str) -> dict:
+    from .. import restauracao, backup_auto
+    if (confirmar or "").strip().upper() != "RESTAURAR":
+        raise HTTPException(422, 'Para restaurar, digite RESTAURAR na confirmação.')
+    try:
+        doc = restauracao.ler(bruto)
+    except restauracao.ErroRestauracao as e:
+        raise HTTPException(422, str(e))
+    antes = backup_auto.fazer(db, origem="antes_restaurar", gerado_por=me.email)   # dá para desfazer
+    r = restauracao.restaurar(db, doc)
+    return {"ok": True, **r, "backup_anterior_id": antes.id, "gerado_em": doc.get("gerado_em")}
+
+
+@router.post("/restaurar/previa")
+async def restaurar_previa(arquivo: UploadFile = File(...), me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    from .. import restauracao
+    bruto = await arquivo.read(MAX_ARQUIVO + 1)
+    if len(bruto) > MAX_ARQUIVO:
+        raise HTTPException(413, "Arquivo grande demais (máximo 200 MB).")
+    try:
+        return restauracao.previa(restauracao.ler(bruto))
+    except restauracao.ErroRestauracao as e:
+        raise HTTPException(422, str(e))
+
+
+@router.post("/restaurar")
+async def restaurar_arquivo(arquivo: UploadFile = File(...), confirmar: str = Form(""),
+                            me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    bruto = await arquivo.read(MAX_ARQUIVO + 1)
+    if len(bruto) > MAX_ARQUIVO:
+        raise HTTPException(413, "Arquivo grande demais (máximo 200 MB).")
+    return _restaurar(db, me, bruto, confirmar)
+
+
+@router.post("/automaticos/{bid}/restaurar")
+def restaurar_automatico(bid: int, dados: dict, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    _exigir_admin(db, me)
+    b = db.get(models.BackupAuto, bid)
+    if not b:
+        raise HTTPException(404, "Backup não encontrado.")
+    return _restaurar(db, me, b.arquivo, dados.get("confirmar", ""))
