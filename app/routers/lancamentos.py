@@ -67,7 +67,10 @@ def listar(
 
     itens = q.order_by(models.Lancamento.data_competencia.desc(),
                        models.Lancamento.id.desc()).limit(limite).all()
-    return [_out(i) for i in itens]
+    saida = [_out(i) for i in itens]
+    for o in saida:          # logo (imagem guardada) pesa: a lista não usa, o detalhe continua trazendo
+        o.contato_logo = None
+    return saida
 
 
 @router.get("/{lid}", response_model=schemas.LancamentoOut)

@@ -50,7 +50,7 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
     zap_fila.disparar("Resposta no grupo", tarefa)
 
 
-_ATRASO: dict = {"ultimo": None}
+_ATRASO: dict = {"ultimo": None, "webhook_em": 0.0}
 
 
 def _id_msg(body: dict) -> str:
@@ -103,6 +103,8 @@ def _tratar(body: dict, db: Session):
     inicio = _t.time()
     # mesma mensagem lida pela escuta do grupo: não responde duas vezes
     ts_msg = _ts_aware(body.get("ts"))
+    if str(body.get("jid") or "").endswith("@g.us"):
+        _ATRASO["webhook_em"] = _t.time()      # webhook vivo: a escuta do grupo descansa
     if ts_msg and str(body.get("jid") or "").endswith("@g.us"):   # quanto o WhatsApp/gateway demorou para avisar o sistema
         from datetime import timezone as _tz
         seg = (datetime.now(_tz.utc) - ts_msg).total_seconds()
@@ -380,6 +382,9 @@ def _ts_aware(v):
 
 
 def job_escutar_grupo():
+    import time as _t
+    if _t.time() - _ATRASO["webhook_em"] < 600:
+        return      # o webhook está entregando: não consulta o gateway à toa (poupa memória e CPU da VPS)
     from ..database import SessionLocal
     from datetime import datetime, timezone, timedelta
     db = SessionLocal()
