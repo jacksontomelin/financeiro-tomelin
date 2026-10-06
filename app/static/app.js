@@ -489,7 +489,13 @@ async function fazerLogin(e) {
     localStorage.setItem("tom_nome", r.nome);
     localStorage.setItem("tom_email", r.email);
     State._senhaChecada = false;
-    await render();
+    sessionStorage.removeItem("tom_popup");          // acabou de entrar: mostra a abertura do dia
+    const ent = document.createElement("div"); ent.className = "entrada";
+    ent.innerHTML = `<div class="entrada-logo"><img src="/static/icons/logo-mark.png" alt=""></div>
+      <b>Bem-vindo de volta, ${esc((r.nome || "").split(" ")[0])}!</b><small>Preparando o seu dia...</small><i class="entrada-barra"></i>`;
+    document.body.appendChild(ent); vibrar(12);
+    await Promise.all([render(), new Promise(ok => setTimeout(ok, 900))]);
+    ent.classList.add("sai"); setTimeout(() => ent.remove(), 450);
   } catch (err) {
     erro.textContent = err.message; erro.classList.remove("hidden");
     btn.disabled = false; btn.innerHTML = "Entrar";
@@ -1194,11 +1200,10 @@ async function viewDashboard(v) {
     </div>
     </div>`;
 
-  // popup de aviso financeiro (uma vez por sessão)
-  const totalAlerta = venc.atrasados.length + venc.proximos.filter(x => diasEntre(x.vencimento) <= 3).length;
-  if (totalAlerta > 0 && !sessionStorage.getItem("tom_popup")) {
+  // abertura ao entrar: resumo em histórias (uma vez por sessão; dá para ocultar no dia)
+  if (!sessionStorage.getItem("tom_popup") && _bvPodeMostrar()) {
     sessionStorage.setItem("tom_popup", "1");
-    popupVencimentos(venc);
+    setTimeout(() => boasVindas({ k, venc, orc, prev, nome, saudacao, hora }), 450);
   }
 }
 function popupVencimentos(venc) {
@@ -4370,6 +4375,145 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
   _fornIniciar(d);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Abertura ao entrar: o dia em "histórias" (toque para avançar,
+   segure para pausar, deslize para voltar). Contas dá para pagar ali mesmo.
+   ══════════════════════════════════════════════════════════════ */
+const _BV = { i: 0, n: 0, pagou: false };
+const _hojeKey = () => hojeISO();
+function _bvPodeMostrar() { try { return localStorage.getItem("tom_bv_ocultar") !== _hojeKey(); } catch { return true; } }
+async function boasVindas(d) {
+  const { k, venc, orc, prev, nome, saudacao, hora } = d;
+  const F = _saudeFatores(k, orc, prev, venc), nota = F.reduce((s, f) => s + f.pts, 0);
+  const contas = [...venc.atrasados, ...venc.proximos.filter(x => diasEntre(x.vencimento) <= 3)];
+  const resultado = (k.receitas_mes || 0) - (k.despesas_mes || 0);
+  let metas = []; try { metas = (await api("/api/metas")).filter(m => !m.concluida).slice(0, 3); } catch {}
+  const orcAlerta = (orc?.itens || []).filter(i => i.status === "estourado" || i.status === "atencao" || i.vai_estourar).slice(0, 4);
+  const neg = prev?.primeiro_negativo?.lancado || prev?.primeiro_negativo?.estimado;
+
+  const slides = [];
+  slides.push({ cor: ["#06243F", "#2F817A"], html: `
+    <div class="bv-ola"><span class="bv-per">${_iconePeriodo(hora)}</span><div><b>${saudacao}, ${esc(nome)}!</b>
+      <small>${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</small></div></div>
+    <div class="bv-masc">${_mascoteSVG(nota)}</div>
+    <div class="bv-rot">Saldo de toda a família</div>
+    <div class="bv-grande mono-num" data-conta="${k.saldo}">${money(0)}</div>
+    <div class="bv-chips"><span class="${resultado >= 0 ? "ok" : "ruim"}">${icon(resultado >= 0 ? "trendUp" : "arrowDown")}${resultado >= 0 ? "Sobrou" : "Faltou"} ${money0(Math.abs(resultado))} este mês</span>
+      <span>${icon("heart")}Saúde ${nota}/100</span></div>` });
+  if (contas.length) {
+    const total = contas.filter(x => x.tipo === "despesa").reduce((s, x) => s + x.valor, 0);
+    slides.push({ cor: ["#8E3326", "#C9573F"], html: `
+      <div class="bv-tit">${icon("bell")}<div><b>${contas.length} conta(s) pedindo atenção</b><small><span id="bv-total">${money(total)}</span> a pagar nos próximos dias</small></div></div>
+      <div class="bv-lista">${contas.slice(0, 5).map(l => { const dd = diasEntre(l.vencimento), at = l.status === "atrasado", rec = l.tipo === "receita";
+        return `<div class="bv-conta${at ? " atras" : ""}" data-id="${l.id}" data-v="${rec ? 0 : l.valor}">
+          <span class="bv-c-ic">${icon(rec ? "arrowDown" : "arrowUp")}</span>
+          <div class="grow"><b>${esc(l.descricao)}</b><small>${at ? `venceu há ${Math.abs(dd)}d` : dd === 0 ? "vence hoje" : dd === 1 ? "vence amanhã" : `vence em ${dd}d`}${l.responsavel ? ` · ${esc(l.responsavel.split(" ")[0])}` : ""}</small></div>
+          <span class="mono-num bv-c-v">${money(l.valor)}</span>
+          <button class="bv-pagar" onclick="event.stopPropagation();_bvPagar(${l.id}, this)">${icon("check")}${rec ? "Recebi" : "Paguei"}</button></div>`; }).join("")}
+        ${contas.length > 5 ? `<div class="bv-mais">e mais ${contas.length - 5}...</div>` : ""}</div>` });
+  } else {
+    slides.push({ cor: ["#14594C", "#3EC28F"], festa: true, html: `
+      <div class="bv-centro"><div class="bv-ok">${icon("checkCircle")}</div><b class="bv-tit-g">Tudo em dia!</b>
+        <small>Nenhuma conta vencida nem vencendo nos próximos 3 dias.</small></div>` });
+  }
+  if (orcAlerta.length) slides.push({ cor: ["#8A6D1E", "#E2C46E"], html: `
+    <div class="bv-tit">${icon("target")}<div><b>Orçamento do mês</b><small>Dia ${orc.dia} de ${orc.dias_mes}</small></div></div>
+    <div class="bv-lista">${orcAlerta.map(i => { const pct = Math.min(130, i.pct || 0); return `
+      <div class="bv-orc"><div class="bv-orc-top"><b>${esc(i.nome)}</b><span>${money0(i.gasto)} de ${money0(i.limite)}</span></div>
+        <div class="bv-barra ${i.status}"><i style="--w:${Math.min(100, pct)}%"></i></div>
+        <small>${i.status === "estourado" ? `Passou ${money0(i.gasto - i.limite)}` : i.vai_estourar ? `No ritmo, fecha em ${money0(i.previsto_fim_mes)}` : `Restam ${money0(i.restante)}`}</small></div>`; }).join("")}</div>` });
+  if (metas.length) slides.push({ cor: ["#5B3FA0", "#E35D9A"], html: `
+    <div class="bv-tit">${icon("star")}<div><b>Suas metas</b><small>Cada aporte conta</small></div></div>
+    <div class="bv-lista">${metas.map(m => `<div class="bv-meta"><span class="bv-anel" style="--p:${Math.min(100, m.progresso_pct)}">
+        <b>${Math.round(m.progresso_pct)}%</b></span><div class="grow"><b>${esc(m.nome)}</b>
+        <small>${money0(m.valor_atual)} de ${money0(m.valor_alvo)}${m.prazo ? ` · até ${dataBR(m.prazo)}` : ""}</small></div></div>`).join("")}</div>` });
+  if (prev) slides.push({ cor: neg ? ["#8E3326", "#E07A5F"] : ["#082D51", "#4F8BC9"], html: `
+    <div class="bv-tit">${icon("chart")}<div><b>Os próximos 30 dias</b><small>Contas lançadas e o que costuma vir</small></div></div>
+    <div class="bv-rot">Saldo previsto em 30 dias</div>
+    <div class="bv-grande mono-num" data-conta="${prev.marcos?.["30"]?.estimado ?? prev.saldo_hoje}">${money(0)}</div>
+    <div class="bv-prev">${svgPrevisao(prev, true)}</div>
+    ${neg ? `<div class="bv-alerta">${icon("alert")}O saldo fica negativo em ${_dm(neg)}. Vale rever as contas.</div>`
+          : `<div class="bv-chips"><span class="ok">${icon("shield")}Menor saldo: ${money0(prev.minimo.estimado.valor)}</span></div>`}` });
+
+  _BV.i = 0; _BV.n = slides.length; _BV.pagou = false; _BV.slides = slides;
+  document.getElementById("bv")?.remove();
+  const el = document.createElement("div"); el.id = "bv"; el.className = "bv";
+  el.innerHTML = `
+    <div class="bv-fundo" onclick="_bvFechar()"></div>
+    <div class="bv-caixa" role="dialog" aria-label="Resumo do dia">
+      <div class="bv-segs">${slides.map((_, i) => `<span class="bv-seg" data-i="${i}"><i></i></span>`).join("")}</div>
+      <button class="bv-x" onclick="_bvFechar()" aria-label="Fechar">${icon("x")}</button>
+      <div class="bv-trilho">${slides.map((sl, i) => `<section class="bv-slide" data-i="${i}" style="--c1:${sl.cor[0]};--c2:${sl.cor[1]}">${sl.html}</section>`).join("")}</div>
+      <div class="bv-pe">
+        <label class="bv-ocultar"><input type="checkbox" id="bv-ocultar"> Não mostrar de novo hoje</label>
+        <div class="bv-bts">${contas.length ? `<button class="bv-bt claro" onclick="_bvFechar();setView('vencimentos')">Ver vencimentos</button>` : ""}
+          <button class="bv-bt" id="bv-prox" onclick="_bvIr(_BV.i + 1)">Próximo ›</button></div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  _DLG_ATUAL_FOLHA = true;
+  requestAnimationFrame(() => el.classList.add("aberta"));
+  _bvGestos(el.querySelector(".bv-caixa"));
+  el.querySelectorAll(".bv-seg i").forEach(i => i.addEventListener("animationend", () => _bvIr(_BV.i + 1)));
+  document.addEventListener("keydown", _bvTecla);
+  _bvIr(0);
+}
+function _bvIr(i) {
+  const el = document.getElementById("bv"); if (!el) return;
+  if (i >= _BV.n) return _bvFechar();
+  i = Math.max(0, i); _BV.i = i;
+  el.querySelector(".bv-trilho").style.transform = `translateX(${-i * 100}%)`;
+  el.querySelectorAll(".bv-seg").forEach((s, k) => { s.classList.toggle("feito", k < i); s.classList.toggle("ativo", k === i);
+    const b = s.querySelector("i"); b.style.animation = "none"; void b.offsetWidth; b.style.animation = ""; });
+  const sl = el.querySelectorAll(".bv-slide")[i];
+  el.querySelector(".bv-caixa").style.setProperty("--c1", _BV.slides[i].cor[0]);
+  el.querySelector(".bv-caixa").style.setProperty("--c2", _BV.slides[i].cor[1]);
+  el.querySelector("#bv-prox").textContent = i === _BV.n - 1 ? "Começar o dia" : "Próximo ›";
+  sl.querySelectorAll("[data-conta]").forEach(n => _bvConta(n));
+  if (_BV.slides[i].festa) setTimeout(() => celebrar("Tudo em dia!"), 300);
+  vibrar(6);
+}
+function _bvConta(n) {
+  if (n.dataset.feito) return; n.dataset.feito = "1";
+  const alvo = Number(n.dataset.conta) || 0, ini = performance.now(), dur = 900;
+  const passo = t => { const p = Math.min(1, (t - ini) / dur), e = 1 - Math.pow(1 - p, 3); n.textContent = money(alvo * e); if (p < 1) requestAnimationFrame(passo); };
+  requestAnimationFrame(passo);
+}
+function _bvGestos(cx) {
+  let x0 = null, t0 = 0, mexeu = false;
+  cx.addEventListener("pointerdown", e => { if (e.target.closest("button, label, input, a")) return; x0 = e.clientX; t0 = Date.now(); mexeu = false; cx.classList.add("pausa"); });
+  cx.addEventListener("pointermove", e => { if (x0 != null && Math.abs(e.clientX - x0) > 12) mexeu = true; });
+  const solta = e => {
+    if (x0 == null) return; cx.classList.remove("pausa");
+    const dx = e.clientX - x0, rapido = Date.now() - t0 < 350; x0 = null;
+    if (mexeu && Math.abs(dx) > 50) return _bvIr(_BV.i + (dx < 0 ? 1 : -1));
+    if (!mexeu && rapido) { const r = cx.getBoundingClientRect(); _bvIr(_BV.i + (e.clientX - r.left < r.width * .3 ? -1 : 1)); }
+  };
+  cx.addEventListener("pointerup", solta); cx.addEventListener("pointercancel", () => { x0 = null; cx.classList.remove("pausa"); });
+}
+function _bvTecla(e) {
+  if (!document.getElementById("bv")) return document.removeEventListener("keydown", _bvTecla);
+  if (e.key === "ArrowRight") _bvIr(_BV.i + 1); else if (e.key === "ArrowLeft") _bvIr(_BV.i - 1); else if (e.key === "Escape") _bvFechar();
+}
+async function _bvPagar(id, bt) {
+  const linha = bt.closest(".bv-conta"); bt.disabled = true; bt.innerHTML = icon("refresh", "spin");
+  try {
+    await api(`/api/lancamentos/${id}/baixa`, { method: "POST", body: JSON.stringify({}) });
+    linha.classList.add("paga"); vibrar(15); _BV.pagou = true;
+    const tot = document.getElementById("bv-total");
+    const resta = [...document.querySelectorAll(".bv-conta:not(.paga)")].reduce((s, x) => s + Number(x.dataset.v || 0), 0);
+    if (tot) tot.textContent = money(resta);
+    if (!document.querySelector(".bv-conta:not(.paga)")) setTimeout(() => celebrar("Tudo pago!"), 250);
+  } catch (e) { toast(e.message, "err"); bt.disabled = false; bt.innerHTML = `${icon("check")}Paguei`; }
+}
+function _bvFechar() {
+  const el = document.getElementById("bv"); if (!el) return;
+  try { if (document.getElementById("bv-ocultar")?.checked) localStorage.setItem("tom_bv_ocultar", _hojeKey()); } catch {}
+  _DLG_ATUAL_FOLHA = false; document.removeEventListener("keydown", _bvTecla);
+  el.classList.remove("aberta"); el.classList.add("saindo"); setTimeout(() => el.remove(), 320);
+  if (_BV.pagou) { atualizarBadge(); if (State.view === "dashboard") setView("dashboard", { silencioso: true }); }
+}
+
 /* ── Cor do logo do fornecedor: a compra ganha a cor da loja (amarelo do Mercado Livre...) ── */
 const _COR_LOGO = new Map();
 function _corDoLogo(src) {
@@ -7072,6 +7216,7 @@ function _aoVoltar() {
   if (!State.token) return;                                           // tela de login: deixa sair
   if (_DLG_ATUAL) { _DLG_ATUAL.cancelar(); return repor(); }
   if (document.getElementById("menu-lanc")) { _folhaFechar(); return repor(); }
+  if (document.getElementById("bv")) { _bvFechar(); return repor(); }
   if (document.querySelector(".dp-pop")) { _dpFechar(); return repor(); }
   if (document.getElementById("leque")) { fecharLeque(); return repor(); }
   const visor = document.querySelector(".anx-viewer"); if (visor) { visor.click(); return repor(); }
@@ -8147,7 +8292,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,
