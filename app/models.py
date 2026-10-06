@@ -488,3 +488,17 @@ class BackupAuto(Base):
     com_comprovantes = Column(Boolean, default=False)
     enviado_whatsapp = Column(Boolean, default=False)
     arquivo = Column(LargeBinary, nullable=False)                      # .json.gz
+
+
+class HistoricoLancamento(Base):
+    """Quem criou, editou, deu baixa, estornou, anexou ou excluiu cada lançamento.
+    Sem chave estrangeira de propósito: o registro fica mesmo depois de excluir."""
+    __tablename__ = "historico_lancamentos"
+    id = Column(Integer, primary_key=True)
+    lancamento_id = Column(Integer, nullable=False, index=True)
+    descricao = Column(String(200), nullable=True)      # como estava, para ler mesmo após excluir
+    acao = Column(String(20), nullable=False)           # criou | editou | baixa | estorno | excluiu | comprovante
+    usuario_id = Column(Integer, nullable=True, index=True)
+    autor = Column(String(160), nullable=False)
+    mudancas = Column(JSON, nullable=True)               # [{"campo", "de", "para"}]
+    quando = Column(DateTime, default=datetime.utcnow, index=True)

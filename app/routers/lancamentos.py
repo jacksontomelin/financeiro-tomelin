@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from ..database import get_db
 from .. import models, schemas
 from ..security import usuario_atual
+from .. import historico
 
 FORMAS = {"pix", "dinheiro", "debito", "credito", "boleto", "transferencia"}
 
@@ -78,12 +79,13 @@ def obter(lid: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=schemas.LancamentoOut)
-def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
+def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     payload = dados.model_dump()
     if not payload.get("data_competencia"):
         payload["data_competencia"] = date.today()
     l = models.Lancamento(**payload)
     db.add(l); db.commit(); db.refresh(l)
+    historico.registrar(db, l, "criou", me)
     if l.data_pagamento:
         _auto_recibo(l, db=db)
     _aviso_orcamento(l)
@@ -91,14 +93,18 @@ def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
 
 
 @router.put("/{lid}", response_model=schemas.LancamentoOut)
-def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db)):
+def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     l = db.get(models.Lancamento, lid)
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
     era_pago = l.data_pagamento is not None
+    antes = historico.foto(l)
     for k, v in dados.model_dump(exclude_unset=True).items():   # campo não enviado fica como está
         setattr(l, k, v)
     db.commit(); db.refresh(l)
+    mud = historico.diferencas(db, antes, historico.foto(l))
+    if mud:
+        historico.registrar(db, l, "editou", me, mudancas=mud)
     if l.data_pagamento and not era_pago:
         _auto_recibo(l, db=db)
     _aviso_orcamento(l)
@@ -106,7 +112,7 @@ def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db))
 
 
 @router.post("/{lid}/baixa", response_model=schemas.LancamentoOut)
-def dar_baixa(lid: int, dados: schemas.BaixaIn, db: Session = Depends(get_db)):
+def dar_baixa(lid: int, dados: schemas.BaixaIn, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     l = db.get(models.Lancamento, lid)
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
@@ -122,28 +128,43 @@ def dar_baixa(lid: int, dados: schemas.BaixaIn, db: Session = Depends(get_db)):
     if dados.multa is not None:
         l.multa = dados.multa
     db.commit(); db.refresh(l)
+    historico.registrar(db, l, "baixa", me, mudancas=[{"campo": "Pagamento", "de": None, "para": l.data_pagamento.strftime("%d/%m/%Y")}])
     _auto_recibo(l, db=db)
     return _out(l)
 
 
 @router.post("/{lid}/estornar", response_model=schemas.LancamentoOut)
-def estornar(lid: int, db: Session = Depends(get_db)):
+def estornar(lid: int, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     l = db.get(models.Lancamento, lid)
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
+    era = l.data_pagamento
     l.data_pagamento = None
     db.commit(); db.refresh(l)
+    historico.registrar(db, l, "estorno", me, mudancas=[{"campo": "Pagamento", "de": era.strftime("%d/%m/%Y") if era else None, "para": None}])
     return _out(l)
 
 
 @router.delete("/{lid}")
-def excluir(lid: int, db: Session = Depends(get_db)):
+def excluir(lid: int, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     l = db.get(models.Lancamento, lid)
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
+    historico.registrar(db, l, "excluiu", me, mudancas=[{"campo": "Valor", "de": f"{l.valor:.2f}", "para": None}])
     db.query(models.Anexo).filter(models.Anexo.lancamento_id == lid).delete()   # comprovantes vão junto
     db.delete(l); db.commit()
     return {"ok": True}
+
+
+@router.get("/{lid}/historico")
+def ver_historico(lid: int, db: Session = Depends(get_db)):
+    return [_hist(h) for h in db.query(models.HistoricoLancamento).filter_by(lancamento_id=lid)
+            .order_by(models.HistoricoLancamento.quando.desc()).all()]
+
+
+def _hist(h: models.HistoricoLancamento) -> dict:
+    return {"id": h.id, "lancamento_id": h.lancamento_id, "descricao": h.descricao, "acao": h.acao, "autor": h.autor,
+            "usuario_id": h.usuario_id, "mudancas": h.mudancas or [], "quando": h.quando.isoformat() + "Z"}
 
 
 def _aviso_orcamento(l: models.Lancamento):

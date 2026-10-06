@@ -276,6 +276,12 @@ def _texto_contas(db: Session) -> str:
     return "\n".join(linhas)
 
 
+def _autor_zap(remetente: str | None) -> str:
+    """'WhatsApp (…1234)' quando dá para saber o número de quem mandou."""
+    n = "".join(ch for ch in (remetente or "") if ch.isdigit())
+    return f"WhatsApp (…{n[-4:]})" if n and "@" not in (remetente or "") and len(n) >= 8 else "WhatsApp"
+
+
 def _lancar(db: Session, tipo: str, texto: str, remetente: str | None = None) -> str:
     """
     Lança despesa ou receita a partir de texto livre.
@@ -307,6 +313,8 @@ def _lancar(db: Session, tipo: str, texto: str, remetente: str | None = None) ->
     db.add(l); db.commit(); db.refresh(l)
     from .zap_midia import lembrar_lancamento
     lembrar_lancamento(remetente, l.id)   # foto mandada logo depois vira comprovante dele
+    from . import historico
+    historico.registrar(db, l, "criou", autor=_autor_zap(remetente))
 
     emoji = "💵" if tipo == "receita" else "💸"
     cat_str = f" · {cat.nome}" if cat else ""
@@ -355,6 +363,9 @@ def _dar_baixa(db: Session, lid_str: str) -> str:
         return f"⚠️ Lançamento #{lid} já está *pago*."
     l.data_pagamento = date.today()
     db.commit()
+    from . import historico
+    historico.registrar(db, l, "baixa", autor="WhatsApp",
+                        mudancas=[{"campo": "Pagamento", "de": None, "para": l.data_pagamento.strftime("%d/%m/%Y")}])
     tipo_str = "Recebimento" if l.tipo == models.TipoMov.receita else "Pagamento"
     return (
         f"✅ *Baixa registrada!*\n\n"

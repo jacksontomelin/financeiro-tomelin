@@ -46,8 +46,9 @@ def listar(lid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/api/lancamentos/{lid}/anexos")
-def enviar(lid: int, dados: AnexoIn, db: Session = Depends(get_db)):
-    if not db.get(models.Lancamento, lid):
+def enviar(lid: int, dados: AnexoIn, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
+    lanc = db.get(models.Lancamento, lid)
+    if not lanc:
         raise HTTPException(404, "Lançamento não encontrado.")
     n = db.query(func.count(models.Anexo.id)).filter(models.Anexo.lancamento_id == lid).scalar() or 0
     if n >= MAX_POR_LANCAMENTO:
@@ -67,6 +68,8 @@ def enviar(lid: int, dados: AnexoIn, db: Session = Depends(get_db)):
     nome = re.sub(r"[\x00-\x1f]", "", nome)[:200]
     a = models.Anexo(lancamento_id=lid, nome=nome, mime=mime, tamanho=len(bruto), dados=bruto)
     db.add(a); db.commit(); db.refresh(a)
+    from .. import historico
+    historico.registrar(db, lanc, "comprovante", me, mudancas=[{"campo": "Comprovante", "de": None, "para": nome}])
     return _meta(a)
 
 
@@ -90,9 +93,13 @@ def baixar(aid: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/api/anexos/{aid}")
-def excluir(aid: int, db: Session = Depends(get_db)):
+def excluir(aid: int, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     a = db.get(models.Anexo, aid)
     if not a:
         raise HTTPException(404, "Comprovante não encontrado.")
+    lanc, nome = db.get(models.Lancamento, a.lancamento_id), a.nome
     db.delete(a); db.commit()
+    if lanc:
+        from .. import historico
+        historico.registrar(db, lanc, "comprovante", me, mudancas=[{"campo": "Comprovante", "de": nome, "para": None}])
     return {"ok": True}

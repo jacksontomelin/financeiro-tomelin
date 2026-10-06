@@ -276,6 +276,8 @@ for r in (auth.router, categorias.router, contas.router, contatos.router,
 from .verificacao import router as _verificacao   # validação pública pelo QR code dos PDFs
 from .routers import documentos as _documentos
 app.include_router(_documentos.router)
+from .routers import atividade as _atividade
+app.include_router(_atividade.router)
 app.include_router(_verificacao)
 
 

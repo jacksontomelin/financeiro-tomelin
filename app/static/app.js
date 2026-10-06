@@ -3947,7 +3947,9 @@ async function viewUsuarios(v) {
     </div>
     <div class="dica azul" style="margin-top:16px">
       ${icon("shield")}<div><b>Como funciona:</b> cada membro entra com o próprio e-mail e senha. O <b>Admin</b> cadastra, edita e remove membros; o <b>Membro</b> só edita o próprio perfil. Sempre fica pelo menos um admin com acesso.</div>
-    </div>`;
+    </div>
+    <div class="card card-pad" id="atividade" style="margin-top:16px"><div class="sub">Carregando atividade...</div></div>`;
+  setTimeout(_atividadeCarregar, 0);
 }
 
 function formUsuario(u) {
@@ -6591,6 +6593,44 @@ function _filtroChips() {
   box.innerHTML = chips.map(([k, ic, t]) => `<button class="filtro-chip" onclick="FILTRO.${k}='';_filtroChips();recarregarTabela()">${icon(ic)}${esc(t)}${icon("x")}</button>`).join("");
 }
 
+/* ── Histórico de alterações ── */
+const _ACOES = { criou: ["Criou", "plus", "#1F6F5C", "#3EC28F"], editou: ["Editou", "edit", "#082D51", "#4F8BC9"],
+  baixa: ["Deu baixa", "check", "#14594C", "#2F9E7E"], estorno: ["Desfez o pagamento", "refresh", "#8A6D1E", "#E2C46E"],
+  excluiu: ["Excluiu", "trash", "#8E3326", "#D0624E"], comprovante: ["Comprovante", "clip", "#B35C1E", "#E59A4B"] };
+function _quandoRel(iso) {
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (s < 60) return "agora";
+  if (s < 3600) return `há ${Math.floor(s / 60)} min`;
+  if (s < 86400 && d.getDate() === new Date().getDate()) return `hoje, ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+function _histItem(h, comDescricao) {
+  const [rot, ic, c1, c2] = _ACOES[h.acao] || [h.acao, "clock", "#3A4654", "#7E8C9A"];
+  const mud = (h.mudancas || []).map(m => `<div class="hi-mud"><span>${esc(m.campo)}</span>${m.de != null ? `<s>${esc(m.de)}</s>` : ""}${m.de != null && m.para != null ? "→" : ""}${m.para != null ? `<b>${esc(m.para)}</b>` : (m.de != null ? "<em>removido</em>" : "")}</div>`).join("");
+  return `<div class="hi" style="--c1:${c1};--c2:${c2}"><span class="hi-ic">${icon(ic)}</span>
+    <div class="grow"><div class="hi-top"><b>${esc(h.autor)}</b> <span>${rot.toLowerCase()}</span>
+      ${comDescricao ? `<a onclick="${h.acao === "excluiu" ? "" : `formLancamentoId(${h.lancamento_id})`}">${esc(h.descricao || "#" + h.lancamento_id)}</a>` : ""}
+      <small>${_quandoRel(h.quando)}</small></div>${mud}</div></div>`;
+}
+async function verHistoricoLanc(id) {
+  const l = _LANC_CACHE.get(id);
+  abrirModal(`<div class="modal" style="max-width:520px"><div class="modal-h"><span class="card-ico i-navy">${icon("clock")}</span>
+    <h3>Histórico${l ? `: ${esc(l.descricao)}` : ""}</h3><button class="close-btn" onclick="fecharModal()">${icon("x")}</button></div>
+    <div class="modal-b" id="hist-corpo">${ilusCarregando(60)}</div></div>`);
+  try {
+    const h = await api(`/api/lancamentos/${id}/historico`);
+    document.getElementById("hist-corpo").innerHTML = h.length ? `<div class="hi-lista">${h.map(x => _histItem(x, false)).join("")}</div>`
+      : `<div class="empty" style="padding:24px">${ilus("clock")}<p>Sem registro. O histórico começou a ser guardado em outubro de 2026.</p></div>`;
+  } catch (e) { document.getElementById("hist-corpo").innerHTML = `<p>${esc(e.message)}</p>`; }
+}
+async function _atividadeCarregar() {
+  const box = document.getElementById("atividade"); if (!box) return;
+  let h; try { h = await api("/api/atividade?limite=30"); } catch { box.remove(); return; }
+  box.innerHTML = `<div class="card-h"><span class="card-ico i-navy">${icon("clock")}</span><div class="grow"><h3>Atividade recente</h3>
+    <div class="sub">Quem criou, mudou, pagou ou excluiu cada conta</div></div></div>
+    ${h.length ? `<div class="hi-lista">${h.map(x => _histItem(x, true)).join("")}</div>` : `<div class="sub">Nenhuma alteração registrada ainda.</div>`}`;
+}
+
 /* ── Documentos emitidos ── */
 const _DOC_TIPOS = { recibo: ["Recibo", "receipt", "#1F6F5C", "#3EC28F"], balancete: ["Balancete", "chart", "#082D51", "#4F8BC9"],
   patrimonio: ["Patrimônio", "bank", "#8A6D1E", "#E2C46E"], imposto_renda: ["Imposto de Renda", "doc", "#14594C", "#2F9E7E"] };
@@ -7079,6 +7119,7 @@ function _menuLanc(id) {
     { rot: "Recibo", ic: "doc", c1: "#2F5D50", c2: "#4E9C84", f: `abrirPDF('/api/lancamentos/${id}/recibo.pdf')` },
     { rot: "Compartilhar", ic: "send", c1: "#1E7A4A", c2: "#25B26A", f: `_lancCompartilhar(${id})` },
     { rot: "Recibo no WhatsApp", ic: "whatsapp", c1: "#DDF8E8", c2: "#B4EFCD", f: `reciboWhats(${id})` },
+    { rot: "Histórico", ic: "clock", c1: "#3A4654", c2: "#7E8C9A", f: `verHistoricoLanc(${id})` },
     { rot: "Excluir", ic: "trash", c1: "#8E3326", c2: "#D0624E", f: `excluirLanc(${id})` },
   ];
   document.getElementById("menu-lanc")?.remove();
@@ -7926,7 +7967,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

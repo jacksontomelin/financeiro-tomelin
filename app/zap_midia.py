@@ -93,6 +93,9 @@ def anexar(db, lid: int, bruto: bytes, nome: str) -> str | None:
         nome += f".{ext}"
     db.add(models.Anexo(lancamento_id=lid, nome=nome, mime=mime, tamanho=len(bruto), dados=bruto))
     db.commit()
+    from . import historico
+    historico.registrar(db, db.get(models.Lancamento, lid), "comprovante", autor="WhatsApp",
+                        mudancas=[{"campo": "Comprovante", "de": None, "para": nome}])
     return None
 
 
@@ -131,5 +134,10 @@ def remover(db, lid: int) -> str:
          .order_by(models.Anexo.id.desc()).first())
     if not a:
         return f"ℹ️ O #{lid} não tem comprovante."
+    nome = a.nome
     db.delete(a); db.commit()
-    return f"🗑️ Tirei o comprovante \"{a.nome}\" do #{lid}."
+    l = db.get(models.Lancamento, lid)
+    if l:
+        from . import historico
+        historico.registrar(db, l, "comprovante", autor="WhatsApp", mudancas=[{"campo": "Comprovante", "de": nome, "para": None}])
+    return f"🗑️ Tirei o comprovante \"{nome}\" do #{lid}."
