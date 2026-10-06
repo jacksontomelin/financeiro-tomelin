@@ -45,8 +45,8 @@ jobs:
                   msg = msg.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
                   print(f"::error title={tc.get('classname')}.{tc.get('name')}::{msg}")
           PY
-      - name: Sintaxe do app.js
-        run: node --check app/static/app.js
+      - name: Sintaxe dos scripts da tela
+        run: for f in app/static/js/*.js; do node --check "$f"; done
 
   tela:
     runs-on: ubuntu-latest

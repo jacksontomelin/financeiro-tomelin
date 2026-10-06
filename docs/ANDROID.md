@@ -54,7 +54,7 @@ O APK abre o próprio site em tela cheia. Atualizações do sistema chegam no ap
 Para usar câmera nativa, notificações push ou biometria.
 
 1. Crie o projeto e copie os arquivos de `app/static` para a pasta `www`.
-2. No `index.html` copiado, antes do `app.js`, informe o servidor:
+2. No `index.html` copiado, antes dos scripts `js/`, informe o servidor:
    ```html
    <script>window.TOMELIN_API = "https://financeiro.seudominio.com.br"</script>
    ```

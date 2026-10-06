@@ -115,7 +115,7 @@ app/
   whatsapp.py      # envio + processamento de comandos
   seed.py          # admin + categorias + dados de exemplo
   routers/         # auth, contas, categorias, contatos, lancamentos, dashboard, whatsapp
-  static/          # index.html, app.js, styles.css, sw.js, manifest, ícones
+  static/          # index.html, js/ (scripts em ordem), styles.css, sw.js, manifest, ícones
 Dockerfile
 docker-compose.yml
 .env.example

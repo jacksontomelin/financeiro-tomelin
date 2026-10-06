@@ -307,7 +307,7 @@ def config_publica():
 @app.middleware("http")
 async def _sem_cache_no_shell(request, call_next):
     """Força o navegador (principalmente Safari/iOS) a revalidar o app a cada
-    acesso: sem isso ele reaproveita um app.js antigo depois do deploy."""
+    acesso: sem isso ele reaproveita scripts antigos depois do deploy."""
     if request.url.path.startswith("/api/"):
         from .urls import aprender
         aprender(request)   # guarda o domínio real para os QR codes dos PDFs

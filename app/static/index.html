@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="/static/icons/favicon-48.png">
 <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/styles.css?v=165-1791254169">
+<link rel="stylesheet" href="/static/styles.css?v=166-1791254399">
 <link rel="preload" href="/static/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +24,7 @@
 <div id="modal-root"></div>
 <div class="toast-wrap" id="toasts"></div>
 <script>
-  /* Se o app.js quebrar antes de desenhar, mostra o erro em vez de tela branca */
+  /* Se o app quebrar antes de desenhar, mostra o erro em vez de tela branca */
   window.__bootErro = function (msg) {
     var r = document.getElementById("root");
     if (r && !r.innerHTML.trim()) r.innerHTML =
@@ -35,7 +35,21 @@
   };
   window.addEventListener("error", function (e) { window.__bootErro(e.message); });
 </script>
-<script src="/static/app.js?v=165-1791254169"></script>
+<script src="/static/js/01-base.js?v=166-1791254399"></script>
+<script src="/static/js/02-estrutura.js?v=166-1791254399"></script>
+<script src="/static/js/03-painel.js?v=166-1791254399"></script>
+<script src="/static/js/04-lancamentos.js?v=166-1791254399"></script>
+<script src="/static/js/05-cadastros.js?v=166-1791254399"></script>
+<script src="/static/js/06-whatsapp.js?v=166-1791254399"></script>
+<script src="/static/js/07-veiculos-relatorios.js?v=166-1791254399"></script>
+<script src="/static/js/08-configuracoes.js?v=166-1791254399"></script>
+<script src="/static/js/09-compras.js?v=166-1791254399"></script>
+<script src="/static/js/10-metas-busca-tour.js?v=166-1791254399"></script>
+<script src="/static/js/11-recursos.js?v=166-1791254399"></script>
+<script src="/static/js/12-visual.js?v=166-1791254399"></script>
+<script src="/static/js/13-interacoes.js?v=166-1791254399"></script>
+<script src="/static/js/14-cartoes.js?v=166-1791254399"></script>
+<script src="/static/js/99-inicio.js?v=166-1791254399"></script>
 <script>
   if ("serviceWorker" in navigator) {
     // Só recarrega quando uma versão NOVA assume (atualização publicada).
