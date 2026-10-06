@@ -107,3 +107,12 @@ def test_midia_sem_conteudo_com_texto_segue_como_comando(client):
 def test_anexo_sem_foto_explica(client):
     r = _hook(client, texto="Anexo 42")
     assert r == {"ok": True}, r
+
+
+def test_payload_com_tempos_do_gateway(client):
+    from datetime import datetime, timedelta, timezone
+    agora = datetime.now(timezone.utc)
+    r = _hook(client, texto="menu", id="TEMPO1", ts=(agora - timedelta(seconds=5)).isoformat().replace("+00:00", "Z"),
+              recebido_em=(agora - timedelta(seconds=4)).isoformat().replace("+00:00", "Z"),
+              processamento_ms=350, timestamp=agora.isoformat().replace("+00:00", "Z"))
+    assert r == {"ok": True}, r
