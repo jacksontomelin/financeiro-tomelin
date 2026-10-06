@@ -16,13 +16,44 @@ from datetime import datetime
 LOG_EVENTOS: deque = deque(maxlen=40)
 
 def _log(texto, resultado, autor=""):
-    LOG_EVENTOS.appendleft({
+    e = {
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
         "texto": (texto or "")[:80],
         "resultado": resultado,
         "autor": autor,
         "origem": "webhook",
-    })
+    }
+    LOG_EVENTOS.appendleft(e)
+    return e
+
+
+def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, arquivo=None):
+    """Manda a resposta em segundo plano: o webhook devolve na hora para o gateway
+    (que pode estar esperando essa resposta para seguir) e o log mostra quanto levou."""
+    import time as _t
+    from .. import zap_fila
+    ent = _log(texto_cmd, f"{como}: enviando…", autor)
+    t0 = inicio or _t.time()
+
+    def tarefa(sdb):
+        if arquivo:
+            pdf, nome, legenda = arquivo
+            ok = zapapi.enviar_arquivo(pdf, nome, "application/pdf", legenda, destino, db=sdb)
+        else:
+            ok = zapapi.enviar_texto(resp, destino, db=sdb)
+        seg = f"{_t.time() - t0:.1f}".replace(".", ",")
+        ent["resultado"] = (f"{como} em {seg} s" if ok
+                            else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)")
+        return ok
+    zap_fila.disparar("Resposta no grupo", tarefa)
+
+
+def _id_msg(body: dict) -> str:
+    for k in ("id", "msgId", "mensagemId", "messageId", "msg_id"):
+        if body.get(k):
+            return str(body[k])
+    chave = body.get("key") if isinstance(body.get("key"), dict) else {}
+    return str(chave.get("id") or "")
 
 
 def _resumir(v, nivel: int = 0):
@@ -58,6 +89,20 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         "payload": _resumir(body)          # base64 de foto não fica na memória nem na tela
     })
 
+    from starlette.concurrency import run_in_threadpool
+    return await run_in_threadpool(_tratar, body, db)
+
+
+def _tratar(body: dict, db: Session):
+    import time as _t
+    inicio = _t.time()
+    # mesma mensagem lida pela escuta do grupo: não responde duas vezes
+    mid = _id_msg(body)
+    if mid:
+        if mid in _ESCUTADOS:
+            return {"ok": True, "ignorado": "já respondida pela escuta"}
+        _ESCUTADOS.add(mid)
+        if len(_ESCUTADOS) > 500: _ESCUTADOS.clear()
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
     jid      = str(body.get("jid") or "")
     texto    = str(body.get("texto") or "").strip()
@@ -111,8 +156,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         except Exception as e:
             _log(texto or "[arquivo]", f"erro comprovante: {e}")
         if resp:
-            zapapi.enviar_texto(resp, destino, db=db)
-            _log(texto or "[arquivo]", "comprovante", autor_limpo)
+            _responder(texto or "[arquivo]", resp, destino, autor_limpo, "comprovante", inicio)
             return {"ok": True}
         if not texto:
             _log("[arquivo]", "arquivo ignorado", autor_limpo)
@@ -130,21 +174,17 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
 
     if arq:
         if arq[0] == "ERRO":
-            zapapi.enviar_texto(arq[1], destino, db=db)
-            _log(texto, "erro: não encontrado")
+            _responder(texto, arq[1], destino, autor_limpo, "não encontrado", inicio)
         else:
-            pdf, nome, legenda = arq
-            zapapi.enviar_arquivo(pdf, nome, "application/pdf", legenda, destino, db=db)
-            _log(texto, f"PDF {nome} enviado")
+            _responder(texto, None, destino, autor_limpo, f"PDF {arq[1]}", inicio, arquivo=arq)
         return {"ok": True}
 
     # "anexo 42" chegou sem arquivo: explica como mandar
     import re as _re
     m = _re.match(r"^(anexo|anexar|comprovante)\s*#?(\d+)\s*$", whatsapp._sem_acento(texto.lower()))
     if m and not midia:
-        zapapi.enviar_texto(f"📎 Para anexar no #{m.group(2)}, mande a *foto ou o PDF* com a legenda `anexo {m.group(2)}` "
-                            "(escreva na legenda da foto, na mesma mensagem).", destino, db=db)
-        _log(texto, "respondido: anexo sem arquivo", autor_limpo)
+        _responder(texto, f"📎 Para anexar no #{m.group(2)}, mande a *foto ou o PDF* com a legenda `anexo {m.group(2)}` "
+                   "(escreva na legenda da foto, na mesma mensagem).", destino, autor_limpo, "respondido (anexo sem arquivo)", inicio)
         return {"ok": True}
 
     # comando de texto
@@ -158,8 +198,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         _log(texto, "não é comando")
         return {"ok": True, "ignorado": "não é comando"}
 
-    enviado = zapapi.enviar_texto(resp, destino, db=db)
-    _log(texto, "respondido" if enviado else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)", autor_limpo)
+    _responder(texto, resp, destino, autor_limpo, "respondido", inicio)
     return {"ok": True}
 
 
@@ -358,8 +397,10 @@ def job_escutar_grupo():
             if de_mim and zapapi.foi_enviado_pelo_sistema(texto): continue
             resp = whatsapp.processar_comando(texto, db, remetente=autor_raw or grupo)
             if resp:
-                zapapi.enviar_texto(resp, grupo, db=db)
-                _log(texto, "respondido (escuta)", autor_raw)
+                ok = zapapi.enviar_texto(resp, grupo, db=db)
+                seg = f"{(datetime.now(timezone.utc) - t).total_seconds():.1f}".replace(".", ",")
+                _log(texto, f"respondido pela escuta em {seg} s (o webhook não chegou)" if ok
+                     else "FALHOU ao enviar a resposta (escuta)", autor_raw)
     except Exception as e:
         _ESCUTA["erro"] = str(e)
         import logging; logging.getLogger("tomelin.wa").error("escuta: %s", e)

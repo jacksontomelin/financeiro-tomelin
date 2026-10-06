@@ -219,7 +219,7 @@ async def lifespan(app: FastAPI):
     # escuta direta do grupo do WhatsApp (lê mensagens novas pela API v1)
     from apscheduler.triggers.interval import IntervalTrigger
     from .routers.whatsapp import job_escutar_grupo
-    scheduler.add_job(job_escutar_grupo, IntervalTrigger(seconds=4), id="escuta_whatsapp",
+    scheduler.add_job(job_escutar_grupo, IntervalTrigger(seconds=2), id="escuta_whatsapp",
                       replace_existing=True, max_instances=1, coalesce=True)
     scheduler.start()
     reagendar()   # horários vêm da tela de Configurações (banco > .env)
