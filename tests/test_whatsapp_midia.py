@@ -59,3 +59,33 @@ def test_arquivo_que_nao_e_foto_nem_pdf(client, api):
     l = api.post("/api/lancamentos", json={"descricao": "Sem audio", "tipo": "despesa", "valor": "1"}).json()
     _hook(client, texto=f"anexo {l['id']}", midia={"base64": base64.b64encode(b"OggS audio").decode()})
     assert _anexos(api, l["id"]) == []
+
+
+def test_midia_aninhada_e_buffer(client, api):
+    """Formatos alternativos do gateway: dentro de "mensagem", e Buffer do Node."""
+    l = api.post("/api/lancamentos", json={"descricao": "Formatos", "tipo": "despesa", "valor": "5"}).json()
+    _hook(client, mensagem={"imagem": {"base64": PNG, "caption": f"anexo {l['id']}"}})
+    bruto = list(b"%PDF-1.4 buffer")
+    _hook(client, texto=f"anexo {l['id']}", arquivo={"data": {"type": "Buffer", "data": bruto}, "fileName": "nota.pdf"})
+    nomes = sorted(a["nome"] for a in _anexos(api, l["id"]))
+    assert len(nomes) == 2 and "nota.pdf" in nomes
+
+
+def test_diagnostico_mostra_formato_e_motivo(client, api):
+    l = api.post("/api/lancamentos", json={"descricao": "Diag", "tipo": "despesa", "valor": "5"}).json()
+    r = _hook(client, texto=f"anexo {l['id']}", midia={"url": "https://mmg.whatsapp.net/v/t62/abc.enc?x=1", "mimetype": "image/jpeg"})
+    assert r.get("ok") is True
+    d = api.get("/api/whatsapp/debug").json()
+    m = d["ultimas_midias"][0]
+    assert m["resultado"] == "falhou" and "criptografado" in m["motivo"]
+    assert m["formato"]["url"].startswith("link (mmg.whatsapp.net")
+    assert m["formato"]["mimetype"] == "image/jpeg"
+
+
+def test_foto_grande_cabe_e_debug_resume_base64(client, api):
+    l = api.post("/api/lancamentos", json={"descricao": "Grande", "tipo": "despesa", "valor": "5"}).json()
+    grande = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 400_000).decode()   # ~530 KB em base64
+    _hook(client, texto=f"anexo {l['id']}", midia={"base64": grande})
+    assert len(_anexos(api, l["id"])) == 1
+    p = api.get("/api/whatsapp/debug").json()["ultimos_payloads"][0]["payload"]
+    assert "caracteres" in p["midia"]["base64"] and len(p["midia"]["base64"]) < 200

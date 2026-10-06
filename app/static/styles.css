@@ -4364,3 +4364,18 @@ html.dark .cp-var.bom { color: #7FD8B6; }
 .off-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .off-txt small { opacity: .7; font-size: 11.5px; }
 .off-val { font-weight: 700; white-space: nowrap; }
+
+/* diagnóstico: comprovantes recebidos pelo WhatsApp */
+.zm-vazio { font-size: 12.5px; color: var(--ink-3); padding: 8px 0 12px; }
+.zm-lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.zm-item { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.zm-item summary { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; list-style: none; font-size: 12.5px; }
+.zm-item summary::-webkit-details-marker { display: none; }
+.zm-sit { flex-shrink: 0; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: rgba(127,127,127,.15); color: var(--ink-2); }
+.zm-anexado .zm-sit { background: rgba(37,211,102,.16); color: #128C7E; }
+.zm-falhou .zm-sit { background: rgba(220,38,38,.12); color: var(--red); }
+.zm-txt { flex: 1; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.zm-hora { flex-shrink: 0; font-size: 10.5px; color: var(--ink-3); }
+.zm-forma { padding: 0 12px 10px; }
+.zm-forma small { color: var(--ink-3); font-size: 11px; }
+.zm-forma pre { margin: 4px 0 0; font-size: 11px; white-space: pre-wrap; word-break: break-all; background: rgba(127,127,127,.07); padding: 8px; border-radius: 8px; }

@@ -3211,6 +3211,23 @@ async function rodarDiagnosticoWA() {
           </div>`).join("")}
       </div>`}
 
+    <!-- fotos e PDFs recebidos -->
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">
+      Comprovantes recebidos (últimos ${(d.ultimas_midias||[]).length})
+    </div>
+    ${(d.ultimas_midias||[]).length === 0 ? `
+      <div class="zm-vazio">Nenhuma foto ou PDF chegou ainda. Para testar, mande no grupo uma foto com a legenda <b>anexo</b> e o número do lançamento (ex.: <b>anexo 42</b>).</div>` :
+      `<div class="zm-lista">${(d.ultimas_midias||[]).map(m => `
+        <details class="zm-item zm-${esc(m.resultado)}">
+          <summary>
+            <span class="zm-sit">${m.resultado === "anexado" ? "Anexado" : m.resultado === "falhou" ? "Falhou" : "Ignorado"}</span>
+            <span class="zm-txt">${m.lancamento_id ? `#${m.lancamento_id} · ` : ""}${esc(m.motivo || "")}</span>
+            <span class="zm-hora">${esc(m.hora)}</span>
+          </summary>
+          <div class="zm-forma"><small>Formato que o gateway mandou (sem o conteúdo):</small>
+            <pre>${esc(JSON.stringify(m.formato, null, 2))}</pre></div>
+        </details>`).join("")}</div>`}
+
     <!-- eventos processados -->
     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-bottom:6px">
       Comandos processados (últimos ${(d.ultimos_eventos||[]).length})

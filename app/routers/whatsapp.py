@@ -25,11 +25,22 @@ def _log(texto, resultado, autor=""):
     })
 
 
+def _resumir(v, nivel: int = 0):
+    """Cópia do payload com textos enormes (base64) trocados por um resumo."""
+    if isinstance(v, dict):
+        return {k: _resumir(x, nivel + 1) for k, x in v.items()} if nivel < 6 else "{…}"
+    if isinstance(v, list):
+        return [_resumir(x, nivel + 1) for x in v[:20]] + ([f"… +{len(v) - 20} itens"] if len(v) > 20 else [])
+    if isinstance(v, str) and len(v) > 400:
+        return f"{v[:60]}… ({len(v)} caracteres)"
+    return v
+
+
 @router.post("/webhook")
 async def webhook(req: Request, db: Session = Depends(get_db)):
     try:
         raw = await req.body()
-        if len(raw) > 256 * 1024:          # 256 KB: payload legítimo é ~1 KB
+        if len(raw) > 9 * 1024 * 1024:     # foto de até 5 MB em base64 cabe; texto é ~1 KB
             return {"ok": False, "erro": "payload grande demais"}
         body = __import__("json").loads(raw)
     except Exception as e:
@@ -44,7 +55,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
         "ip": client_ip,
-        "payload": body
+        "payload": _resumir(body)          # base64 de foto não fica na memória nem na tela
     })
 
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
@@ -53,7 +64,10 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     de_mim   = bool(body.get("deMim", False))
     autor_num = str(body.get("autorNumero") or "")
     evento   = str(body.get("evento") or "")
-    midia    = body.get("midia") or body.get("media")
+    from .. import zap_midia
+    midia    = zap_midia.achar_midia(body)
+    if midia and not texto and isinstance(midia, dict):      # legenda pode vir dentro da mídia
+        texto = str(midia.get("legenda") or midia.get("caption") or "").strip()
 
     # ignora eventos sem texto nem arquivo (status, leitura, etc)
     if not texto and not midia:
@@ -89,7 +103,6 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     if midia:
         if de_mim and zapapi.arquivo_recente_do_sistema():
             return {"ok": True, "ignorado": "arquivo enviado pelo sistema"}
-        from .. import zap_midia
         try:
             resp = zap_midia.processar(midia, texto, db, remetente=autor_limpo or destino)
         except Exception as e:
@@ -354,13 +367,14 @@ async def webhook_debug(req: Request, db: Session = Depends(get_db)):
         body = {"erro_parse": str(e), "raw": (await req.body()).decode("utf-8", errors="replace")[:500]}
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
-        "payload": body,
+        "payload": _resumir(body),
     })
-    return {"ok": True, "recebido": body}
+    return {"ok": True, "recebido": _resumir(body)}
 
 @router.get("/debug", dependencies=[Depends(usuario_atual)])
 def debug_log(db: Session = Depends(get_db)):
     """Retorna os últimos payloads recebidos pelo webhook + estado atual da config."""
+    from .. import zap_midia
     c = zapapi.config(db)
     return {
         "config": {
@@ -375,6 +389,7 @@ def debug_log(db: Session = Depends(get_db)):
         "webhook_url_debug": "/api/whatsapp/webhook/debug",
         "ultimos_payloads": list(_DEBUG_PAYLOADS),
         "ultimos_eventos": list(LOG_EVENTOS),
+        "ultimas_midias": list(zap_midia.ULTIMAS),
     }
 
 
