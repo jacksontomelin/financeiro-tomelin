@@ -399,8 +399,8 @@ def _ts_aware(v):
 
 def job_escutar_grupo():
     import time as _t
-    if _t.time() - _ATRASO["webhook_em"] < 600:
-        return      # o webhook está entregando: não consulta o gateway à toa (poupa memória e CPU da VPS)
+    if _t.time() - _ATRASO["webhook_em"] < 45:
+        return      # webhook entregou há pouco: não consulta o gateway à toa; se ele parar, a escuta volta em 45 s
     from ..database import SessionLocal
     from datetime import datetime, timezone, timedelta
     db = SessionLocal()
