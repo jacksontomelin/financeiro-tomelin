@@ -487,7 +487,7 @@ async function rodarDiagnosticoWA() {
   const checks = [
     [cfg.ativo,                        "Envio ativado",           cfg.ativo?"":"Ative no passo 1"],
     [!!cfg.url,                        "URL do gateway",          cfg.url||"não configurada"],
-    [cfg.chave_configurada,            "Chave de API",            cfg.chave_configurada?"configurada":"não configurada"],
+    [cfg.chave_configurada,            "Chave de API",            cfg.chave_configurada ? `${cfg.chave_resumo || "configurada"} · precisa ser a mesma ZAP_API_KEY do Sentinela` : "não configurada"],
     [!!(cfg.grupo&&cfg.grupo.includes("@g.us")), "Grupo definido",cfg.grupo||"escolha no passo 2"],
     [!!cfg.meu_numero,                 "Seu número",              cfg.meu_numero||"qualquer membro pode usar"],
   ];

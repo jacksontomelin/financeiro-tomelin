@@ -464,10 +464,13 @@ def debug_log(db: Session = Depends(get_db)):
             "ativo": c["ativo"],
             "url": c["url"],
             "chave_configurada": bool(c["chave"]),
+            # só o começo e o fim: dá para comparar com a chave do Sentinela sem expor a chave
+            "chave_resumo": (f"{c['chave'][:4]}…{c['chave'][-4:]}" if len(c["chave"] or "") >= 10 else ("configurada" if c["chave"] else "")),
             "grupo": c["grupo"],
             "meu_numero": cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "",
             "endpoint": c["endpoint"],
         },
+        "ultimo_atraso": _ATRASO.get("ultimo"),
         "webhook_url_principal": "/api/whatsapp/webhook",
         "webhook_url_debug": "/api/whatsapp/webhook/debug",
         "ultimos_payloads": list(_DEBUG_PAYLOADS),
