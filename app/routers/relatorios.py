@@ -104,3 +104,8 @@ def imposto_renda_pdf(ano: int | None = None, db: Session = Depends(get_db)):
 def por_pessoa(de: date | None = None, ate: date | None = None, db: Session = Depends(get_db)):
     de, ate = _periodo(de, ate)
     return service.por_responsavel(db, de, ate)
+
+
+@router.get("/comparativo")
+def comparativo(ano: int | None = None, db: Session = Depends(get_db)):
+    return service.comparativo(db, ano or date.today().year)

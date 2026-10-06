@@ -3547,6 +3547,7 @@ async function viewRelatorios(v) {
       </div>
     </div>
 
+    <div class="card card-pad" id="comp-ano" style="margin-bottom:16px"><div class="sub">Carregando o comparativo do ano...</div></div>
     <div class="card card-pad" id="por-pessoa" style="margin-bottom:16px"><div class="sub">Carregando quem paga o quê...</div></div>
 
     <!-- KPIs clicáveis -->
@@ -3679,6 +3680,7 @@ async function viewRelatorios(v) {
       </div>
     </div>`;
   setTimeout(_porPessoaCarregar, 0);
+  setTimeout(() => _compCarregar(), 0);
 }
 function aplicarPeriodo() {
   PERIODO.de = $("#r-de").value; PERIODO.ate = $("#r-ate").value;
@@ -6914,6 +6916,48 @@ async function _docCarregar() {
 }
 function _docZap(codigo, btn) { return _waDisparar(`/api/documentos/${codigo}/whatsapp`, btn); }
 
+/* ── Este ano x ano passado ── */
+const _COMP = { ano: new Date().getFullYear(), modo: "despesas" };
+async function _compCarregar(ano, modo) {
+  const box = document.getElementById("comp-ano"); if (!box) return;
+  if (ano) _COMP.ano = ano; if (modo) _COMP.modo = modo;
+  let d; try { d = await api(`/api/relatorios/comparativo?ano=${_COMP.ano}`); } catch (e) { box.innerHTML = `<div class="sub">${esc(e.message)}</div>`; return; }
+  const k = _COMP.modo, ka = k + "_ant", desp = k === "despesas";
+  const t = d.totais, dif = t[k] - t[ka], pct = t[ka] ? dif / t[ka] * 100 : null;
+  const bom = desp ? dif <= 0 : dif >= 0;
+  const max = Math.max(1, ...d.meses.flatMap(m => [m[k], m[ka]]));
+  const W = 640, H = 190, base = 160, larg = W / 12;
+  const cor = desp ? "#C9573F" : "#2F9E7E";
+  const barras = d.meses.map((m, i) => {
+    const x = i * larg, h1 = m[ka] / max * 140, h2 = m[k] / max * 140;
+    return `<g class="cp-mes${m.futuro ? " futuro" : ""}" style="--i:${i}">
+      <title>${m.rotulo}: ${d.ano} ${money(m[k])} · ${d.ano_anterior} ${money(m[ka])}</title>
+      <rect class="cp-ant" x="${x + larg * .16}" y="${base - h1}" width="${larg * .3}" height="${Math.max(h1, 1)}" rx="3"/>
+      <rect class="cp-atu" x="${x + larg * .5}" y="${base - h2}" width="${larg * .3}" height="${Math.max(h2, 1)}" rx="3" fill="${cor}"/>
+      <text x="${x + larg / 2}" y="${base + 18}" text-anchor="middle">${m.rotulo}</text></g>`;
+  }).join("");
+  const cats = d.categorias.filter(c => c.atual || c.anterior).slice(0, 6);
+  box.innerHTML = `
+    <div class="card-h"><span class="card-ico i-teal">${icon("chart")}</span><div class="grow"><h3>Este ano x ano passado</h3>
+      <div class="sub">${d.ano} contra ${d.ano_anterior}, de ${d.periodo}</div></div></div>
+    <div class="cp-ctrl">
+      <div class="seg">${[d.ano === new Date().getFullYear() ? d.ano : new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2]
+        .map(a => `<button class="${a === d.ano ? "on" : ""}" onclick="_compCarregar(${a})">${a}</button>`).join("")}</div>
+      <div class="seg">${[["despesas", "Gastos"], ["receitas", "Receitas"]].map(([m, r]) => `<button class="${m === k ? "on" : ""}" onclick="_compCarregar(null,'${m}')">${r}</button>`).join("")}</div>
+    </div>
+    <div class="cp-total">
+      <div><small>${desp ? "Gastou" : "Recebeu"} em ${d.ano}</small><b class="mono-num">${money(t[k])}</b></div>
+      <div class="cp-var ${bom ? "bom" : "ruim"}">${pct == null ? "sem dados do ano anterior" : `${dif >= 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(0)}% · ${dif >= 0 ? "+" : "−"}${money0(Math.abs(dif))}`}
+        <small>em ${d.ano_anterior}: ${money0(t[ka])}</small></div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" class="cp-graf" role="img" aria-label="Comparativo mês a mês">${barras}</svg>
+    <div class="cp-leg"><span><i class="ant"></i>${d.ano_anterior}</span><span><i style="background:${cor}"></i>${d.ano}</span></div>
+    ${desp && cats.length ? `<div class="cp-cats"><div class="cp-cats-tit">Onde mudou mais (${d.periodo})</div>${cats.map(c => {
+      const sobe = c.diferenca > 0; return `<div class="cp-cat"><i style="background:${_corOk(c.cor, "#7E8C9A")}"></i><span class="grow">${esc(c.nome)}</span>
+        <small>${money0(c.anterior)} → <b>${money0(c.atual)}</b></small>
+        <em class="${sobe ? "ruim" : "bom"}">${c.variacao_pct == null ? "novo" : `${sobe ? "▲" : "▼"} ${Math.abs(c.variacao_pct).toFixed(0)}%`}</em></div>`; }).join("")}</div>` : ""}`;
+}
+
 /* ── Quem paga ── */
 function _quemEscolher(b) {
   b.parentElement.querySelectorAll(".quem-opt").forEach(x => x.classList.toggle("on", x === b));
@@ -8342,7 +8386,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, _waDisparar, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, _compCarregar, _waDisparar, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

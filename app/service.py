@@ -705,3 +705,52 @@ def previsao_saldo(db: Session, dias: int = 90, hoje: date | None = None) -> dic
         "atrasados": float(-sum((e["valor"] for e in eventos if e["atrasado"]), D0)),
         "eventos": [{**e, "data": e["data"].isoformat(), "valor": float(e["valor"])} for e in eventos[:60]],
     }
+
+
+def comparativo(db: Session, ano: int, hoje: date | None = None) -> dict:
+    """Este ano x ano anterior, mês a mês e por categoria (pela competência).
+
+    No ano corrente, os totais por categoria comparam o mesmo período nos dois
+    anos (janeiro até o mês atual), para a comparação ser justa.
+    """
+    hoje = hoje or date.today()
+    ate_mes = hoje.month if ano == hoje.year else 12
+
+    def por_mes(a):
+        rows = (db.query(func.extract("month", models.Lancamento.data_competencia).label("m"), models.Lancamento.tipo,
+                         func.coalesce(func.sum(models.Lancamento.valor), 0))
+                .filter(models.Lancamento.data_competencia >= date(a, 1, 1), models.Lancamento.data_competencia <= date(a, 12, 31))
+                .group_by("m", models.Lancamento.tipo).all())
+        out = {m: {"receitas": 0.0, "despesas": 0.0} for m in range(1, 13)}
+        for m, tipo, v in rows:
+            out[int(m)]["receitas" if tipo == TipoMov.receita else "despesas"] += float(v)
+        return out
+
+    def por_cat(a):
+        fim = date(a, ate_mes, monthrange(a, ate_mes)[1])
+        rows = (db.query(models.Lancamento.categoria_id, func.coalesce(func.sum(models.Lancamento.valor), 0))
+                .filter(models.Lancamento.tipo == TipoMov.despesa,
+                        models.Lancamento.data_competencia >= date(a, 1, 1), models.Lancamento.data_competencia <= fim)
+                .group_by(models.Lancamento.categoria_id).all())
+        return {cid: float(v) for cid, v in rows}
+
+    atual, anterior = por_mes(ano), por_mes(ano - 1)
+    nomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    meses = [{"mes": m, "rotulo": nomes[m - 1], "receitas": atual[m]["receitas"], "despesas": atual[m]["despesas"],
+              "receitas_ant": anterior[m]["receitas"], "despesas_ant": anterior[m]["despesas"], "futuro": m > ate_mes}
+             for m in range(1, 13)]
+    ca, cb = por_cat(ano), por_cat(ano - 1)
+    cats = {c.id: c for c in db.query(models.Categoria).all()}
+    categorias = []
+    for cid in set(ca) | set(cb):
+        a, b = ca.get(cid, 0.0), cb.get(cid, 0.0)
+        c = cats.get(cid)
+        categorias.append({"categoria_id": cid, "nome": c.nome if c else "Sem categoria", "cor": c.cor if c else "#7E8C9A",
+                           "atual": a, "anterior": b, "diferenca": a - b,
+                           "variacao_pct": round((a - b) / b * 100, 1) if b else None})
+    categorias.sort(key=lambda x: -abs(x["diferenca"]))
+    soma = lambda d, k, ate: sum(d[m][k] for m in range(1, ate + 1))
+    tot = {"despesas": soma(atual, "despesas", ate_mes), "despesas_ant": soma(anterior, "despesas", ate_mes),
+           "receitas": soma(atual, "receitas", ate_mes), "receitas_ant": soma(anterior, "receitas", ate_mes)}
+    return {"ano": ano, "ano_anterior": ano - 1, "ate_mes": ate_mes, "periodo": f"jan a {nomes[ate_mes - 1].lower()}",
+            "meses": meses, "categorias": categorias, "totais": tot}
