@@ -91,9 +91,13 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
     import logging as _lg
     client_ip = req.headers.get("x-forwarded-for","") or (req.client.host if req.client else "?")
     _lg.getLogger("tomelin.webhook").info("webhook de %s: evento=%s jid=%s", client_ip, body.get("evento"), str(body.get("jid"))[:30])
+    ua = (req.headers.get("user-agent") or "").lower()
+    origem = ("repasse do Sentinela (:8787/webhook/financeiro)" if "python-requests" in ua
+              else "gateway direto" if ("node" in ua or "undici" in ua) else (ua[:40] or "desconhecida"))
     _DEBUG_PAYLOADS.appendleft({
         "hora": datetime.now().strftime("%d/%m %H:%M:%S"),
         "ip": client_ip,
+        "origem": origem,
         "payload": _resumir(body)          # base64 de foto não fica na memória nem na tela
     })
 

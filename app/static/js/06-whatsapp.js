@@ -559,7 +559,7 @@ async function rodarDiagnosticoWA() {
           <div style="padding:10px 12px;border-bottom:1px solid var(--line)">
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:11px;color:var(--ink-3)">${p.hora}</span>
-              <span style="font-size:11px;background:#25D36620;color:#128C7E;padding:1px 6px;border-radius:6px">recebido</span>
+              <span style="font-size:11px;background:${/Sentinela/.test(p.origem||"") ? "#C9A94E30;color:#8A6A1A" : "#25D36620;color:#128C7E"};padding:1px 6px;border-radius:6px">${esc(p.origem || "recebido")}</span>
             </div>
             <pre style="font-size:11px;color:var(--ink);margin:0;overflow-x:auto;white-space:pre-wrap;word-break:break-all">${JSON.stringify(p.payload,null,2).replace(/</g,"&lt;")}</pre>
           </div>`).join("")}
