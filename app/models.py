@@ -26,6 +26,7 @@ class Usuario(Base):
     criado_em = Column(DateTime, default=datetime.utcnow)
     ultimo_acesso = Column(DateTime, nullable=True)       # gravado a cada login
     ultimo_acesso_ip = Column(String(60), nullable=True)  # IP do último acesso
+    whatsapp = Column(String(20), nullable=True)          # número para receber o código de nova senha
 
 
 class Conta(Base):
@@ -502,3 +503,18 @@ class HistoricoLancamento(Base):
     autor = Column(String(160), nullable=False)
     mudancas = Column(JSON, nullable=True)               # [{"campo", "de", "para"}]
     quando = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class RecuperacaoSenha(Base):
+    """Código de 6 dígitos para criar senha nova (vale 15 min, 5 tentativas, uso único).
+    O código nunca fica guardado: só o resumo (HMAC) dele."""
+    __tablename__ = "recuperacoes_senha"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
+    canal = Column(String(10), nullable=False)          # whatsapp | email
+    codigo_hash = Column(String(64), nullable=False)
+    criado_em = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expira_em = Column(DateTime, nullable=False)
+    usado_em = Column(DateTime, nullable=True)
+    tentativas = Column(Integer, default=0, nullable=False)
+    ip = Column(String(60), nullable=True)

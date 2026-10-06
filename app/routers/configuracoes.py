@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/configuracoes", tags=["configuracoes"],
                    dependencies=[Depends(usuario_atual)])
 
 # chaves que dão acesso a serviços externos: só o administrador vê o valor
-SECRETAS = {"WHATSAPP_API_TOKEN", "FIPE_API_TOKEN"}
+SECRETAS = {"WHATSAPP_API_TOKEN", "FIPE_API_TOKEN", "SMTP_SENHA"}
 
 
 def eh_admin(db: Session, u: models.Usuario) -> bool:
@@ -47,3 +47,18 @@ def testar_whatsapp(db: Session = Depends(get_db)):
     from .. import whatsapp as wa
     ok = wa.enviar("✅ *Tomelin Financeiro*: teste de conexão OK!", db=db)
     return {"enviado": bool(ok)}
+
+
+@router.post("/email/testar")
+def testar_email(dados: dict | None = None, me: models.Usuario = Depends(usuario_atual), db: Session = Depends(get_db)):
+    """Manda um e-mail de teste para quem clicou (ou para o endereço informado)."""
+    exigir_admin(db, me)
+    from .. import email_envio
+    para = ((dados or {}).get("para") or me.email or "").strip()
+    try:
+        email_envio.enviar(db, para, "Tomelin Financeiro: teste de e-mail",
+                           f"Olá, {me.nome.split()[0]}!\n\nO envio de e-mail do Tomelin Gestão Financeira está funcionando.\n"
+                           "Com isso, a família pode recuperar a senha por e-mail na tela de entrada.")
+    except email_envio.ErroEmail as e:
+        raise HTTPException(400, str(e))
+    return {"enviado": True, "para": para}

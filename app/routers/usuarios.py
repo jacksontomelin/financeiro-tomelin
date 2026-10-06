@@ -23,6 +23,7 @@ class UsuarioIn(BaseModel):
     cor: str = COR_PADRAO
     papel: str = "membro"
     ativo: bool = True
+    whatsapp: Optional[str] = None      # número que recebe o código para criar senha nova
 
 
 class SenhaIn(BaseModel):
@@ -43,7 +44,20 @@ def _out(u: models.Usuario):
         "ultimo_acesso_ip": u.ultimo_acesso_ip,
         "emoji": chave_avatar(av.get("emoji")), "cor": av.get("cor") or COR_PADRAO,
         "papel": av.get("papel", "membro"),
+        "whatsapp": u.whatsapp or "",
     }
+
+
+def normalizar_whatsapp(v) -> str | None:
+    """(47) 99935-7131 → 5547999357131. Vazio → None. Erro diz o que está errado."""
+    d = re.sub(r"\D", "", v or "")
+    if not d:
+        return None
+    if len(d) in (10, 11):
+        d = "55" + d
+    if not (12 <= len(d) <= 13) or not d.startswith("55"):
+        raise ErroCampo("whatsapp", "WhatsApp: use DDD + número, ex.: (47) 99999-0000.")
+    return d
 
 
 def _get_av(db, uid):
@@ -113,6 +127,7 @@ def criar(dados: UsuarioIn, me: models.Usuario = Depends(usuario_atual), db: Ses
         nome=nome, email=email,
         senha_hash=security.hash_senha(dados.senha),
         ativo=dados.ativo,
+        whatsapp=normalizar_whatsapp(dados.whatsapp),
     )
     db.add(u); db.flush()
     db.add(models.UsuarioAvatar(usuario_id=u.id, emoji=chave_avatar(dados.emoji), cor=dados.cor, papel=dados.papel))
@@ -142,6 +157,8 @@ def editar(uid: int, dados: UsuarioIn, me: models.Usuario = Depends(usuario_atua
     u.nome = nome
     u.email = email
     u.ativo = dados.ativo
+    if "whatsapp" in dados.model_fields_set:
+        u.whatsapp = normalizar_whatsapp(dados.whatsapp)
     if dados.senha:
         u.senha_hash = security.hash_senha(dados.senha)
     av.emoji = chave_avatar(dados.emoji); av.cor = dados.cor; av.papel = dados.papel

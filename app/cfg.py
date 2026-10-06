@@ -41,6 +41,13 @@ DEFS = [
     ("BACKUP_MANTER",            "Quantos backups automáticos guardar",                               "7"),
     ("BACKUP_WHATSAPP",          "Mandar o arquivo do backup no grupo do WhatsApp",                   "false"),
     ("BACKUP_COMPROVANTES",      "Incluir fotos e PDFs dos comprovantes no backup automático",        "false"),
+    # ---- E-mail (recuperar senha) ----
+    ("SMTP_HOST",                "Servidor de e-mail (SMTP), ex.: smtp.gmail.com",                    ""),
+    ("SMTP_PORTA",               "Porta do SMTP (587 com STARTTLS, 465 com SSL)",                     "587"),
+    ("SMTP_SEGURANCA",           "Segurança: starttls, ssl ou nenhuma",                               "starttls"),
+    ("SMTP_USUARIO",             "Usuário do e-mail (normalmente o próprio endereço)",                ""),
+    ("SMTP_SENHA",               "Senha do e-mail (no Gmail, use uma senha de app)",                  ""),
+    ("SMTP_REMETENTE",           "Remetente que aparece no e-mail (vazio = o usuário acima)",         ""),
     ("APP_URL",                  "Endereço do sistema para o QR code dos PDFs (ex.: https://financeiro.seudominio.com.br). Vazio = detecta sozinho", ""),
 ]
 

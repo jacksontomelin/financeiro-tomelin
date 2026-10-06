@@ -22,6 +22,24 @@ for (const [disp, viewport] of [["celular", { width: 390, height: 844 }], ["comp
   page.on("pageerror", (e) => erros.push(`[${disp}] erro de JS: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) erros.push(`[${disp}] console: ${m.text()}`); });
 
+  await passo("senha errada mostra o erro e o atalho de senha nova", async () => {
+    await page.goto(URL);
+    await page.fill("#l-email", EMAIL);
+    await page.fill("#l-senha", "senha-errada-1");
+    await page.click("#l-btn");
+    await page.waitForSelector("#l-erro:not(.hidden) .login-esqueci-bt", { timeout: 8000 });
+    const t = await page.textContent("#l-erro");
+    if (!/Senha incorreta/.test(t)) throw new Error("mensagem: " + t);
+    if (await page.$(".sidebar, .app")) throw new Error("entrou com senha errada");
+  });
+  await passo("esqueci a senha abre e explica", async () => {
+    await page.click(".login-esqueci-bt");
+    await page.waitForSelector("#rs-email", { timeout: 4000 });
+    await page.click("#rs-bt1");
+    await page.waitForSelector(".rs-sem, .rs-canais", { timeout: 8000 });
+    await page.evaluate(() => _rsFechar());
+    await espera(400);
+  });
   await passo("login", async () => {
     await page.goto(URL);
     await page.fill("#l-email", EMAIL);

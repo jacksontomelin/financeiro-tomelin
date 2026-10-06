@@ -1,7 +1,7 @@
 /* Service Worker: Tomelin Gestão Financeira
    Network-first para o shell (sempre busca a versão mais nova primeiro);
    cache só como fallback offline. Nunca faz cache de chamadas /api. */
-const CACHE = "tomelin-v16";
+const CACHE = "tomelin-v17";
 const SHELL = [
   "/", "/static/styles.css",
   "/static/js/01-base.js", "/static/js/02-estrutura.js", "/static/js/03-painel.js", "/static/js/04-lancamentos.js", "/static/js/05-cadastros.js", "/static/js/06-whatsapp.js", "/static/js/07-veiculos-relatorios.js", "/static/js/08-configuracoes.js", "/static/js/09-compras.js", "/static/js/10-metas-busca-tour.js", "/static/js/11-recursos.js", "/static/js/12-visual.js", "/static/js/13-interacoes.js", "/static/js/14-cartoes.js", "/static/js/99-inicio.js",

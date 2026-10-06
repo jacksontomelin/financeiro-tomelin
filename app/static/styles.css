@@ -4379,3 +4379,56 @@ html.dark .cp-var.bom { color: #7FD8B6; }
 .zm-forma { padding: 0 12px 10px; }
 .zm-forma small { color: var(--ink-3); font-size: 11px; }
 .zm-forma pre { margin: 4px 0 0; font-size: 11px; white-space: pre-wrap; word-break: break-all; background: rgba(127,127,127,.07); padding: 8px; border-radius: 8px; }
+
+/* login: esqueci a senha, caps lock e tremida no erro */
+.login-esqueci { align-self: center; background: none; border: 0; padding: 4px 8px; margin-top: -4px; cursor: pointer;
+  color: var(--navy); font: 600 13px/1.3 inherit; text-decoration: underline; text-underline-offset: 3px; opacity: .85; }
+html.dark .login-esqueci { color: #9CC3E6; }
+.login-esqueci:hover { opacity: 1; }
+.login-erro { display: flex; flex-direction: column; gap: 8px; }
+.login-erro.hidden { display: none; }
+.login-esqueci-bt { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 10px;
+  padding: 7px 12px; cursor: pointer; background: rgba(201,87,63,.14); color: inherit; font: 700 12.5px/1 inherit; }
+.login-esqueci-bt svg { width: 15px; height: 15px; }
+.login-caps { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 600; color: #B7791F; }
+.login-caps svg { width: 14px; height: 14px; }
+.login-caps.hidden { display: none; }
+.login-app-card.treme { animation: lgTreme .42s cubic-bezier(.36,.07,.19,.97); }
+@keyframes lgTreme { 15%, 85% { transform: translateX(-3px); } 30%, 70% { transform: translateX(6px); } 45%, 55% { transform: translateX(-8px); } }
+
+/* criar senha nova */
+.rs-passos { display: flex; gap: 6px; margin-bottom: 14px; }
+.rs-passos i { flex: 1; height: 4px; border-radius: 4px; background: rgba(127,127,127,.2); transition: background .3s; }
+.rs-passos i.on { background: linear-gradient(90deg, #2F817A, #3E9079); }
+.rs-txt { margin: 0 0 12px; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.rs-erro { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: rgba(201,87,63,.1); color: var(--red, #C9573F); font-size: 13px; font-weight: 600; animation: semRede .35s var(--mola); }
+.rs-erro svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px; }
+.rs-erro.hidden { display: none; }
+.rs-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.rs-canais { display: flex; flex-direction: column; gap: 10px; }
+.rs-canal { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--surface, transparent); color: inherit; text-align: left; font: inherit;
+  transition: transform .15s, border-color .15s; }
+.rs-canal:hover { transform: translateY(-1px); border-color: #3E9079; }
+.rs-canal:disabled { opacity: .7; cursor: wait; }
+.rs-canal > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.rs-canal small { color: var(--ink-3); font-size: 12px; }
+.rs-wa, .rs-em { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+.rs-wa { background: linear-gradient(135deg, #25D366, #128C7E); }
+.rs-wa svg { width: 24px; height: 24px; }
+.rs-em { background: linear-gradient(135deg, #2F5D8A, #1E3A5F); }
+.rs-em svg { width: 20px; height: 20px; }
+.rs-seta { font-style: normal; font-size: 22px; opacity: .5; }
+.rs-ok { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;
+  background: rgba(62,144,121,.12); color: #2F6F5E; font-size: 13px; }
+html.dark .rs-ok { color: #8FD3BE; }
+.rs-ok svg { width: 18px; height: 18px; flex-shrink: 0; }
+.rs-codigo { font-size: 24px !important; letter-spacing: .5em; text-align: center; font-weight: 800; }
+.rs-forca { height: 5px; border-radius: 5px; background: rgba(127,127,127,.15); margin-top: 6px; overflow: hidden; }
+.rs-forca i { display: block; height: 100%; width: 0; border-radius: 5px; transition: width .25s, background .25s; }
+.rs-outro { display: block; margin: 12px auto 0; background: none; border: 0; cursor: pointer; color: var(--ink-3);
+  font: 600 12.5px/1.3 inherit; text-decoration: underline; }
+.rs-sem { display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: rgba(201,169,78,.12); }
+.rs-sem svg { width: 20px; height: 20px; color: #B7791F; flex-shrink: 0; }
+.rs-sem p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--ink-2); }

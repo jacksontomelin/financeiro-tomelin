@@ -271,7 +271,7 @@ async function api(path, opts = {}) {
     err.rede = true;
     throw err;
   }
-  if (res.status === 401) { logout(); throw new Error("Sessão expirada. Entre de novo."); }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) { logout(); throw new Error("Sessão expirada. Entre de novo."); }
   if (!res.ok) {
     let j = null;
     try { j = await res.json(); } catch {}
@@ -472,7 +472,9 @@ function fecharModal() {
 
 /* ---------- auth ---------- */
 function logout() {
-  State.token = null; localStorage.clear();
+  State.token = null;
+  // só os dados da sessão: tema, tour visto e lançamentos guardados sem internet continuam
+  ["tom_token", "tom_emoji", "tom_nome", "tom_email"].forEach(k => { try { localStorage.removeItem(k); } catch {} });
   render();
 }
 async function fazerLogin(e) {
@@ -484,6 +486,14 @@ async function fazerLogin(e) {
   btn.innerHTML = icon("refresh", "spin") + "Entrando...";
   try {
     const r = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, senha }) });
+    await _entrarCom(r);
+  } catch (err) {
+    _loginErro(err);
+  }
+}
+
+async function _entrarCom(r) {
+  {
     State.token = r.token; State.nome = r.nome; State.email = r.email;
     State.ultimo_acesso = r.ultimo_acesso || null;
     State.ultimo_acesso_ip = r.ultimo_acesso_ip || null;
@@ -501,10 +511,166 @@ async function fazerLogin(e) {
     document.body.appendChild(ent); vibrar(12);
     await Promise.all([render(), new Promise(ok => setTimeout(ok, 900))]);
     ent.classList.add("sai"); setTimeout(() => ent.remove(), 450);
-  } catch (err) {
-    erro.textContent = err.message; erro.classList.remove("hidden");
-    btn.disabled = false; btn.innerHTML = "Entrar";
   }
+}
+
+function _loginErro(err) {
+  const btn = $("#l-btn"), erro = $("#l-erro");
+  if (!btn || !erro) return toast(err.message, "err");
+  {
+    const senhaErrada = err.status === 401 || err.status === 429;
+    erro.innerHTML = `<span>${esc(err.message)}</span>` + (senhaErrada && !/Não achei esse e-mail/.test(err.message)
+      ? `<button type="button" class="login-esqueci-bt" onclick="abrirRecuperarSenha()">${icon("lock")}Criar uma senha nova</button>` : "");
+    erro.classList.remove("hidden");
+    btn.disabled = false; btn.innerHTML = `${icon("send")}<span id="l-btn-txt">Entrar</span>`;
+    const card = document.querySelector(".login-app-card");
+    card?.classList.remove("treme"); void card?.offsetWidth; card?.classList.add("treme"); vibrar([30, 40, 30]);
+    if (err.status === 401 && !/Não achei/.test(err.message)) { const s = $("#l-senha"); s.value = ""; s.focus(); }
+  }
+}
+
+/* Caps Lock ligado no campo de senha: avisa antes de errar */
+function _capsLogin(e) {
+  const av = document.getElementById("l-caps");
+  if (av && e.getModifierState) av.classList.toggle("hidden", !e.getModifierState("CapsLock"));
+}
+
+/* ── Esqueci a senha: código pelo WhatsApp ou e-mail ─────────────
+   1) confere o e-mail e mostra por onde dá para mandar o código
+   2) manda o código (6 dígitos, vale 15 min)
+   3) código + senha nova: já entra no sistema */
+const _RS = { email: "", canal: "", destino: "", espera: 0, timer: null };
+function abrirRecuperarSenha() {
+  _RS.email = ($("#l-email")?.value || "").trim();
+  abrirModal(`
+    <div class="modal rs-modal" style="max-width:420px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("lock")}</span>
+        <h3>Criar uma senha nova</h3>
+        <button class="close-btn" onclick="_rsFechar()">${icon("x")}</button>
+      </div>
+      <div class="modal-b" id="rs-corpo"></div>
+    </div>`);
+  _rsPasso1();
+}
+function _rsFechar() { clearInterval(_RS.timer); fecharModal(); }
+function _rsErro(msg) {
+  const el = document.getElementById("rs-erro");
+  if (!el) return toast(msg, "err");
+  el.innerHTML = msg ? `${icon("alert")}<span>${esc(msg)}</span>` : "";
+  el.classList.toggle("hidden", !msg);
+  if (msg) vibrar([30, 40, 30]);
+}
+function _rsCarregando(btn, txt) { if (btn) { btn.disabled = true; btn.dataset.txt = btn.innerHTML; btn.innerHTML = icon("refresh", "spin") + txt; } }
+function _rsSolta(btn) { if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.txt || btn.innerHTML; } }
+
+function _rsPasso1() {
+  $("#rs-corpo").innerHTML = `
+    <div class="rs-passos"><i class="on"></i><i></i><i></i></div>
+    <p class="rs-txt">Digite o e-mail com que você entra no sistema. Vamos mandar um código para você criar uma senha nova.</p>
+    <div class="frm"><div class="campo full"><label>E-mail</label>
+      <input id="rs-email" type="email" autocomplete="username" value="${esc(_RS.email)}" placeholder="seu@email.com.br"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();_rsOpcoes(document.getElementById('rs-bt1'))}"></div></div>
+    <div id="rs-erro" class="rs-erro hidden"></div>
+    <div class="rs-acoes"><button class="btn" onclick="_rsFechar()">Cancelar</button>
+      <button class="btn btn-primary" id="rs-bt1" onclick="_rsOpcoes(this)">Continuar</button></div>`;
+  setTimeout(() => $("#rs-email")?.focus(), 60);
+}
+
+async function _rsOpcoes(btn) {
+  const email = ($("#rs-email")?.value ?? _RS.email ?? "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return _rsErro("Digite um e-mail válido, ex.: nome@gmail.com.");
+  _RS.email = email; _rsErro(""); _rsCarregando(btn, "Conferindo...");
+  try {
+    const r = await api("/api/auth/recuperar/opcoes", { method: "POST", body: JSON.stringify({ email }) });
+    if (!r.canais.length) {
+      $("#rs-corpo").innerHTML = `
+        <div class="rs-passos"><i class="on"></i><i></i><i></i></div>
+        <div class="rs-sem">${icon("alert")}<div><b>Olá, ${esc(r.nome)}!</b><p>${esc(r.aviso)}</p></div></div>
+        <div class="rs-acoes"><button class="btn btn-primary" onclick="_rsFechar()">Entendi</button></div>`;
+      return;
+    }
+    const ic = { whatsapp: `<span class="rs-wa">${waDesenho()}</span>`, email: `<span class="rs-em">${icon("send")}</span>` };
+    const nomeCanal = { whatsapp: "WhatsApp", email: "E-mail" };
+    $("#rs-corpo").innerHTML = `
+      <div class="rs-passos"><i class="on"></i><i class="on"></i><i></i></div>
+      <p class="rs-txt">Olá, <b>${esc(r.nome)}</b>! Para onde mandamos o código?</p>
+      <div class="rs-canais">${r.canais.map(c => `
+        <button class="rs-canal rs-${c.canal}" onclick="_rsEnviar('${c.canal}', this)">
+          ${ic[c.canal]}<span><b>${nomeCanal[c.canal]}</b><small>${esc(c.destino)}</small></span><i class="rs-seta">›</i>
+        </button>`).join("")}</div>
+      <div id="rs-erro" class="rs-erro hidden"></div>
+      <div class="rs-acoes"><button class="btn btn-ghost" onclick="_rsPasso1()">Voltar</button></div>`;
+  } catch (e) { _rsSolta(btn); _rsErro(e.message); }
+}
+
+async function _rsEnviar(canal, btn) {
+  _rsErro(""); _rsCarregando(btn, canal === "whatsapp" ? "Mandando no WhatsApp..." : "Mandando o e-mail...");
+  try {
+    const r = await api("/api/auth/recuperar/enviar", { method: "POST", body: JSON.stringify({ email: _RS.email, canal }) });
+    _RS.canal = canal; _RS.destino = r.destino;
+    _rsPasso3(r);
+  } catch (e) { _rsSolta(btn); _rsErro(e.message); }
+}
+
+function _rsPasso3(r) {
+  $("#rs-corpo").innerHTML = `
+    <div class="rs-passos"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="rs-ok">${icon("checkCircle")}<span>Código enviado ${_RS.canal === "whatsapp" ? "no WhatsApp" : "para o e-mail"} <b>${esc(_RS.destino)}</b>. Vale por ${r.validade_min} minutos.</span></div>
+    <div class="frm"><div class="campo full"><label>Código de 6 dígitos</label>
+      <input id="rs-codigo" class="rs-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6)"></div>
+    <div class="campo full"><label>Senha nova</label>
+      <div class="senha-wrap"><input id="rs-nova_senha" type="password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres" oninput="_rsForca(this.value)">
+        <button type="button" class="senha-olho" onmousedown="event.preventDefault()" onclick="const i=$('#rs-nova_senha');i.type=i.type==='password'?'text':'password'">${icon("eye")}</button></div>
+      <div class="rs-forca"><i id="rs-forca-b"></i></div><small class="campo-dica" id="rs-forca-t">Use letras e números.</small></div>
+    <div class="campo full"><label>Repita a senha nova</label>
+      <input id="rs-repete" type="password" autocomplete="new-password" placeholder="A mesma senha"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();_rsConfirmar(document.getElementById('rs-bt3'))}"></div></div>
+    <div id="rs-erro" class="rs-erro hidden"></div>
+    <div class="rs-acoes">
+      <button class="btn btn-ghost" id="rs-reenviar" onclick="_rsEnviar(_RS.canal, this)" disabled>Reenviar</button>
+      <button class="btn btn-primary" id="rs-bt3" onclick="_rsConfirmar(this)">${icon("check")}Salvar e entrar</button>
+    </div>
+    <button class="rs-outro" onclick="_rsOpcoes()">Não chegou? Escolher outro jeito</button>`;
+  setTimeout(() => $("#rs-codigo")?.focus(), 60);
+  clearInterval(_RS.timer); _RS.espera = 45;
+  const tic = () => {
+    const b = document.getElementById("rs-reenviar");
+    if (!b) return clearInterval(_RS.timer);
+    _RS.espera--;
+    if (_RS.espera > 0) { b.disabled = true; b.textContent = `Reenviar em ${_RS.espera}s`; }
+    else { b.disabled = false; b.textContent = "Reenviar código"; clearInterval(_RS.timer); }
+  };
+  tic(); _RS.timer = setInterval(tic, 1000);
+}
+
+function _rsForca(v) {
+  let n = 0;
+  if (v.length >= 6) n++; if (v.length >= 10) n++;
+  if (/[a-z]/i.test(v) && /\d/.test(v)) n++; if (/[^a-z0-9]/i.test(v) || /[A-Z]/.test(v) && /[a-z]/.test(v)) n++;
+  const rot = ["Curta demais", "Fraca", "Razoável", "Boa", "Forte"][n];
+  const cor = ["#C9573F", "#C9573F", "#C9A94E", "#3E9079", "#2F817A"][n];
+  const b = document.getElementById("rs-forca-b"), t = document.getElementById("rs-forca-t");
+  if (b) { b.style.width = (v ? Math.max(12, n * 25) : 0) + "%"; b.style.background = cor; }
+  if (t) t.textContent = v ? rot : "Use letras e números.";
+}
+
+async function _rsConfirmar(btn) {
+  const codigo = ($("#rs-codigo")?.value || "").trim(), nova = $("#rs-nova_senha")?.value || "", rep = $("#rs-repete")?.value || "";
+  _rsErro("");
+  if (codigo.length !== 6) { _marcarCampo("codigo", "Digite os 6 números do código."); return _rsErro("Digite os 6 números do código."); }
+  if (nova.length < 6) { _marcarCampo("nova_senha", "Mínimo de 6 caracteres."); return _rsErro("A senha nova precisa ter no mínimo 6 caracteres."); }
+  if (nova !== rep) { _marcarCampo("repete", "As senhas não são iguais."); return _rsErro("As duas senhas não são iguais. Digite de novo."); }
+  _rsCarregando(btn, "Salvando...");
+  try {
+    const r = await api("/api/auth/recuperar/confirmar", { method: "POST", body: JSON.stringify({ email: _RS.email, codigo, nova_senha: nova }) });
+    clearInterval(_RS.timer); fecharModal();
+    toast("Senha nova salva. Bem-vindo de volta!", "ok");
+    $("#l-email") && ($("#l-email").value = _RS.email);
+    $("#l-senha") && ($("#l-senha").value = nova);
+    await _entrarCom(r);
+  } catch (e) { _rsSolta(btn); _rsErro(e.message); }
 }
 
 function toggleSenha() {
@@ -552,15 +718,17 @@ function renderLogin() {
             <label class="login-label">Senha</label>
             <div class="login-input-wrap">
               <span class="login-input-ic">${icon("lock")}</span>
-              <input id="l-senha" type="password" autocomplete="current-password"
+              <input id="l-senha" type="password" autocomplete="current-password" onkeyup="_capsLogin(event)" onkeydown="_capsLogin(event)"
                 placeholder="••••••••" required class="login-input" style="padding-right:44px">
               <button type="button" class="btn-ver-senha" onclick="toggleSenha()">${icon("eye")}</button>
             </div>
+            <div id="l-caps" class="login-caps hidden">${icon("alert")} Caps Lock ligado</div>
           </div>
           <div id="l-erro" class="login-erro hidden"></div>
           <button id="l-btn" type="submit" class="btn btn-primary btn-login">
             ${icon("send")}<span id="l-btn-txt">Entrar</span>
           </button>
+          <button type="button" class="login-esqueci" onclick="abrirRecuperarSenha()">Esqueci minha senha</button>
         </form>
       </div>
 

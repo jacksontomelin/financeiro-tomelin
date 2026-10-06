@@ -80,11 +80,27 @@ def login(dados: schemas.LoginIn, request: Request, db: Session = Depends(get_db
 
     if not senha_ok:
         _registra_falha(chaves)
-        raise HTTPException(401, "E-mail ou senha inválidos.")
+        with _TRAVA:
+            erros = len([t for t in _FALHAS.get(("email", email), []) if time.time() - t < JANELA])
+        resta = MAX_EMAIL - erros
+        msg = "E-mail ou senha inválidos."
+        if not u:
+            msg = "Não achei esse e-mail entre os membros da família. Confira se digitou certo."
+        elif resta <= 0:
+            msg = "Senha errada de novo: o acesso ficou bloqueado por 10 minutos. Use \"Esqueci a senha\" para criar uma nova."
+        elif resta <= 2:
+            msg = f"Senha incorreta. Mais {resta} tentativa(s) errada(s) e o acesso fica bloqueado por 10 minutos."
+        else:
+            msg = "Senha incorreta."
+        raise HTTPException(401, msg)
     _limpa_falhas(email)
     if not u.ativo:
         raise HTTPException(403, "Usuário desativado.")
 
+    return _token_saida(db, u, ip)
+
+
+def _token_saida(db, u, ip):
     penultimo = u.ultimo_acesso
     penultimo_ip = u.ultimo_acesso_ip
     u.ultimo_acesso = datetime.utcnow()
@@ -163,3 +179,87 @@ def status_publico(db: Session = Depends(get_db)):
         "total_lancamentos": total_lanc,
         "online": True,
     }
+
+
+# ── Esqueci a senha ────────────────────────────────────────────
+from pydantic import BaseModel as _BM
+from fastapi.responses import JSONResponse as _JSON
+from .. import recuperar_senha as _rec
+
+
+class _RecEmail(_BM):
+    email: str
+    canal: str | None = None
+
+
+class _RecConfirmar(_BM):
+    email: str
+    codigo: str
+    nova_senha: str
+
+
+def _ip(request: Request) -> str:
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "")
+    return ip.split(",")[0].strip()
+
+
+def _membro(db, email: str):
+    u = db.query(models.Usuario).filter(models.Usuario.email == (email or "").lower().strip()).first()
+    if not u:
+        raise _rec.ErroRecuperar("Não achei esse e-mail entre os membros da família. Confira se digitou certo.", "email", 404)
+    if not u.ativo:
+        raise _rec.ErroRecuperar("Este membro está desativado. Fale com o administrador da família.", "email", 403)
+    return u
+
+
+def _erro(e: "_rec.ErroRecuperar"):
+    return _JSON(status_code=e.status, content={"detail": str(e), "campo": e.campo})
+
+
+def _limite_ip(request):
+    ch = [(("rec-ip", _ip(request)), 30)]
+    espera = _bloqueado(ch)
+    if espera:
+        raise _rec.ErroRecuperar(f"Muitos pedidos deste aparelho. Tente de novo em {max(1, round(espera / 60))} minuto(s).", status=429)
+    _registra_falha(ch)
+
+
+@router.post("/recuperar/opcoes")
+def recuperar_opcoes(dados: _RecEmail, request: Request, db: Session = Depends(get_db)):
+    try:
+        _limite_ip(request)
+        u = _membro(db, dados.email)
+    except _rec.ErroRecuperar as e:
+        return _erro(e)
+    canais = _rec.canais(db, u)
+    return {"nome": (u.nome or "").split(" ")[0], "canais": canais,
+            "aviso": None if canais else _rec.motivo_sem_canal(db, u)}
+
+
+@router.post("/recuperar/enviar")
+def recuperar_enviar(dados: _RecEmail, request: Request, db: Session = Depends(get_db)):
+    try:
+        _limite_ip(request)
+        u = _membro(db, dados.email)
+        return _rec.gerar_e_enviar(db, u, (dados.canal or "").strip().lower(), _ip(request))
+    except _rec.ErroRecuperar as e:
+        return _erro(e)
+
+
+@router.post("/recuperar/confirmar", response_model=schemas.TokenOut)
+def recuperar_confirmar(dados: _RecConfirmar, request: Request, db: Session = Depends(get_db)):
+    try:
+        _limite_ip(request)
+        u = _membro(db, dados.email)
+        _rec.confirmar(db, u, dados.codigo, dados.nova_senha)
+    except _rec.ErroRecuperar as e:
+        return _erro(e)
+    _limpa_falhas(u.email.lower())          # senha nova: libera o bloqueio de tentativas
+    try:
+        db.add(models.LoginHistorico(usuario_id=u.id, ip=_ip(request),
+                                     dispositivo=_resumo_ua(request.headers.get("user-agent", "")) + " · senha nova",
+                                     sucesso=True))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return _token_saida(db, u, _ip(request))

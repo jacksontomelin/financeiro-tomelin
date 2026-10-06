@@ -131,6 +131,11 @@ function formUsuario(u) {
             <div class="campo-dica">É com este e-mail que a pessoa entra no sistema.</div>
           </div>
           <div class="campo full">
+            <label>WhatsApp</label>
+            <input id="fu-whatsapp" inputmode="tel" value="${esc(_fmtZapNum(e.whatsapp || ""))}" placeholder="(47) 99999-0000" autocomplete="off">
+            <div class="campo-dica">Recebe o código quando a pessoa esquecer a senha. Opcional.</div>
+          </div>
+          <div class="campo full">
             <label>Senha</label>
             <div class="senha-wrap">
               <input id="fu-senha" type="password" autocomplete="new-password" placeholder="${novo ? "Mínimo de 6 caracteres" : "Preencha só se quiser trocar"}">
@@ -266,6 +271,7 @@ async function salvarUsuario(id) {
     ativo: $("#fu-ativo").checked,
     emoji: FORM_AV,
     cor: FORM_COR,
+    whatsapp: ($("#fu-whatsapp")?.value || "").trim(),
   };
   if (!body.nome) return erroCampo("nome", "Nome: preenchimento obrigatório.");
   if (!body.email) return erroCampo("email", "E-mail: preenchimento obrigatório.");
@@ -280,8 +286,8 @@ async function salvarUsuario(id) {
     fecharModal(); toast("Membro salvo", "ok"); setView("usuarios");
   } catch (e) {
     // o servidor começa a mensagem pelo nome do campo: destaca o campo certo
-    const campos = { "Nome": "nome", "E-mail": "email", "Senha": "senha", "Papel": "papel", "Cor": "cor" };
-    const m = /^(Nome|E-mail|Senha|Papel|Cor):/.exec(e.message || "");
+    const campos = { "Nome": "nome", "E-mail": "email", "Senha": "senha", "Papel": "papel", "Cor": "cor", "WhatsApp": "whatsapp" };
+    const m = /^(Nome|E-mail|Senha|Papel|Cor|WhatsApp):/.exec(e.message || "");
     if (m) erroCampo(campos[m[1]], e.message); else toast(e.message, "err");
   }
 }
@@ -421,4 +427,14 @@ async function cadastrarDaNFe() {
   if (!_nfeDados) return;
   fecharModal();
   abrirFormCompra(null, _nfeDados);
+}
+
+
+/* 5547999990000 → (47) 99999-0000 */
+function _fmtZapNum(n) {
+  let d = String(n || "").replace(/\D/g, "");
+  if (d.startsWith("55") && d.length >= 12) d = d.slice(2);
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return n || "";
 }

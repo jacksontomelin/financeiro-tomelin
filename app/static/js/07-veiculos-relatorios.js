@@ -432,14 +432,19 @@ const CFG_GRUPOS = [
     chaves: ["BACKUP_AUTO","BACKUP_HORA","BACKUP_MANTER","BACKUP_WHATSAPP","BACKUP_COMPROVANTES"],
   },
   {
+    titulo: "E-mail", ic: "send", cor: "i-navy",
+    desc: "Usado para mandar o código de senha nova a quem esqueceu. No Gmail: smtp.gmail.com, porta 587, starttls e uma senha de app.",
+    chaves: ["SMTP_HOST","SMTP_PORTA","SMTP_SEGURANCA","SMTP_USUARIO","SMTP_SENHA","SMTP_REMETENTE"],
+  },
+  {
     titulo: "PDFs e recibos", ic: "doc", cor: "i-gold",
     desc: "Nome e dados da empresa que aparecem no cabeçalho e rodapé dos PDFs gerados.",
     chaves: ["EMPRESA_NOME","EMPRESA_DOC","EMPRESA_CIDADE","APP_URL"],
   },
 ];
 const BOOL_CHAVES = new Set(["ORCAMENTO_AVISO","WHATSAPP_ATIVO","RECIBO_WHATSAPP_AUTO","RESUMO_SEMANAL","FECHAMENTO_DIARIO","FIPE_ATIVO","BACKUP_AUTO","BACKUP_WHATSAPP","BACKUP_COMPROVANTES"]);
-const INT_CHAVES  = new Set(["ALERTA_HORA","ALERTA_DIAS_ANTES","FECHAMENTO_HORA","BACKUP_HORA","BACKUP_MANTER"]);
-const PASS_CHAVES = new Set(["WHATSAPP_API_TOKEN","FIPE_API_TOKEN"]);
+const INT_CHAVES  = new Set(["SMTP_PORTA","ALERTA_HORA","ALERTA_DIAS_ANTES","FECHAMENTO_HORA","BACKUP_HORA","BACKUP_MANTER"]);
+const PASS_CHAVES = new Set(["WHATSAPP_API_TOKEN","FIPE_API_TOKEN","SMTP_SENHA"]);
 
 async function viewConfiguracoes(v) {
   const cfgs = await api("/api/configuracoes");
@@ -516,6 +521,7 @@ async function viewConfiguracoes(v) {
             <span class="card-ico ${g.cor}">${icon(g.ic)}</span>
             <div class="grow"><h3>${g.titulo}</h3><div class="sub">${g.desc}</div></div>
             ${g.titulo === "WhatsApp" ? btnWA("Testar", "testarWhatsappCfg(this)", 'style="padding:7px 12px;font-size:12.5px"') : ""}
+            ${g.titulo === "E-mail" ? `<button class="btn btn-ghost btn-sm" onclick="testarEmailCfg(this)">${icon("send")}Testar</button>` : ""}
           </div>
           <div class="cfg-campos">
             ${g.chaves.map(k => campo(map[k] || {chave:k,valor:"",descricao:k})).join("")}
@@ -565,4 +571,15 @@ async function testarWhatsappCfg(btn) {
       return !!r.enviado;
     } catch (e) { toast(e.message, "err"); return false; }
   });
+}
+
+
+async function testarEmailCfg(btn) {
+  btn.disabled = true; const txt = btn.innerHTML; btn.innerHTML = icon("refresh", "spin") + "Enviando...";
+  try {
+    await salvarConfiguracoes();
+    const r = await api("/api/configuracoes/email/testar", { method: "POST", body: "{}" });
+    toast(`E-mail de teste enviado para ${r.para}`, "ok");
+  } catch (e) { toast(e.message, "err"); }
+  finally { btn.disabled = false; btn.innerHTML = txt; }
 }
