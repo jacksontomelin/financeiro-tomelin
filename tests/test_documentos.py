@@ -53,5 +53,12 @@ def test_lista_de_documentos_e_reenvio(api, monkeypatch):
     enviados = []
     monkeypatch.setattr(zapapi, "enviar_arquivo", lambda *a, **k: enviados.append(a) or True)
     r = api.post(f"/api/documentos/{d['itens'][0]['codigo']}/whatsapp").json()
-    assert r["enviado"] and enviados[0][0][:4] == b"%PDF"
+    assert r["enviado"] and r["id"]
+    import time
+    for _ in range(50):
+        st = api.get(f"/api/whatsapp/envio/{r['id']}").json()
+        if st["status"] != "enviando":
+            break
+        time.sleep(.1)
+    assert st["status"] == "ok" and enviados[0][0][:4] == b"%PDF"
     api.post("/api/configuracoes", json={"WHATSAPP_ATIVO": "false"})

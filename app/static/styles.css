@@ -4313,3 +4313,13 @@ html.dark .fat-item.com-forn { background: linear-gradient(100deg, color-mix(in 
 .cc.mini .cc-band.img { height: 28px; } .cc.mini .cc-band.img img { max-height: 24px; max-width: 64px; }
 .cc.mini .cc-band.img img.selo { max-height: 18px; }
 .fat-mini .cc-band.img img { max-height: 16px; max-width: 44px; }
+
+/* ── WhatsApp: ✓ cinza (indo para o grupo) e ✓✓ azul (chegou) ── */
+.btn-wa.fila .wa-ticks, .hero-zap.fila .wa-ticks { display: inline-flex; color: rgba(255,255,255,.75); }
+.btn-wa.fila .wa-ticks path:last-child, .hero-zap.fila .wa-ticks path:last-child, .zap-bt.fila .zap-ok path:last-child { display: none; }
+.btn-wa.fila .wa-ic, .hero-zap.fila .wa-ic, .zap-bt.fila .folha-bt-ic { animation: waRespira 1.2s ease-in-out infinite; }
+.zap-bt.fila .zap-ok { display: grid; color: #9AA8B6; }
+@keyframes waRespira { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.btn-wa.enviando .wa-rot::after { content: ""; }
+.toast.wa.fila .toast-ticks { color: rgba(255,255,255,.75); }
+.toast.wa.fila .toast-ticks path:last-child { display: none; }

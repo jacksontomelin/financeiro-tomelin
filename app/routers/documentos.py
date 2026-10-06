@@ -44,5 +44,7 @@ def reenviar(codigo: str, db: Session = Depends(get_db)):
     from ..urls import verificar
     link = verificar(d.codigo)
     legenda = f"📄 {d.titulo}" + (f"\n{d.resumo}" if d.resumo else "") + (f"\n✅ Validar: {link}" if link.startswith("http") else "")
-    ok = zapapi.enviar_arquivo(d.pdf, f"{d.tipo}-{d.codigo}.pdf", "application/pdf", legenda, db=db)
-    return {"enviado": bool(ok), "motivo": None if ok else "O gateway não confirmou o envio."}
+    pdf, nome = d.pdf, f"{d.tipo}-{d.codigo}.pdf"
+    from .. import zap_fila
+    eid = zap_fila.disparar(d.titulo, lambda sdb: zapapi.enviar_arquivo(pdf, nome, "application/pdf", legenda, db=sdb))
+    return {"enviado": True, "na_fila": True, "id": eid, "nome": d.titulo}

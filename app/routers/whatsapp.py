@@ -213,17 +213,29 @@ def enviar_ao_grupo(oque: str, db: Session = Depends(get_db)):
     if not c["grupo"]:
         return {"enviado": False, "motivo": "Escolha o grupo na tela do WhatsApp."}
     comando, nome = ENVIOS[oque]
-    arq = whatsapp.processar_arquivo(comando, db)
-    if arq and arq[0] != "ERRO":
-        pdf, arquivo, legenda = arq
-        ok = zapapi.enviar_arquivo(pdf, arquivo, "application/pdf", legenda, db=db)
-    else:
-        texto = whatsapp.processar_comando(comando, db)
-        ok = bool(texto) and zapapi.enviar_texto(texto, db=db)
-    if ok:
-        _log(f"[app] {nome}", "enviado pelo app")
-    return {"enviado": bool(ok), "nome": nome,
-            "motivo": None if ok else "O gateway não confirmou o envio. Veja o diagnóstico."}
+
+    def tarefa(sdb):   # roda em segundo plano: a tela não fica esperando o WhatsApp
+        arq = whatsapp.processar_arquivo(comando, sdb)
+        if arq and arq[0] != "ERRO":
+            pdf, arquivo, legenda = arq
+            ok = zapapi.enviar_arquivo(pdf, arquivo, "application/pdf", legenda, db=sdb)
+        else:
+            texto = whatsapp.processar_comando(comando, sdb)
+            ok = bool(texto) and zapapi.enviar_texto(texto, db=sdb)
+        if ok:
+            _log(f"[app] {nome}", "enviado pelo app")
+        return ok
+    from .. import zap_fila
+    return {"enviado": True, "na_fila": True, "id": zap_fila.disparar(nome, tarefa), "nome": nome}
+
+
+@router.get("/envio/{eid}", dependencies=[Depends(usuario_atual)])
+def situacao_envio(eid: str):
+    from .. import zap_fila
+    s = zap_fila.situacao(eid)
+    if not s:
+        raise HTTPException(404, "Envio não encontrado (pode ter expirado).")
+    return s
 
 
 @router.get("/diagnostico", dependencies=[Depends(usuario_atual)])

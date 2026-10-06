@@ -91,11 +91,23 @@ def _destino(alvo: str) -> dict:
     return {"numero": alvo}
 
 
+_CLIENTE: httpx.Client | None = None
+
+
+def _cliente() -> httpx.Client:
+    """Conexão reaproveitada com o gateway: não refaz a conexão segura a cada envio."""
+    global _CLIENTE
+    if _CLIENTE is None:
+        _CLIENTE = httpx.Client(timeout=httpx.Timeout(25, connect=8),
+                                limits=httpx.Limits(max_keepalive_connections=4, keepalive_expiry=60))
+    return _CLIENTE
+
+
 def _req(metodo: str, caminho: str, db=None, **kw):
     c = config(db)
     if not c["url"] or not c["chave"]:
         raise RuntimeError("Gateway não configurado (URL e chave de API).")
-    r = httpx.request(metodo, c["url"] + caminho, headers=_headers(c), timeout=25, **kw)
+    r = _cliente().request(metodo, c["url"] + caminho, headers=_headers(c), **kw)
     if r.status_code == 401:
         raise RuntimeError("Chave de API inválida ou revogada no gateway.")
     if r.status_code >= 400:

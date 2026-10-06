@@ -418,9 +418,9 @@ function avatarLogo(logo, nome, size = 34) {
 /* ---------- toast ---------- */
 function toast(msg, tipo = "") {
   const el = document.createElement("div");
-  el.className = `toast ${tipo}`;
+  el.className = tipo === "wa-fila" ? "toast wa fila" : `toast ${tipo}`;
   const ic = tipo === "ok" ? "checkCircle" : (tipo === "err" || tipo === "warn") ? "alert" : "bell";
-  el.innerHTML = tipo === "wa"
+  el.innerHTML = tipo === "wa" || tipo === "wa-fila"
     ? `<span class="toast-wa-ic">${waDesenho()}</span><span>${esc(msg)}</span><span class="toast-ticks">${_WA_TICKS}</span>`
     : icon(ic) + `<span>${esc(msg)}</span>`;
   $("#toasts").appendChild(el);
@@ -1789,12 +1789,7 @@ async function confirmarBaixa(id) {
   } catch (e) { toast(e.message, "err"); }
 }
 
-async function reciboWhats(id) {
-  try {
-    const r = await api(`/api/lancamentos/${id}/recibo/whatsapp`, { method: "POST" });
-    toast(r.enviado ? "Recibo enviado no grupo do WhatsApp" : "WhatsApp desativado: configure a integração", r.enviado ? "wa" : "err");
-  } catch (e) { toast(e.message, "err"); }
-}
+function reciboWhats(id) { return _waDisparar(`/api/lancamentos/${id}/recibo/whatsapp`, null); }
 async function estornar(id) {
   try { await api(`/api/lancamentos/${id}/estornar`, { method: "POST" }); toast("Estornado", "ok"); await recarregarTabela(); atualizarBadge(); }
   catch (e) { toast(e.message, "err"); }
@@ -6917,15 +6912,7 @@ async function _docCarregar() {
       </div>
     </div>`; }).join("") + (d.total > d.itens.length ? `<div class="sub" style="text-align:center;padding:8px">Mostrando ${d.itens.length} de ${d.total}. Use a busca para achar os mais antigos.</div>` : "");
 }
-async function _docZap(codigo, btn) {
-  return _waBotao(btn, async () => {
-    try {
-      const r = await api(`/api/documentos/${codigo}/whatsapp`, { method: "POST" });
-      if (r.enviado) { toast("Documento enviado no grupo", "wa"); return true; }
-      toast(r.motivo || "Não foi enviado.", "warn"); return false;
-    } catch (e) { toast(e.message, "err"); return false; }
-  });
-}
+function _docZap(codigo, btn) { return _waDisparar(`/api/documentos/${codigo}/whatsapp`, btn); }
 
 /* ── Quem paga ── */
 function _quemEscolher(b) {
@@ -8243,16 +8230,40 @@ function _waVoo(el) {
   ], { duration: 900, easing: "cubic-bezier(.3,.7,.4,1)" }).onfinish = () => b.remove();
 }
 
-/* Manda resumos e relatórios para o grupo direto do app */
-async function waEnviar(oque, btn) {
-  return _waBotao(btn, async () => {
-    try {
-      const r = await api(`/api/whatsapp/enviar/${oque}`, { method: "POST" });
-      if (r.enviado) { toast(`${r.nome}: enviado no grupo`, "wa"); return true; }
-      toast(r.motivo || "Não foi enviado.", "warn"); return false;
-    } catch (e) { toast(e.message, "err"); return false; }
-  });
+/* Manda resumos e relatórios para o grupo direto do app.
+   O servidor responde na hora (✓ cinza: indo para o grupo) e o envio segue por trás;
+   quando o gateway confirma, vira ✓✓ azul. Ninguém fica olhando um botão girando. */
+async function _waAcompanhar(r, btn) {
+  if (btn) { btn.classList.remove("enviando", "enviado", "falhou"); btn.classList.add("fila"); clearTimeout(btn._waT); }
+  toast(`${r.nome || "Mensagem"}: indo para o grupo`, "wa-fila");
+  const fim = Date.now() + 45000;
+  while (Date.now() < fim) {
+    await new Promise(ok => setTimeout(ok, 700));
+    let st; try { st = await api(`/api/whatsapp/envio/${r.id}`); } catch { break; }
+    if (st.status === "ok") {
+      if (btn) { btn.classList.remove("fila"); btn.classList.add("enviado"); _waVoo(btn); btn._waT = setTimeout(() => btn.classList.remove("enviado"), 3000); }
+      vibrar(14); toast(`${r.nome || "Mensagem"}: chegou no grupo`, "wa"); return true;
+    }
+    if (st.status === "erro") {
+      if (btn) { btn.classList.remove("fila"); btn.classList.add("falhou"); btn._waT = setTimeout(() => btn.classList.remove("falhou"), 2000); }
+      vibrar(40); toast(st.motivo || "Não foi enviado.", "err"); return false;
+    }
+  }
+  btn?.classList.remove("fila");
+  toast("O WhatsApp está demorando: a mensagem segue sendo enviada, confira no grupo.", "warn");
+  return false;
 }
+async function _waDisparar(url, btn) {
+  if (btn && (btn.classList.contains("fila") || btn.classList.contains("enviando"))) return false;
+  btn?.classList.add("enviando");
+  try {
+    const r = await api(url, { method: "POST" });
+    btn?.classList.remove("enviando");
+    if (!r.enviado) { toast(r.motivo || "Não foi enviado.", "warn"); btn?.classList.add("falhou"); setTimeout(() => btn?.classList.remove("falhou"), 1500); return false; }
+    return _waAcompanhar(r, btn);
+  } catch (e) { btn?.classList.remove("enviando"); toast(e.message, "err"); return false; }
+}
+function waEnviar(oque, btn) { return _waDisparar(`/api/whatsapp/enviar/${oque}`, btn); }
 
 /* Folha "Mandar no WhatsApp" (atalho do painel) */
 const _ZAP_OPCOES = [
@@ -8331,7 +8342,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, _waDisparar, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

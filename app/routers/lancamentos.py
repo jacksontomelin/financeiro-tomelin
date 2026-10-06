@@ -187,10 +187,11 @@ def _auto_recibo(l: models.Lancamento, db: Session = None):
         return
     if not l.data_pagamento:
         return
-    try:
-        from .. import service, whatsapp as wa
+    try:   # em segundo plano: a baixa responde na hora, sem esperar o WhatsApp
+        from .. import service, whatsapp as wa, zap_fila
         cat, conta, contato = _ctx(l)
-        wa.enviar(service.texto_recibo(l, categoria=cat, conta=conta, contato=contato))
+        txt = service.texto_recibo(l, categoria=cat, conta=conta, contato=contato)
+        zap_fila.disparar(f"Recibo #{l.id}", lambda sdb: wa.enviar(txt, db=sdb))
     except Exception:  # nunca deixa o envio quebrar a baixa
         pass
 
@@ -226,7 +227,11 @@ def recibo_whatsapp(lid: int, db: Session = Depends(get_db)):
     ).filter(models.Lancamento.id == lid).first()
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
+    from .. import zapapi, zap_fila
+    c = zapapi.config(db)
+    if not c["ativo"] or not c["grupo"]:
+        return {"enviado": False, "motivo": "WhatsApp desligado ou sem grupo: configure na tela do WhatsApp."}
     cat, conta, contato = _ctx(l)
     txt = service.texto_recibo(l, categoria=cat, conta=conta, contato=contato)
-    ok = wa.enviar(txt)
-    return {"enviado": bool(ok)}
+    eid = zap_fila.disparar(f"Recibo #{l.id}", lambda sdb: wa.enviar(txt, db=sdb))
+    return {"enviado": True, "na_fila": True, "id": eid, "nome": f"Recibo #{l.id}"}
