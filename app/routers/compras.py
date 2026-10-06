@@ -82,8 +82,11 @@ def _parcelamento_out(pm: models.Parcelamento):
 
 
 def _compra_out(c: models.Compra):
+    ct = c.lancamento.contato if c.lancamento else None
     return {
         "id": c.id, "lancamento_id": c.lancamento_id,
+        "contato_id": ct.id if ct else None, "contato_nome": ct.nome if ct else None,
+        "contato_logo": ct.logo if ct else None,
         "estabelecimento": c.estabelecimento, "cnpj_emitente": c.cnpj_emitente,
         "numero_nota": c.numero_nota, "chave_acesso": c.chave_acesso,
         "data_emissao": c.data_emissao.isoformat() if c.data_emissao else None,
@@ -97,6 +100,7 @@ def _compra_out(c: models.Compra):
 
 def _query_base(db: Session):
     return db.query(models.Compra).options(
+        joinedload(models.Compra.lancamento).joinedload(models.Lancamento.contato),
         joinedload(models.Compra.itens).joinedload(models.ItemCompra.categoria),
         joinedload(models.Compra.parcelamento).joinedload(models.Parcelamento.cartao),
         joinedload(models.Compra.parcelamento).joinedload(models.Parcelamento.parcelas),

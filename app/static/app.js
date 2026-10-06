@@ -4325,8 +4325,14 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
             `<option value="${c.id}" ${d.categoria_sugerida?.id === c.id ? 'selected' : ''}>${esc(c.nome)}</option>`).join("")}</select></div>
         <div class="campo"><label>Data da compra</label>
           <input id="fc-data" type="date" value="${dataRef}"></div>
-        <div class="campo"><label>Estabelecimento</label>
-          <input id="fc-estab" value="${d.emitente || ''}" placeholder="Nome da loja"></div>
+        <div class="campo full"><label>Fornecedor (onde comprou)</label>
+          <input type="hidden" id="fc-forn" value="">
+          <div class="forn-box">
+            <div class="forn-atual" id="fc-forn-atual"></div>
+            <div class="search forn-busca"><span>${icon("search")}</span>
+              <input id="fc-forn-busca" autocomplete="off" placeholder="Buscar ou cadastrar: Mercado Livre, Cassol..." oninput="_fornFiltrar(this.value)"></div>
+            <div class="forn-chips" id="fc-forn-chips"></div>
+          </div></div>
         <div class="campo full"><label>Como foi pago?</label>
           <select id="fc-forma" onchange="_toggleParcelamento()">
             <option value="avista">À vista (débito, pix, dinheiro)</option>
@@ -4361,6 +4367,58 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
         <button class="btn btn-primary" onclick="salvarCompra()">${icon("check")}Salvar compra</button>
       </div>
     </div>`, "lg");
+  _fornIniciar(d);
+}
+
+/* ── Fornecedor da compra: escolhe dos contatos (com logo) ou cadastra na hora ── */
+let _FORN_NFE = null;
+const _fornLista = () => (State.contatos || []).filter(c => c.tipo !== "cliente").sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+const _soDig = v => String(v || "").replace(/\D/g, "");
+function _fornIniciar(nfe, recarregou) {
+  if (!State.contatos && !recarregou) { carregarRefs().catch(() => {}).finally(() => _fornIniciar(nfe, true)); return; }
+  _FORN_NFE = nfe && nfe.emitente ? nfe : null;
+  let achado = null;
+  if (_FORN_NFE) {
+    const cnpj = _soDig(_FORN_NFE.cnpj_emitente);
+    achado = (State.contatos || []).find(c => cnpj && _soDig(c.documento) === cnpj)
+          || (State.contatos || []).find(c => c.nome.toLowerCase() === _FORN_NFE.emitente.toLowerCase());
+  }
+  if (achado) _fornEscolher(achado.id);
+  else { _fornMostrar(null); if (_FORN_NFE) { document.getElementById("fc-forn-busca").value = _FORN_NFE.emitente; } }
+  _fornFiltrar(document.getElementById("fc-forn-busca")?.value || "");
+}
+function _fornMostrar(c) {
+  const box = document.getElementById("fc-forn-atual"); if (!box) return;
+  box.innerHTML = c ? `<div class="forn-escolhido">${avatarLogo(c.logo, c.nome, 40)}<div class="grow"><b>${esc(c.nome)}</b>
+      <small>${c.documento ? esc(fmtDoc(c.documento)) : "fornecedor"}</small></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="_fornLimpar()" title="Trocar">${icon("x")}</button></div>` : "";
+  box.parentElement.classList.toggle("tem", !!c);
+}
+function _fornFiltrar(q) {
+  const box = document.getElementById("fc-forn-chips"); if (!box) return;
+  const t = q.trim().toLowerCase();
+  const lista = _fornLista().filter(c => !t || c.nome.toLowerCase().includes(t)).slice(0, t ? 12 : 10);
+  const exato = _fornLista().some(c => c.nome.toLowerCase() === t);
+  box.innerHTML = lista.map(c => `<button type="button" class="forn-chip" onclick="_fornEscolher(${c.id})">${avatarLogo(c.logo, c.nome, 24)}<span>${esc(c.nome)}</span></button>`).join("")
+    + (t && !exato ? `<button type="button" class="forn-chip novo" onclick="_fornCriar()">${icon("plus")}<span>Cadastrar “${esc(q.trim())}”</span></button>` : "")
+    + (!lista.length && !t ? `<span class="sub">Nenhum fornecedor ainda: digite o nome para cadastrar.</span>` : "");
+}
+function _fornEscolher(id) {
+  const c = (State.contatos || []).find(x => x.id === id); if (!c) return;
+  document.getElementById("fc-forn").value = id; vibrar(8);
+  document.getElementById("fc-forn-busca").value = "";
+  _fornMostrar(c); _fornFiltrar("");
+  const desc = document.getElementById("fc-desc"); if (desc && !desc.value.trim()) desc.value = `Compra ${c.nome}`;
+}
+function _fornLimpar() { document.getElementById("fc-forn").value = ""; _fornMostrar(null); document.getElementById("fc-forn-busca").focus(); }
+async function _fornCriar() {
+  const nome = document.getElementById("fc-forn-busca").value.trim(); if (!nome) return;
+  const doc = _FORN_NFE && nome.toLowerCase() === _FORN_NFE.emitente.toLowerCase() ? _soDig(_FORN_NFE.cnpj_emitente) : "";
+  try {
+    const c = await api("/api/contatos", { method: "POST", body: JSON.stringify({ nome, tipo: "fornecedor", documento: doc || null }) });
+    State.contatos = [...(State.contatos || []), c];
+    toast(`Fornecedor "${c.nome}" cadastrado`, "ok"); _fornEscolher(c.id);
+  } catch (e) { toast(e.message, "err"); }
 }
 
 function _add30dias(dataISO) {
@@ -4424,9 +4482,10 @@ function _removerItem(idx) {
 }
 
 async function salvarCompra() {
-  const descricao = $("#fc-desc").value.trim();
+  const forn = (State.contatos || []).find(c => c.id === +$("#fc-forn").value) || null;
+  const descricao = $("#fc-desc").value.trim() || (forn ? `Compra ${forn.nome}` : "");
   const valor = parseFloat($("#fc-valor").value || "0");
-  if (!descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório.");
+  if (!descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório (ou escolha o fornecedor).");
   if (!valor) return erroCampo("valor", "Valor: informe um valor maior que zero.");
 
   const dataCompra = $("#fc-data").value || hojeISO();
@@ -4438,7 +4497,8 @@ async function salvarCompra() {
     categoria_id: +$("#fc-cat").value || null,
     data_vencimento: dataCompra, data_competencia: dataCompra,
     data_pagamento: parcelado ? null : dataCompra,  // parcelado só "paga" conforme as parcelas
-    obs: $("#fc-estab").value ? `Compra em ${$("#fc-estab").value}` : null,
+    contato_id: forn ? forn.id : null,
+    obs: forn ? `Compra em ${forn.nome}` : null,
   };
 
   try {
@@ -4446,7 +4506,7 @@ async function salvarCompra() {
 
     const bodyCompra = {
       lancamento_id: lanc.id,
-      estabelecimento: $("#fc-estab").value || null,
+      estabelecimento: forn ? forn.nome : (_nfeDados?.emitente || null),
       cnpj_emitente: _nfeDados?.cnpj_emitente || null,
       numero_nota: _nfeDados?.numero_nota || null,
       chave_acesso: _nfeDados?.chave || null,
@@ -4525,9 +4585,9 @@ function _cardCompra(c) {
   return `
     <div class="card card-pad" style="margin-bottom:14px">
       <div style="display:flex;align-items:flex-start;gap:12px;cursor:pointer" onclick="_toggleItensCompra(${c.id})">
-        <span class="card-ico i-navy">${icon("receipt")}</span>
+        ${c.contato_id ? avatarLogo(c.contato_logo, c.contato_nome, 40) : `<span class="card-ico i-navy">${icon("receipt")}</span>`}
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;color:var(--ink)">${c.estabelecimento || "Compra #" + c.id}</div>
+          <div style="font-weight:700;color:var(--ink)">${esc(c.contato_nome || c.estabelecimento || "Compra #" + c.id)}</div>
           <div class="sub">${c.numero_nota ? "NF " + c.numero_nota + " · " : ""}${c.data_emissao ? dataBR(c.data_emissao) : ""} ${c.uf ? "· " + c.uf : ""}</div>
         </div>
         <div style="text-align:right">
@@ -7811,7 +7871,7 @@ async function viewFatura(v) {
   const linha = it => {
     const cat = (State.cats || []).find(c => c.id === it.categoria_id);
     return `<div class="fat-item${it.pago ? " pago" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
-      <span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>
+      ${it.contato_nome ? `<span class="fat-ic fat-logo">${avatarLogo(it.contato_logo, it.contato_nome, 34)}</span>` : `<span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>`}
       <div class="fat-txt"><b>${esc(it.descricao)}</b><small>${it.parcela ? `<span class="fat-parc">Parcela ${it.parcela}</span>` : "À vista"}${cat ? ` · ${esc(cat.nome)}` : ""}${it.local && it.local !== it.descricao ? ` · ${esc(it.local)}` : ""}</small></div>
       <span class="fat-val mono-num">${money(it.valor)}</span>${it.pago ? `<span class="fat-ok" title="Pago">${icon("check")}</span>` : ""}
     </div>`;
@@ -8043,7 +8103,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

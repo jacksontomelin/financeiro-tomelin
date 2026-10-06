@@ -4144,3 +4144,22 @@ html.dark .hi-mud b { color: #7FD8B6; } .hi-mud em { color: var(--red); font-sty
 .bk-r-aviso { display: flex; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 12.5px; line-height: 1.5;
   background: rgba(201,87,63,.08); color: var(--ink-2); box-shadow: inset 3px 0 0 var(--red); }
 .bk-r-aviso svg { width: 18px; height: 18px; color: var(--red); flex-shrink: 0; margin-top: 2px; }
+
+/* ── fornecedor da compra ── */
+.forn-box { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 14px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.forn-box.tem .forn-busca, .forn-box.tem .forn-chips { display: none; }
+.forn-escolhido { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 12px; background: var(--card);
+  box-shadow: 0 6px 16px -10px rgba(8,45,81,.4); animation: icoPop .4s var(--mola); }
+.forn-escolhido b { display: block; font-size: 14px; } .forn-escolhido small { color: var(--ink-3); font-size: 12px; }
+.forn-busca { background: var(--card); }
+.forn-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
+.forn-chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 4px; border: 0; cursor: pointer; border-radius: 99px;
+  font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink); background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line);
+  transition: transform .15s var(--mola), box-shadow .15s; }
+.forn-chip:hover { box-shadow: inset 0 0 0 1.5px var(--teal); transform: translateY(-1px); }
+.forn-chip:active { transform: scale(.95); }
+.forn-chip .lg-av { border-radius: 50%; }
+.forn-chip.novo { padding-left: 10px; color: #fff; background: linear-gradient(135deg, #1F6F5C, #3EC28F); box-shadow: none; }
+.forn-chip.novo svg { width: 15px; height: 15px; }
+.fat-ic.fat-logo { background: none !important; box-shadow: none; padding: 0; }
+.fat-ic.fat-logo .lg-av { border-radius: 11px; }

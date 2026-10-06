@@ -120,14 +120,17 @@ def _itens_fatura(db, c):
                       "local": cp.estabelecimento, "parcela": f"{p.numero}/{pm.total_parcelas}",
                       "data": (cp.data_emissao or pm.primeira_parcela_data).isoformat() if (cp.data_emissao or pm.primeira_parcela_data) else None,
                       "valor": float(p.valor), "pago": bool(p.paga), "mes": p.data_vencimento.strftime("%Y-%m"),
-                      "categoria_id": l.categoria_id if l else None})
+                      "categoria_id": l.categoria_id if l else None,
+                      "contato_nome": l.contato.nome if l and l.contato else None,
+                      "contato_logo": l.contato.logo if l and l.contato else None})
     for l in db.query(models.Lancamento).filter(models.Lancamento.conta_id == c.id, models.Lancamento.tipo == models.TipoMov.despesa).all():
         if l.id in com_parcelas:
             continue
         d = l.data_competencia or l.data_vencimento or date.today()
         itens.append({"chave": f"l{l.id}", "tipo": "compra", "id": l.id, "lancamento_id": l.id, "descricao": l.descricao, "local": None,
                       "parcela": None, "data": d.isoformat(), "valor": float(l.valor_total), "pago": bool(l.data_pagamento),
-                      "mes": _venc_da_fatura(c, d).strftime("%Y-%m"), "categoria_id": l.categoria_id})
+                      "mes": _venc_da_fatura(c, d).strftime("%Y-%m"), "categoria_id": l.categoria_id,
+                      "contato_nome": l.contato.nome if l.contato else None, "contato_logo": l.contato.logo if l.contato else None})
     return itens
 
 
