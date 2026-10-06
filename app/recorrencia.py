@@ -43,7 +43,7 @@ def gerar(db: Session, hoje: date | None = None) -> int:
                     descricao=r.descricao, tipo=r.tipo, valor=Decimal(r.valor),
                     data_competencia=d, data_vencimento=d, data_pagamento=None,
                     categoria_id=r.categoria_id, conta_id=r.conta_id, contato_id=r.contato_id,
-                    recorrente=True, recorrencia_id=r.id))
+                    responsavel_id=r.responsavel_id, recorrente=True, recorrencia_id=r.id))
                 criadas += 1
             r.ultima = d
             d = proxima(r, d)

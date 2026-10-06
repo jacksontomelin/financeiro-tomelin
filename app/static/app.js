@@ -843,10 +843,11 @@ function _animarNumeros(raiz) {
 }
 
 async function carregarRefs() {
-  const [cats, contas, contatos] = await Promise.all([
-    api("/api/categorias"), api("/api/contas"), api("/api/contatos"),
+  const [cats, contas, contatos, membros] = await Promise.all([
+    api("/api/categorias"), api("/api/contas"), api("/api/contatos"), api("/api/usuarios").catch(() => []),
   ]);
   State.cats = cats; State.contas = contas; State.contatos = contatos;
+  State.membros = (membros || []).filter(u => u.ativo !== false);
 }
 
 async function atualizarBadge() {
@@ -1229,7 +1230,7 @@ function popupVencimentos(venc) {
 /* ============================================================
    VIEW: LANÇAMENTOS (a pagar / a receber / todos)
    ============================================================ */
-const FILTRO = { status: "", busca: "", cat: "", conta: "", contato: "" };
+const FILTRO = { status: "", busca: "", cat: "", conta: "", contato: "", responsavel: "" };
 
 async function viewLancamentos(v, tipoFixo) {
   await carregarRefs();
@@ -1264,8 +1265,10 @@ async function viewLancamentos(v, tipoFixo) {
       ${[["", "Tudo"], ["hoje", "Hoje"], ["7d", "7 dias"], ["mes", "Este mês"], ["mesant", "Mês passado"], ["prox", "Próximo mês"]]
         .map(([k, r]) => `<button class="periodo${k === "" ? " on" : ""}" data-p="${k}" onclick="_periodo('${k}')">${r}</button>`).join("")}
     </div>
+    <div id="filtro-chips" class="filtro-chips"></div>
     <div id="lanc-lista" style="display:flex;flex-direction:column;gap:8px"></div>`;
   FILTRO.status = ""; FILTRO.busca = ""; FILTRO.cat = ""; FILTRO.de = ""; FILTRO.ate = "";
+  _filtroChips();
   // quem abriu esta tela já filtrada (rosca do painel, Categorias) deixa o filtro aqui
   if (window._filtroInicial) { Object.assign(FILTRO, window._filtroInicial); window._filtroInicial = null; }
   const selCat = v.querySelector('select[onchange^="filtroCat"]'); if (selCat && FILTRO.cat) selCat.value = String(FILTRO.cat);
@@ -1291,6 +1294,7 @@ async function recarregarTabela(opts = {}) {
   if (FILTRO.cat) q += `&categoria_id=${FILTRO.cat}`;
   if (FILTRO.conta) q += `&conta_id=${FILTRO.conta}`;
   if (FILTRO.contato) q += `&contato_id=${FILTRO.contato}`;
+  if (FILTRO.responsavel) q += `&responsavel_id=${FILTRO.responsavel}`;
   if (FILTRO.de) q += `&de=${FILTRO.de}`;
   if (FILTRO.ate) q += `&ate=${FILTRO.ate}`;
   const lista0 = document.getElementById("lanc-lista");
@@ -1334,7 +1338,7 @@ function _linhaLanc(l) {
   return `<div class="lanc-card lc st-${st} ${rec ? "rec" : "desp"}" data-id="${l.id}" style="--cat:${cor}" onclick="_menuLanc(${l.id})">
     <span class="lc-ic">${icon(cat?.icone || (rec ? "arrowDown" : "arrowUp"))}</span>
     <div class="lc-meio"><b class="lc-desc">${esc(l.descricao)}</b>
-      <small class="lc-sub"><span class="lc-st">${stTxt}</span>${cat ? `<span class="lc-cat">${esc(cat.nome)}</span>` : ""}${l.conta_nome ? `<span class="lc-cat">${esc(l.conta_nome)}</span>` : ""}${l.recorrencia_id ? `<span class="lc-mini" title="Repete todo mês">${icon("repeat")}</span>` : ""}${_ANX_CONT[l.id] ? `<span class="lc-mini" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${_formaSelo(l)}</small></div>
+      <small class="lc-sub"><span class="lc-st">${stTxt}</span>${cat ? `<span class="lc-cat">${esc(cat.nome)}</span>` : ""}${l.conta_nome ? `<span class="lc-cat">${esc(l.conta_nome)}</span>` : ""}${l.responsavel_nome ? `<span class="lc-quem">${icon("user")}${esc(l.responsavel_nome.split(" ")[0])}</span>` : ""}${l.recorrencia_id ? `<span class="lc-mini" title="Repete todo mês">${icon("repeat")}</span>` : ""}${_ANX_CONT[l.id] ? `<span class="lc-mini" title="${_ANX_CONT[l.id]} comprovante(s)">${icon("clip")}</span>` : ""}${_formaSelo(l)}</small></div>
     <div class="lc-dir"><span class="lc-val mono-num">${rec ? "+" : "−"} ${money(valor)}</span>
       ${st !== "pago" ? `<button class="lc-bt" onclick="event.stopPropagation();formBaixaId(${l.id})">${icon("check")}${rec ? "Recebi" : "Paguei"}</button>` : ""}</div>
   </div>`;
@@ -1489,6 +1493,10 @@ function _formLancamento(l, tipo, pre) {
             <option value="">Qualquer</option>
             ${State.contas.map(c => `<option value="${c.id}" ${ed && l.conta_id === c.id ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}
           </select></div>
+        ${(State.membros || []).length > 1 ? `<div class="campo full"><label>Quem paga</label>
+          <div class="quem-grade">${[{ id: "", nome: "Ninguém" }, ...State.membros].map(u => `<button type="button" class="quem-opt${String(ed ? (l.responsavel_id || "") : "") === String(u.id) ? " on" : ""}" data-id="${u.id}"
+              style="--c:${_corOk(u.cor, "#7E8C9A")}" onclick="_quemEscolher(this)">${u.id ? avatarSVG(u.emoji, 18) : icon("users")}<span>${esc(u.nome.split(" ")[0])}</span></button>`).join("")}</div>
+          <input type="hidden" id="f-resp" value="${ed ? (l.responsavel_id || "") : ""}"></div>` : ""}
 
         <div class="campo"><label>${rec ? "Recebo de" : "Pago para"}</label>
           <div style="display:flex;gap:6px">
@@ -1651,6 +1659,7 @@ async function salvarLanc(id) {
     categoria_id: +$("#f-cat").value || null,
     conta_id: +$("#f-conta").value || null,
     contato_id: +$("#f-contato").value || null,
+    ...(document.getElementById("f-resp") ? { responsavel_id: +$("#f-resp").value || null } : {}),
     data_vencimento: $("#f-venc").value || null,
     data_competencia: $("#f-comp").value || null,
     data_pagamento: pago ? ($("#f-venc").value || hojeISO()) : null,
@@ -3535,6 +3544,8 @@ async function viewRelatorios(v) {
       </div>
     </div>
 
+    <div class="card card-pad" id="por-pessoa" style="margin-bottom:16px"><div class="sub">Carregando quem paga o quê...</div></div>
+
     <!-- KPIs clicáveis -->
     <div class="kpi-grid" style="margin-bottom:16px">
       <div class="kpi ${resPos ? "green" : "red"}" style="${clicavel}" ${hoverEfect}
@@ -3664,6 +3675,7 @@ async function viewRelatorios(v) {
         </div>
       </div>
     </div>`;
+  setTimeout(_porPessoaCarregar, 0);
 }
 function aplicarPeriodo() {
   PERIODO.de = $("#r-de").value; PERIODO.ate = $("#r-ate").value;
@@ -6561,6 +6573,44 @@ async function baixarBackup() {
 }
 
 
+/* Filtro de pessoa ou contato aparece como chip com X (antes ficava preso escondido) */
+function _filtroChips() {
+  const box = document.getElementById("filtro-chips"); if (!box) return;
+  const chips = [];
+  if (FILTRO.responsavel) {
+    const m = (State.membros || []).find(u => u.id === +FILTRO.responsavel);
+    chips.push(["responsavel", "user", `Quem paga: ${m ? m.nome.split(" ")[0] : "#" + FILTRO.responsavel}`]);
+  }
+  if (FILTRO.contato) {
+    const c = (State.contatos || []).find(x => x.id === +FILTRO.contato);
+    chips.push(["contato", "users", c ? c.nome : "Contato"]);
+  }
+  box.innerHTML = chips.map(([k, ic, t]) => `<button class="filtro-chip" onclick="FILTRO.${k}='';_filtroChips();recarregarTabela()">${icon(ic)}${esc(t)}${icon("x")}</button>`).join("");
+}
+
+/* ── Quem paga ── */
+function _quemEscolher(b) {
+  b.parentElement.querySelectorAll(".quem-opt").forEach(x => x.classList.toggle("on", x === b));
+  document.getElementById("f-resp").value = b.dataset.id || ""; vibrar(8);
+}
+async function _porPessoaCarregar() {
+  const box = document.getElementById("por-pessoa"); if (!box) return;
+  if (!State.membros) { try { await carregarRefs(); } catch {} }
+  if ((State.membros || []).length < 2) { box.remove(); return; }   // só faz sentido com mais de uma pessoa
+  let d; try { d = await api(`/api/relatorios/por-pessoa?de=${PERIODO.de}&ate=${PERIODO.ate}`); } catch { box.remove(); return; }
+  const max = Math.max(1, ...d.map(p => p.pago + p.a_pagar));
+  box.innerHTML = `<div class="card-h"><span class="card-ico i-navy">${icon("users")}</span><div class="grow"><h3>Quem paga o quê</h3>
+      <div class="sub">Despesas do período por pessoa · toque para ver os lançamentos</div></div></div>
+    ${d.length ? d.map(p => { const m = (State.membros || []).find(u => u.id === p.responsavel_id); const cor = _corOk(m?.cor, "#7E8C9A"); return `
+      <div class="pp-linha" style="--c:${cor}" onclick="${p.responsavel_id ? `FILTRO.responsavel=${p.responsavel_id};setView('lancamentos')` : ""}">
+        <span class="pp-av">${m ? avatarSVG(m.emoji, 20) : icon("users")}</span>
+        <div class="grow"><b>${esc(p.nome)}</b>
+          <span class="pp-barra"><i style="width:${p.pago / max * 100}%"></i><em style="width:${p.a_pagar / max * 100}%"></em></span>
+          <small>Pagou ${money(p.pago)}${p.a_pagar ? ` · falta ${money(p.a_pagar)}` : ""}${p.recebido ? ` · recebeu ${money(p.recebido)}` : ""}</small></div>
+        <span class="mono-num pp-tot">${money(p.pago + p.a_pagar)}</span></div>`; }).join("")
+      : `<div class="sub">Nenhum lançamento no período.</div>`}`;
+}
+
 /* ── Imposto de Renda (Relatórios) ── */
 const _IR_COR = { saude: ["#14594C", "#3EC28F"], educacao: ["#082D51", "#4F8BC9"], previdencia: ["#8A6D1E", "#E2C46E"], pensao: ["#5B3FA0", "#8B6BD8"] };
 async function abrirIR(ano) {
@@ -7824,7 +7874,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, abrirIR, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, abrirIR, _quemEscolher, _filtroChips, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

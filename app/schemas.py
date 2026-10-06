@@ -99,6 +99,7 @@ class LancamentoIn(BaseModel):
     categoria_id: Optional[int] = None
     contato_id: Optional[int] = None
     conta_id: Optional[int] = None
+    responsavel_id: Optional[int] = None
 
 
 class LancamentoOut(BaseModel):
@@ -127,6 +128,8 @@ class LancamentoOut(BaseModel):
     contato_nome: Optional[str] = None
     contato_logo: Optional[str] = None
     conta_nome: Optional[str] = None
+    responsavel_id: Optional[int] = None
+    responsavel_nome: Optional[str] = None
     criado_em: Optional[datetime] = None
 
 

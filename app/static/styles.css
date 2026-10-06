@@ -4062,3 +4062,27 @@ html.dark .sobre-card h3 { color: #E9F0F7; }
 .ir-cats small { width: 100%; }
 .ir-chip { padding: 3px 10px; border-radius: 99px; background: rgba(47,158,126,.12); color: #1F7A5C; font-weight: 700; }
 html.dark .ir-chip { color: #7FD8B6; }
+
+/* ── quem paga ── */
+.quem-grade { display: flex; flex-wrap: wrap; gap: 6px; }
+.quem-opt { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border: 0; cursor: pointer; border-radius: 99px;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ink-2); background: var(--bg); box-shadow: inset 0 0 0 1.5px var(--line);
+  transition: transform .15s var(--mola), background .15s; }
+.quem-opt svg { width: 20px; height: 20px; padding: 3px; border-radius: 50%; color: #fff; background: var(--c); box-sizing: content-box; }
+.quem-opt.on { background: color-mix(in srgb, var(--c) 16%, var(--card)); color: var(--ink); box-shadow: inset 0 0 0 2px var(--c); }
+.quem-opt:active { transform: scale(.94); }
+.lc-quem { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; color: var(--teal); }
+.lc-quem svg { width: 11px; height: 11px; }
+.filtro-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.filtro-chips:not(:empty) { margin: -4px 0 10px; }
+.filtro-chip { display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer; padding: 6px 10px; border-radius: 99px; font: inherit;
+  font-size: 12.5px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--navy), #305C74); }
+.filtro-chip svg { width: 14px; height: 14px; } .filtro-chip svg:last-child { opacity: .75; }
+.pp-linha { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.pp-linha:hover { background: var(--bg); }
+.pp-av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex-shrink: 0;
+  background: var(--c); box-shadow: 0 6px 12px -6px var(--c); } .pp-av svg { width: 20px; height: 20px; }
+.pp-linha b { font-size: 13.5px; } .pp-linha small { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+.pp-barra { display: flex; height: 7px; border-radius: 4px; background: var(--line-2); overflow: hidden; margin-top: 5px; }
+.pp-barra i { background: var(--c); } .pp-barra em { background: repeating-linear-gradient(45deg, var(--c), var(--c) 3px, transparent 3px, transparent 6px); opacity: .55; }
+.pp-tot { font-weight: 800; font-size: 13.5px; }

@@ -84,6 +84,7 @@ CATALOGO = [
         ("parcelas",    "Parcelas de cartão em aberto",           "parcelas",    "cartao"),
         ("carros",      "Veículos, FIPE e financiamentos",        "carros",      "veiculos"),
         ("dica",        "Dica financeira com base nos seus dados","dica",        "conselho"),
+        ("pessoas",     "Quanto cada um pagou e tem a pagar",     "pessoas",     "por pessoa, quem paga"),
     ]),
     ("✏️ LANÇAR E DAR BAIXA", [
         ("despesa VALOR DESCRIÇÃO", "Lança uma despesa (categoria automática)", "despesa 150 mercado", "gasto, d"),
@@ -529,6 +530,10 @@ def processar_comando(texto: str, db: Session | None = None,
                     f"💰 {_brl(l.valor)}\n"
                     f"📅 {l.data_vencimento.strftime('%d/%m/%Y') if l.data_vencimento else '-'}\n"
                     f"Status: {l.status}")
+
+        # ── Quem paga o quê ───────────────────────────────────────────────────
+        if t_low in ("pessoas", "por pessoa", "quem paga", "responsaveis", "familia"):
+            return service.texto_por_responsavel(db)
 
         # ── Fluxo mensal (gráfico ASCII) ─────────────────────────────────────
         if t_low in ("fluxo", "grafico", "gráfico", "historico", "histórico"):

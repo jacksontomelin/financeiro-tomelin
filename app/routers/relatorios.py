@@ -98,3 +98,9 @@ def imposto_renda_pdf(ano: int | None = None, db: Session = Depends(get_db)):
     data = pdfgen.imposto_renda(ir.relatorio(db, a))
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="imposto-renda-{a}.pdf"'})
+
+
+@router.get("/por-pessoa")
+def por_pessoa(de: date | None = None, ate: date | None = None, db: Session = Depends(get_db)):
+    de, ate = _periodo(de, ate)
+    return service.por_responsavel(db, de, ate)

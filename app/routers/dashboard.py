@@ -40,6 +40,7 @@ def vencimentos(dias: int = None, db: Session = Depends(get_db)):
             "vencimento": l.data_vencimento.isoformat() if l.data_vencimento else None,
             "status": l.status,
             "categoria": l.categoria.nome if l.categoria else None,
+            "responsavel": l.responsavel.nome if l.responsavel else None,
         }
     return {
         "atrasados": [fmt(x) for x in v["atrasados"]],

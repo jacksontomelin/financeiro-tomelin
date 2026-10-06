@@ -125,6 +125,9 @@ def _migrar(engine):
         "ALTER TABLE contatos ALTER COLUMN bairro TYPE VARCHAR(150)",
         "ALTER TABLE contatos ALTER COLUMN cidade TYPE VARCHAR(150)",
         "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS ir_tipo VARCHAR(20)",
+        "ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS responsavel_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL",
+        "CREATE INDEX IF NOT EXISTS ix_lancamentos_responsavel_id ON lancamentos(responsavel_id)",
+        "ALTER TABLE recorrencias ADD COLUMN IF NOT EXISTS responsavel_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL",
     ]
     # Cada comando na sua própria transação: no PostgreSQL, um erro aborta
     # a transação inteira e os comandos seguintes falhariam em silêncio.

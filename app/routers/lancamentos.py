@@ -18,6 +18,7 @@ def _out(l: models.Lancamento) -> schemas.LancamentoOut:
     o.contato_nome = l.contato.nome if l.contato else None
     o.contato_logo = l.contato.logo if l.contato else None
     o.conta_nome = l.conta.nome if l.conta else None
+    o.responsavel_nome = l.responsavel.nome if l.responsavel else None
     return o
 
 
@@ -27,6 +28,7 @@ def listar(
     status: str | None = Query(None, description="pago | pendente | atrasado"),
     categoria_id: int | None = None,
     contato_id: int | None = None,
+    responsavel_id: int | None = None,
     de: date | None = None,
     ate: date | None = None,
     busca: str | None = None,
@@ -44,6 +46,8 @@ def listar(
         q = q.filter(models.Lancamento.categoria_id == categoria_id)
     if contato_id:
         q = q.filter(models.Lancamento.contato_id == contato_id)
+    if responsavel_id:
+        q = q.filter(models.Lancamento.responsavel_id == responsavel_id)
     if de:
         q = q.filter(models.Lancamento.data_competencia >= de)
     if ate:
@@ -92,7 +96,7 @@ def editar(lid: int, dados: schemas.LancamentoIn, db: Session = Depends(get_db))
     if not l:
         raise HTTPException(404, "Lançamento não encontrado.")
     era_pago = l.data_pagamento is not None
-    for k, v in dados.model_dump().items():
+    for k, v in dados.model_dump(exclude_unset=True).items():   # campo não enviado fica como está
         setattr(l, k, v)
     db.commit(); db.refresh(l)
     if l.data_pagamento and not era_pago:

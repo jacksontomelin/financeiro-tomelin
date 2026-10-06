@@ -163,6 +163,43 @@ def texto_saldo(db: Session) -> str:
     return "\n".join(linhas)
 
 
+def _quem(l) -> str:
+    """ · 👤 Jackson, quando a conta tem responsável."""
+    return f" · 👤 {l.responsavel.nome.split()[0]}" if getattr(l, "responsavel", None) else ""
+
+
+def por_responsavel(db: Session, de: date, ate: date) -> list[dict]:
+    """Quanto cada pessoa pagou, recebeu e tem a pagar no período (competência)."""
+    rows = (db.query(models.Lancamento.responsavel_id, models.Lancamento.tipo,
+                     models.Lancamento.data_pagamento.isnot(None), func.coalesce(func.sum(models.Lancamento.valor), 0),
+                     func.count())
+            .filter(models.Lancamento.data_competencia >= de, models.Lancamento.data_competencia <= ate)
+            .group_by(models.Lancamento.responsavel_id, models.Lancamento.tipo, models.Lancamento.data_pagamento.isnot(None))
+            .all())
+    nomes = {u.id: u.nome for u in db.query(models.Usuario).all()}
+    out = {}
+    for uid, tipo, pago, total, qtd in rows:
+        p = out.setdefault(uid, {"responsavel_id": uid, "nome": nomes.get(uid, "Sem responsável") if uid else "Sem responsável",
+                                 "pago": 0.0, "a_pagar": 0.0, "recebido": 0.0, "a_receber": 0.0, "qtd": 0})
+        chave = ("pago" if pago else "a_pagar") if tipo == TipoMov.despesa else ("recebido" if pago else "a_receber")
+        p[chave] += float(total); p["qtd"] += qtd
+    return sorted(out.values(), key=lambda p: (p["responsavel_id"] is None, -(p["pago"] + p["a_pagar"])))
+
+
+def texto_por_responsavel(db: Session) -> str:
+    ini, fim = _range_mes(date.today())
+    pessoas = por_responsavel(db, ini, fim)
+    if not pessoas:
+        return "📭 Nenhum lançamento neste mês."
+    linhas = ["👥 *Quem paga o quê: este mês*", ""]
+    for p in pessoas:
+        linhas.append(f"👤 *{p['nome']}*")
+        linhas.append(f"   Pagou {brl(p['pago'])} · falta pagar {brl(p['a_pagar'])}")
+        if p["recebido"] or p["a_receber"]:
+            linhas.append(f"   Recebeu {brl(p['recebido'])} · a receber {brl(p['a_receber'])}")
+    return "\n".join(linhas)
+
+
 def texto_vencimentos(db: Session, dias_antes: int = 7) -> str:
     v = vencimentos(db, dias_antes=dias_antes)
     hoje = v["hoje"]
@@ -172,7 +209,7 @@ def texto_vencimentos(db: Session, dias_antes: int = 7) -> str:
         for l in v["atrasados"]:
             dias = (hoje - l.data_vencimento).days
             ico = "🔴" if l.tipo == TipoMov.despesa else "🟠"
-            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} (há {dias}d, venc. {l.data_vencimento.strftime('%d/%m')})")
+            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} (há {dias}d, venc. {l.data_vencimento.strftime('%d/%m')}){_quem(l)}")
         linhas.append("")
     if v["proximos"]:
         linhas.append(f"🔔 *Próximos {dias_antes} dias:*")
@@ -180,7 +217,7 @@ def texto_vencimentos(db: Session, dias_antes: int = 7) -> str:
             dias = (l.data_vencimento - hoje).days
             quando = "hoje" if dias == 0 else ("amanhã" if dias == 1 else f"em {dias}d")
             ico = "💸" if l.tipo == TipoMov.despesa else "💵"
-            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} ({quando}, {l.data_vencimento.strftime('%d/%m')})")
+            linhas.append(f"{ico} {l.descricao}: {brl(l.valor)} ({quando}, {l.data_vencimento.strftime('%d/%m')}){_quem(l)}")
     if not v["atrasados"] and not v["proximos"]:
         linhas.append("✅ Nenhum vencimento no período. Tudo em dia!")
     return "\n".join(linhas)

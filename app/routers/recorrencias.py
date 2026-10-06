@@ -64,7 +64,8 @@ def criar(dados: NovaIn, db: Session = Depends(get_db)):
     r = models.Recorrencia(descricao=l.descricao, tipo=l.tipo, valor=Decimal(l.valor), frequencia=dados.frequencia,
                            dia=base.day, mes=base.month if dados.frequencia == "anual" else None,
                            inicio=base, ate=ate, ultima=base,
-                           categoria_id=l.categoria_id, conta_id=l.conta_id, contato_id=l.contato_id)
+                           categoria_id=l.categoria_id, conta_id=l.conta_id, contato_id=l.contato_id,
+                           responsavel_id=l.responsavel_id)
     db.add(r); db.flush()
     l.recorrencia_id = r.id; l.recorrente = True
     db.commit()

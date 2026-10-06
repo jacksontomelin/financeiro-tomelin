@@ -125,9 +125,12 @@ class Lancamento(Base):
     import_id = Column(String(80), nullable=True, index=True)
     # regra de repetição que gerou este lançamento (aluguel, salário, assinatura...)
     recorrencia_id = Column(Integer, ForeignKey("recorrencias.id", ondelete="SET NULL"), nullable=True, index=True)
+    # quem da família paga (ou recebe) esta conta
+    responsavel_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True)
 
     criado_em = Column(DateTime, default=datetime.utcnow)
 
+    responsavel = relationship("Usuario", foreign_keys=[responsavel_id])
     categoria = relationship("Categoria", back_populates="lancamentos")
     contato = relationship("Contato", back_populates="lancamentos")
     conta = relationship("Conta", back_populates="lancamentos")
@@ -449,6 +452,7 @@ class Recorrencia(Base):
     categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="SET NULL"), nullable=True)
     conta_id = Column(Integer, ForeignKey("contas.id", ondelete="SET NULL"), nullable=True)
     contato_id = Column(Integer, ForeignKey("contatos.id", ondelete="SET NULL"), nullable=True)
+    responsavel_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
 
