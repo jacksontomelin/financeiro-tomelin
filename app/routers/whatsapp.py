@@ -42,10 +42,15 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
         else:
             ok = zapapi.enviar_texto(resp, destino, db=sdb)
         seg = f"{_t.time() - t0:.1f}".replace(".", ",")
-        ent["resultado"] = (f"{como} em {seg} s" if ok
+        atraso = _ATRASO.get("ultimo")
+        extra = f" · a mensagem levou {atraso} s para chegar do WhatsApp" if atraso else ""
+        ent["resultado"] = (f"{como} em {seg} s{extra}" if ok
                             else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)")
         return ok
     zap_fila.disparar("Resposta no grupo", tarefa)
+
+
+_ATRASO: dict = {"ultimo": None}
 
 
 def _id_msg(body: dict) -> str:
@@ -97,12 +102,14 @@ def _tratar(body: dict, db: Session):
     import time as _t
     inicio = _t.time()
     # mesma mensagem lida pela escuta do grupo: não responde duas vezes
+    ts_msg = _ts_aware(body.get("ts"))
+    if ts_msg and str(body.get("jid") or "").endswith("@g.us"):   # quanto o WhatsApp/gateway demorou para avisar o sistema
+        from datetime import timezone as _tz
+        seg = (datetime.now(_tz.utc) - ts_msg).total_seconds()
+        _ATRASO["ultimo"] = f"{seg:.0f}" if seg >= 3 else None
     mid = _id_msg(body)
-    if mid:
-        if mid in _ESCUTADOS:
-            return {"ok": True, "ignorado": "já respondida pela escuta"}
-        _ESCUTADOS.add(mid)
-        if len(_ESCUTADOS) > 500: _ESCUTADOS.clear()
+    if mid and not _marcar_vista(mid):
+        return {"ok": True, "ignorado": "já respondida pela escuta"}
     # --- campos exatos do gateway whatsapp.jackson (igual ao Sentinela) ---
     jid      = str(body.get("jid") or "")
     texto    = str(body.get("texto") or "").strip()
@@ -127,7 +134,7 @@ def _tratar(body: dict, db: Session):
         _log(texto, "ignorado: grupo não configurado")
         return {"ok": True, "ignorado": "grupo não configurado"}
     if jid.strip().lower() != grupo.lower():
-        if jid.endswith("@g.us") or texto:
+        if jid.endswith("@g.us"):          # canais (@newsletter) e conversas privadas não poluem o log
             _log(texto or "[arquivo]", f"ignorado: veio de outro chat ({jid[:40] or 'sem jid'})", autor_num)
         return {"ok": True, "ignorado": "outro grupo"}
 
@@ -338,7 +345,21 @@ def diagnostico(db: Session = Depends(get_db)):
 # Roda a cada 4s e processa mensagens novas caso o webhook não esteja configurado.
 # Quando o webhook está ativo, a escuta é redundante mas inofensiva.
 _ESCUTA = {"ultimo_ts": None, "ultima_leitura": None, "erro": None}
-_ESCUTADOS: "set[str]" = set()  # ids já processados pela escuta (evita duplicar com webhook)
+_ESCUTADOS: "set[str]" = set()  # ids já processados (webhook ou escuta): cada mensagem é respondida uma vez
+import threading as _threading
+_TRAVA_VISTAS = _threading.Lock()
+
+
+def _marcar_vista(mid: str) -> bool:
+    """True se é a primeira vez que a mensagem aparece. Webhook e escuta chegam
+    no mesmo segundo às vezes: a trava garante que só um dos dois responde."""
+    with _TRAVA_VISTAS:
+        if mid in _ESCUTADOS:
+            return False
+        if len(_ESCUTADOS) > 2000:
+            _ESCUTADOS.clear()
+        _ESCUTADOS.add(mid)
+        return True
 
 
 def _ts_aware(v):
@@ -384,9 +405,7 @@ def job_escutar_grupo():
             _ESCUTA["ultimo_ts"] = t
             if t < limite: continue                          # mensagem muito antiga
             mid = x.get("id") or ""
-            if mid and mid in _ESCUTADOS: continue          # já processado pelo webhook
-            if mid: _ESCUTADOS.add(mid)
-            if len(_ESCUTADOS) > 500: _ESCUTADOS.clear()
+            if mid and not _marcar_vista(mid): continue     # já processado pelo webhook
             de_mim = bool(x.get("de_mim"))
             autor_raw = (x.get("autor_numero") or "").replace("+","").replace("-","").replace(" ","")
             if meu_num:
