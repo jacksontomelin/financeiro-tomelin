@@ -4333,7 +4333,7 @@ html.dark .fat-item.com-forn { background: linear-gradient(100deg, color-mix(in 
 .cp-var.bom { color: #1F7A5C; background: rgba(47,158,126,.12); } .cp-var.ruim { color: var(--red); background: rgba(201,87,63,.1); }
 html.dark .cp-var.bom { color: #7FD8B6; }
 .cp-graf { width: 100%; height: auto; display: block; }
-.cp-graf text { font-size: 12px; fill: var(--ink-3); font-family: inherit; }
+.cp-graf text { font-size: 15px; fill: var(--ink-3); font-family: inherit; }
 .cp-ant { fill: color-mix(in srgb, var(--ink-3) 35%, transparent); }
 .cp-mes rect { transform-box: fill-box; transform-origin: bottom; animation: cpSobe .6s var(--suave) backwards; animation-delay: calc(var(--i) * 35ms); }
 .cp-mes.futuro { opacity: .35; }
@@ -4350,3 +4350,17 @@ html.dark .cp-var.bom { color: #7FD8B6; }
 .cp-cat small { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
 .cp-cat em { font-style: normal; font-weight: 800; font-size: 12.5px; min-width: 52px; text-align: right; }
 .cp-cat em.bom { color: #1F7A5C; } .cp-cat em.ruim { color: var(--red); } html.dark .cp-cat em.bom { color: #7FD8B6; }
+
+/* lançamentos guardados sem internet */
+.fila-off { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 9700;
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; border: 0; border-radius: 999px; cursor: pointer;
+  background: linear-gradient(135deg, #1E3A5F, #2F5D8A); color: #EAF3FF; font: 600 12.5px/1.2 inherit;
+  box-shadow: 0 10px 26px -10px rgba(0,0,0,.55); animation: semRede .45s var(--mola); max-width: calc(100vw - 32px); }
+.fila-off svg { width: 18px; height: 18px; flex-shrink: 0; animation: pisca 2s ease-in-out infinite; }
+@media (min-width: 900px) { .fila-off { bottom: 24px; } }
+.off-lista { display: flex; flex-direction: column; gap: 8px; }
+.off-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, rgba(127,127,127,.08)); }
+.off-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.off-txt b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.off-txt small { opacity: .7; font-size: 11.5px; }
+.off-val { font-weight: 700; white-space: nowrap; }

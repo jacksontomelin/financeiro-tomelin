@@ -81,6 +81,10 @@ def obter(lid: int, db: Session = Depends(get_db)):
 @router.post("", response_model=schemas.LancamentoOut)
 def criar(dados: schemas.LancamentoIn, db: Session = Depends(get_db), me: models.Usuario = Depends(usuario_atual)):
     payload = dados.model_dump()
+    if payload.get("import_id"):   # reenvio do que foi lançado sem internet: devolve o que já entrou
+        ja = db.query(models.Lancamento).filter_by(import_id=payload["import_id"]).first()
+        if ja:
+            return _out(ja)
     if not payload.get("data_competencia"):
         payload["data_competencia"] = date.today()
     l = models.Lancamento(**payload)

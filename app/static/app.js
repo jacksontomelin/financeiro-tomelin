@@ -262,9 +262,11 @@ async function api(path, opts = {}) {
   try {
     res = await fetch(_url(path), { ...opts, headers });
   } catch {
-    throw new Error(navigator.onLine === false
+    const err = new Error(navigator.onLine === false
       ? "Sem internet. Verifique a conexão e tente de novo."
       : "Não consegui falar com o servidor. Ele pode estar reiniciando, tente de novo em alguns segundos.");
+    err.rede = true;
+    throw err;
   }
   if (res.status === 401) { logout(); throw new Error("Sessão expirada. Entre de novo."); }
   if (!res.ok) {
@@ -1677,6 +1679,7 @@ async function salvarLanc(id) {
   };
   if (!body.descricao) return erroCampo("descricao", "Descrição: preenchimento obrigatório.");
   if (!body.valor) return erroCampo("valor", "Valor: informe um valor maior que zero.");
+  if (!id) body.import_id = _offChave();
   try {
     const salvo = id ? await api(`/api/lancamentos/${id}`, { method: "PUT", body: JSON.stringify(body) })
                      : await api("/api/lancamentos", { method: "POST", body: JSON.stringify(body) });
@@ -1692,8 +1695,106 @@ async function salvarLanc(id) {
     fecharModal(); toast(nAnx ? `Lançamento salvo com ${nAnx} comprovante(s)` : "Lançamento salvo", "ok");
     if (body.tipo === "despesa") _avisoOrcamento(body.categoria_id, body.data_competencia);
     await recarregarTabela(); atualizarBadge();
-  } catch (e) { toast(e.message, "err"); }
+  } catch (e) {
+    if (e.rede && !id) {            // sem internet: guarda no aparelho e manda quando a conexão voltar
+      _offGuardar(body);
+      fecharModal();
+      toast(_ANX.fila.length || document.getElementById("f-repetir")?.value
+        ? "Sem internet: lançamento guardado no aparelho. Comprovante e repetição você adiciona depois que ele subir."
+        : "Sem internet: lançamento guardado no aparelho, sobe sozinho quando a conexão voltar", "warn");
+      return;
+    }
+    toast(e.message, "err");
+  }
 }
+
+
+/* ── Lançar sem internet ─────────────────────────────────────────
+   O lançamento novo que não chegou ao servidor fica numa fila no aparelho
+   (localStorage) com uma chave única. Quando a internet volta, ou ao abrir
+   o app, a fila é enviada em ordem; o servidor reconhece a chave e nunca
+   cria o mesmo lançamento duas vezes, mesmo se o envio cair no meio. */
+const _OFF_K = "tomelin.fila_offline";
+function _offChave() {
+  try { if (crypto.randomUUID) return "off:" + crypto.randomUUID(); } catch {}
+  return "off:" + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+}
+function _offLer() { try { return JSON.parse(localStorage.getItem(_OFF_K) || "[]") || []; } catch { return []; } }
+function _offGravar(l) { try { localStorage.setItem(_OFF_K, JSON.stringify(l)); } catch {} _offSelo(); }
+function _offGuardar(body) {
+  const l = _offLer().filter(x => x.import_id !== body.import_id);
+  l.push({ ...body, _quando: new Date().toISOString() });
+  _offGravar(l);
+}
+function _offSelo() {
+  const n = _offLer().length;
+  let b = document.getElementById("fila-off");
+  if (!n || !State.token) { b?.remove(); return; }
+  if (!b) {
+    b = document.createElement("button"); b.id = "fila-off"; b.type = "button"; b.className = "fila-off";
+    b.onclick = () => _offVer();
+    document.body.appendChild(b);
+  }
+  b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 13 3 3 0 0 0 6 19z"/><path d="M12 12v5M9.5 14.5 12 12l2.5 2.5"/></svg>
+    <span>${n} ${n === 1 ? "lançamento esperando" : "lançamentos esperando"} a internet</span>`;
+}
+function _offVer() {
+  const l = _offLer();
+  if (!l.length) return _offSelo();
+  abrirModal(`
+    <div class="modal" style="max-width:440px">
+      <div class="modal-h">
+        <span class="card-ico i-navy">${icon("bell")}</span>
+        <h3>Guardados no aparelho</h3>
+        <button class="close-btn" onclick="fecharModal()">${icon("x")}</button>
+      </div>
+      <div class="modal-b">
+        <p class="muted" style="margin:0 0 10px">Foram lançados sem internet. Sobem sozinhos quando a conexão voltar, sem duplicar.</p>
+        <div class="off-lista">${l.map(x => `<div class="off-item">
+            <div class="off-txt"><b>${esc(x.descricao)}</b><small>${x.tipo === "receita" ? "Receita" : "Despesa"} · guardado ${esc(new Date(x._quando).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}</small></div>
+            <span class="off-val ${x.tipo === "receita" ? "pos" : "neg"}">${money(x.valor)}</span>
+            <button class="close-btn" title="Descartar" aria-label="Descartar" onclick="_offDescartar('${esc(x.import_id)}')">${icon("x")}</button>
+          </div>`).join("")}</div>
+      </div>
+      <div class="modal-f"><button class="btn" onclick="fecharModal()">Fechar</button><button class="btn btn-primary" onclick="fecharModal(); _offEnviar(true)">Enviar agora</button></div>
+    </div>`);
+}
+async function _offDescartar(chave) {
+  if (!(await confirmar({ tipo: "perigo", titulo: "Descartar lançamento?", texto: "Ele está só neste aparelho e não vai para o sistema." }))) return;
+  _offGravar(_offLer().filter(x => x.import_id !== chave));
+  _offLer().length ? _offVer() : fecharModal();
+}
+let _offEnviando = false;
+async function _offEnviar(manual) {
+  if (_offEnviando || !State.token) return;
+  let fila = _offLer();
+  if (!fila.length) return _offSelo();
+  _offEnviando = true;
+  let ok = 0, recusados = 0;
+  try {
+    for (const item of fila) {
+      const { _quando, ...corpo } = item;
+      try {
+        await api("/api/lancamentos", { method: "POST", body: JSON.stringify(corpo) });
+        ok++;
+      } catch (e) {
+        if (e.rede) break;                        // ainda sem conexão: tenta na próxima
+        if (e.status && e.status < 500) recusados++; else break;   // dado recusado sai da fila; erro do servidor espera
+        if (e.status && e.status < 500) toast(`"${corpo.descricao}" não entrou: ${e.message}`, "err");
+      }
+      fila = _offLer().filter(x => x.import_id !== item.import_id);
+      _offGravar(fila);
+    }
+  } finally { _offEnviando = false; }
+  if (ok) {
+    toast(ok === 1 ? "Lançamento feito sem internet foi enviado" : `${ok} lançamentos feitos sem internet foram enviados`, "ok");
+    if (["lancamentos", "dashboard", "receitas", "despesas"].includes(State.view)) setView(State.view);
+    atualizarBadge();
+  } else if (manual && _offLer().length) toast("Ainda sem conexão com o servidor. Fica guardado e tento de novo sozinho.", "warn");
+}
+addEventListener("online", () => setTimeout(() => _offEnviar(), 800));
+setInterval(() => { if (navigator.onLine !== false && _offLer().length) _offEnviar(); }, 60000);
 
 
 // Wrappers seguros para onclick: buscam o objeto do cache global em vez de
@@ -4913,6 +5014,7 @@ async function render() {
   _bandeirasCarregar();
   _historicoIniciar();
   _redeEstado();
+  _offSelo(); setTimeout(() => _offEnviar(), 1500);
   try {
     await setView(State.view || "dashboard");
     atualizarBadge();
@@ -7281,7 +7383,7 @@ function _redeEstado(ev) {
     b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2.5-1.7"/>
         <path d="M1.5 9a15 15 0 0 1 4.6-2.9M22.5 9A15 15 0 0 0 11 5.1"/><circle cx="12" cy="20" r="1"/></svg>
-      <span>Sem internet. Você vê o que já estava carregado; para salvar, precisa de conexão.</span>`;
+      <span>Sem internet. Você vê o que já estava carregado; lançamentos novos ficam guardados e sobem quando a conexão voltar.</span>`;
     document.body.appendChild(b);
   } else if (!off && b) {
     b.remove();
@@ -8386,6 +8488,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
+  _offVer, _offEnviar, _offDescartar,
   abrirFatura, _compCarregar, _waDisparar, boasVindas, _bvIr, _bvPagar, _bvFechar, _fornFiltrar, _fornEscolher, _fornLimpar, _fornCriar, _semFundo, _bkRestaurar, _bkPrevia, _bkRestaurarIr, verHistoricoLanc, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,

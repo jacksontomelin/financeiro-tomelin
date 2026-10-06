@@ -54,6 +54,21 @@ for (const [disp, viewport] of [["celular", { width: 390, height: 844 }], ["comp
     await page.evaluate((id) => salvarLanc(null), null);
     await page.waitForFunction((d) => document.body.innerText.includes(d), desc, { timeout: 8000 });
   });
+  await passo("lança sem internet e sobe quando volta", async () => {
+    await page.evaluate(() => formLancamento(null, "despesa")); await espera(500);
+    const desc = `Offline ${disp} ${Date.now() % 100000}`;
+    await page.fill("#f-desc", desc);
+    await page.fill("#f-valor", "9.90");
+    await ctx.setOffline(true);
+    await page.evaluate(() => salvarLanc(null));
+    await page.waitForSelector("#fila-off", { timeout: 6000 });
+    await ctx.setOffline(false);
+    await page.evaluate(() => _offEnviar(true));
+    await page.waitForSelector("#fila-off", { state: "detached", timeout: 10000 });
+    await page.evaluate(() => _offEnviar(true));   // de novo: não pode duplicar
+    const n = await page.evaluate(async (d) => (await api(`/api/lancamentos?busca=${encodeURIComponent(d)}`)).length, desc);
+    if (n !== 1) throw new Error(`entrou ${n} vez(es)`);
+  });
   await passo("menu do lançamento e histórico", async () => {
     const id = await page.evaluate(() => [..._LANC_CACHE.keys()][0]);
     await page.evaluate((id) => _menuLanc(id), id); await espera(400);

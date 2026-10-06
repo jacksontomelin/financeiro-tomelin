@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------- Auth ----------
@@ -100,6 +100,7 @@ class LancamentoIn(BaseModel):
     contato_id: Optional[int] = None
     conta_id: Optional[int] = None
     responsavel_id: Optional[int] = None
+    import_id: Optional[str] = Field(None, max_length=80)   # chave do celular: lançamento feito sem internet não entra duas vezes
 
 
 class LancamentoOut(BaseModel):
