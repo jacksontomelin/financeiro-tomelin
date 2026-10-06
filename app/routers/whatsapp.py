@@ -82,6 +82,8 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         _log(texto, "ignorado: grupo não configurado")
         return {"ok": True, "ignorado": "grupo não configurado"}
     if jid.strip().lower() != grupo.lower():
+        if jid.endswith("@g.us") or texto:
+            _log(texto or "[arquivo]", f"ignorado: veio de outro chat ({jid[:40] or 'sem jid'})", autor_num)
         return {"ok": True, "ignorado": "outro grupo"}
 
     # só o dono: igual ao Sentinela
@@ -94,6 +96,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
 
     # ignora respostas do próprio bot (anti-loop)
     if de_mim and texto and zapapi.foi_enviado_pelo_sistema(texto):
+        _log(texto, "ignorado: é a própria resposta do sistema")
         return {"ok": True, "ignorado": "eco do bot"}
 
     # --- processa e responde (sempre no grupo configurado) ---
@@ -115,6 +118,7 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
             _log("[arquivo]", "arquivo ignorado", autor_limpo)
             return {"ok": True, "ignorado": "arquivo sem pedido de anexo"}
     elif midia and not texto:
+        _log("[arquivo]", "ignorado: arquivo enviado pelo sistema")
         return {"ok": True, "ignorado": "arquivo enviado pelo sistema"}
 
     # comando que gera PDF
@@ -154,8 +158,8 @@ async def webhook(req: Request, db: Session = Depends(get_db)):
         _log(texto, "não é comando")
         return {"ok": True, "ignorado": "não é comando"}
 
-    zapapi.enviar_texto(resp, destino, db=db)
-    _log(texto, "respondido", autor_limpo)
+    enviado = zapapi.enviar_texto(resp, destino, db=db)
+    _log(texto, "respondido" if enviado else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)", autor_limpo)
     return {"ok": True}
 
 
