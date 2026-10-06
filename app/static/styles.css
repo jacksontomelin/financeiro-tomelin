@@ -4303,3 +4303,13 @@ html.dark .fat-item.com-forn { background: linear-gradient(100deg, color-mix(in 
 @keyframes entradaBarra { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 /* bandeira que já tem fundo colorido: inteira, com cantos arredondados */
 .cc-band.img img.com-fundo { border-radius: 7px; box-shadow: 0 2px 6px rgba(0,0,0,.25); filter: none; }
+
+/* ── bandeira no cartão: tamanho de cartão de verdade e contraste automático ── */
+.cc-band.img { height: 34px; }
+.cc-band.img img { max-height: 30px; max-width: 78px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.3)); }
+.cc-band.img img.branca { filter: brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.cc-band.img img.selo { background: rgba(255,255,255,.95); padding: 4px 7px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.2); filter: none; box-sizing: content-box; max-height: 22px; }
+.cc-band.img img.com-fundo { max-height: 28px; border-radius: 6px; }
+.cc.mini .cc-band.img { height: 28px; } .cc.mini .cc-band.img img { max-height: 24px; max-width: 64px; }
+.cc.mini .cc-band.img img.selo { max-height: 18px; }
+.fat-mini .cc-band.img img { max-height: 16px; max-width: 44px; }

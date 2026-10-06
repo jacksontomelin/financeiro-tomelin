@@ -7940,14 +7940,45 @@ function _fundoTransparente(c, w, h, tol, d) {
   c.putImageData(d, 0, 0);
 }
 
-/* Bandeira no cartão: imagem antiga com fundo branco fica transparente na hora (uma vez por imagem) */
+/* Bandeira no cartão: fundo branco sai, e a bandeira se ajusta à cor do cartão
+   como nos cartões de verdade: de uma cor só e sem contraste (Visa azul no cartão
+   escuro) fica branca; colorida sem contraste ganha um selo branco; com contraste fica igual. */
 const _SEM_FUNDO = new Map();
+const _lumRGB = (r, g, b) => { const f = v => (v /= 255) <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); return .2126 * f(r) + .7152 * f(g) + .0722 * f(b); };
+function _lumHex(hex) { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return .1; const n = parseInt(m[1], 16); return _lumRGB(n >> 16 & 255, n >> 8 & 255, n & 255); }
+function _bandAnalise(px, w, h) {
+  // cor média, luminância e se é "de uma cor só" (uma faixa de matiz domina)
+  const faixas = {}; let n = 0, lum = 0, sat0 = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i + 3] < 140) continue;
+    const r = px[i], g = px[i + 1], b = px[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    n++; lum += _lumRGB(r, g, b);
+    if (!mx || d / mx < .25) { sat0++; continue; }
+    let hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    const k = Math.round(((hh * 60 + 360) % 360) / 30) % 12; faixas[k] = (faixas[k] || 0) + 1;
+  }
+  if (!n) return { mono: true, lum: 1 };
+  const coloridos = Object.values(faixas).reduce((a, b) => a + b, 0);
+  const topo = Object.entries(faixas).sort((a, b) => b[1] - a[1])[0];
+  // uma cor domina sozinha (o detalhe amarelo da Visa não conta; o vermelho + laranja da Master conta como duas)
+  const mono = coloridos < n * .15 || (topo ? topo[1] : 0) / coloridos > .8;
+  return { mono, lum: lum / n };
+}
+function _bandAjusta(img, info) {
+  if (!info) return;
+  if (info.fundo) { img.classList.add("com-fundo"); return; }
+  const cc = getComputedStyle(img.closest(".cc") || document.body).getPropertyValue("--cc").trim();
+  const lc = _lumHex(cc), lo = info.lum;
+  const contraste = (Math.max(lc, lo) + .05) / (Math.min(lc, lo) + .05);
+  img.classList.remove("branca", "selo");
+  if (contraste < 2.6) img.classList.add(info.mono ? "branca" : "selo");
+}
 function _semFundo(img) {
   if (img.dataset.limpo) return;
   img.dataset.limpo = "1";
   const orig = img.getAttribute("src");
-  const aplica = r => { if (r === "fundo") img.classList.add("com-fundo"); else if (r && r !== orig) img.src = r; };
-  if (_SEM_FUNDO.has(orig)) return aplica(_SEM_FUNDO.get(orig));
+  const usa = info => { if (info?.src && info.src !== orig) { img.dataset.limpo = "1"; img.src = info.src; } _bandAjusta(img, info); };
+  if (_SEM_FUNDO.has(orig)) return usa(_SEM_FUNDO.get(orig));
   try {
     const w = img.naturalWidth, h = img.naturalHeight; if (!w || !h) return;
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
@@ -7955,17 +7986,16 @@ function _semFundo(img) {
     const d = c.getImageData(0, 0, w, h), px = d.data;
     const canto = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2], px[i + 3]]; };
     const cs = [canto(0, 0), canto(w - 1, 0), canto(0, h - 1), canto(w - 1, h - 1)];
-    if (cs.every(q => q[3] < 20)) { _SEM_FUNDO.set(orig, orig); return; }            // já é transparente
-    // Só tira fundo BRANCO. Bandeira com fundo colorido de propósito (Amex, Hipercard, Elo...)
-    // fica inteira, só com os cantos arredondados: antes o recorte comia o desenho.
-    const branco = cs.filter(q => q[3] > 200 && Math.min(q[0], q[1], q[2]) > 228).length >= 3;
-    if (!branco) { _SEM_FUNDO.set(orig, "fundo"); return aplica("fundo"); }
-    const copia = new Uint8ClampedArray(px);
-    _fundoTransparente(c, w, h, 34, d);
-    let tirou = 0; for (let i = 3; i < px.length; i += 4) if (px[i] === 0 && copia[i] !== 0) tirou++;
-    if (tirou / (w * h) > .9) { _SEM_FUNDO.set(orig, "fundo"); return aplica("fundo"); }  // ia sumir o logo (desenho branco)
-    const limpo = cv.toDataURL("image/png");
-    _SEM_FUNDO.set(orig, limpo); aplica(limpo);
+    let info;
+    if (cs.every(q => q[3] < 20)) info = { src: orig, ..._bandAnalise(px, w, h) };                 // já transparente
+    else if (cs.filter(q => q[3] > 200 && Math.min(q[0], q[1], q[2]) > 228).length < 3) info = { src: orig, fundo: true };  // fundo colorido de propósito
+    else {
+      const copia = new Uint8ClampedArray(px);
+      _fundoTransparente(c, w, h, 34, d);
+      let tirou = 0; for (let i = 3; i < px.length; i += 4) if (px[i] === 0 && copia[i] !== 0) tirou++;
+      info = tirou / (w * h) > .9 ? { src: orig, fundo: true } : { src: cv.toDataURL("image/png"), ..._bandAnalise(px, w, h) };
+    }
+    _SEM_FUNDO.set(orig, info); usa(info);
   } catch { /* imagem de outro endereço: fica como está */ }
 }
 function _recorteProcessar() {
