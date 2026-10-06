@@ -4330,7 +4330,7 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
           <div class="forn-box">
             <div class="forn-atual" id="fc-forn-atual"></div>
             <div class="search forn-busca"><span>${icon("search")}</span>
-              <input id="fc-forn-busca" autocomplete="off" placeholder="Buscar ou cadastrar: Mercado Livre, Cassol..." oninput="_fornFiltrar(this.value)"></div>
+              <input class="search-i" id="fc-forn-busca" autocomplete="off" placeholder="Buscar ou cadastrar: Mercado Livre, Cassol..." oninput="_fornFiltrar(this.value)"></div>
             <div class="forn-chips" id="fc-forn-chips"></div>
           </div></div>
         <div class="campo full"><label>Como foi pago?</label>
