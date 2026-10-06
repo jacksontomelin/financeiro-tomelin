@@ -5,7 +5,7 @@ from sqlalchemy import (
     Column, Integer, String, Numeric, Date, DateTime, Boolean,
     ForeignKey, Text, Enum, JSON, LargeBinary,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 import enum
 
 from .database import Base
@@ -26,7 +26,8 @@ class Usuario(Base):
     criado_em = Column(DateTime, default=datetime.utcnow)
     ultimo_acesso = Column(DateTime, nullable=True)       # gravado a cada login
     ultimo_acesso_ip = Column(String(60), nullable=True)  # IP do último acesso
-    whatsapp = Column(String(20), nullable=True)          # número para receber o código de nova senha
+    # carregado só quando usado: se a coluna ainda não existir no banco, o login continua funcionando
+    whatsapp = deferred(Column(String(20), nullable=True))   # número para receber o código de nova senha
 
 
 class Conta(Base):

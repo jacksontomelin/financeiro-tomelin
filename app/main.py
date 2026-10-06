@@ -62,6 +62,39 @@ def _chave_sessao(engine):
         print("aviso: chave de sessão não persistida:", e)
 
 
+def _senha_emergencia():
+    """Ficou sem acesso e sem WhatsApp/e-mail configurados? Defina ADMIN_REDEFINIR_SENHA
+    no ambiente (Coolify), reinicie, entre com ela e depois apague a variável.
+    Vale para o usuário de ADMIN_EMAIL; se ele não existir, para o primeiro administrador."""
+    import os
+    nova = (os.environ.get("ADMIN_REDEFINIR_SENHA") or "").strip()
+    if not nova:
+        return
+    if len(nova) < 6:
+        log.error("ADMIN_REDEFINIR_SENHA precisa ter no mínimo 6 caracteres: senha não trocada.")
+        return
+    from .database import SessionLocal
+    from . import models, security
+    db = SessionLocal()
+    try:
+        u = db.query(models.Usuario).filter(models.Usuario.email == settings.ADMIN_EMAIL.lower().strip()).first()
+        if not u:
+            u = (db.query(models.Usuario).join(models.UsuarioAvatar, models.UsuarioAvatar.usuario_id == models.Usuario.id)
+                 .filter(models.UsuarioAvatar.papel == "admin").order_by(models.Usuario.id).first())
+        if not u:
+            log.error("ADMIN_REDEFINIR_SENHA: nenhum administrador encontrado.")
+            return
+        if not security.confere_senha(nova, u.senha_hash):
+            u.senha_hash = security.hash_senha(nova)
+            u.ativo = True
+            db.commit()
+            log.warning("Senha do administrador %s redefinida por ADMIN_REDEFINIR_SENHA. Apague a variável depois de entrar.", u.email)
+    except Exception as e:
+        log.error("ADMIN_REDEFINIR_SENHA falhou: %s", e)
+    finally:
+        db.close()
+
+
 def _migrar(engine):
     """Adiciona colunas novas em tabelas existentes sem quebrar o banco."""
     migrações = [
@@ -132,14 +165,45 @@ def _migrar(engine):
     ]
     # Cada comando na sua própria transação: no PostgreSQL, um erro aborta
     # a transação inteira e os comandos seguintes falhariam em silêncio.
+    falhas = []
     for sql in migrações:
         try:
             with engine.begin() as conn:
+                if engine.dialect.name == "postgresql":
+                    conn.execute(text("SET LOCAL lock_timeout = '8s'"))   # não fica preso esperando o contêiner antigo
                 conn.execute(text(sql))
-        except Exception:
-            pass  # coluna já existe / não suportado no SQLite: create_all cuida
+        except Exception as e:
+            if engine.dialect.name == "postgresql":
+                falhas.append(sql)
+                log.warning("Migração falhou (tento de novo em segundo plano): %s · %s", sql[:90], str(e).splitlines()[0][:160])
     _ajusta_membros(engine)
-    log.info("Migrações aplicadas.")
+    if falhas:
+        _migrar_depois(engine, falhas)
+    log.info("Migrações aplicadas%s.", f" ({len(falhas)} pendente(s))" if falhas else "")
+
+
+def _migrar_depois(engine, falhas):
+    """Tabela travada pelo contêiner antigo durante o deploy: tenta de novo por alguns minutos."""
+    import threading, time
+
+    def rodar():
+        pendentes = list(falhas)
+        for tentativa in range(30):
+            time.sleep(10)
+            for sql in list(pendentes):
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text("SET LOCAL lock_timeout = '8s'"))
+                        conn.execute(text(sql))
+                    pendentes.remove(sql)
+                    log.info("Migração aplicada na tentativa %d: %s", tentativa + 2, sql[:90])
+                except Exception:
+                    pass
+            if not pendentes:
+                return
+        for sql in pendentes:
+            log.error("Migração NÃO aplicada: %s", sql[:120])
+    threading.Thread(target=rodar, daemon=True).start()
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -178,6 +242,7 @@ async def lifespan(app: FastAPI):
     seed.seed()
     _ajusta_membros(engine)   # depois do seed: banco novo também ganha o admin
     _chave_sessao(engine)     # redeploy não desloga mais ninguém
+    _senha_emergencia()       # ADMIN_REDEFINIR_SENHA no ambiente: troca a senha do administrador
     try:
         from .database import SessionLocal as _SR
         from . import recorrencia as _rec

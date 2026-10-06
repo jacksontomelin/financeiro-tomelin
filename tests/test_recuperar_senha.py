@@ -75,3 +75,15 @@ def test_login_errado_avisa_tentativas(client, api):
 def test_whatsapp_invalido_no_cadastro(api):
     r = api.post("/api/usuarios", json={"nome": "Zé", "email": "ze@teste.com", "senha": "senha123", "whatsapp": "123"})
     assert r.status_code == 422 and r.json()["campo"] == "whatsapp"
+
+
+def test_senha_de_emergencia_do_admin(client, api, monkeypatch):
+    from app import main
+    from app.config import settings
+    monkeypatch.setenv("ADMIN_REDEFINIR_SENHA", "Emergencia123")
+    main._senha_emergencia()
+    r = client.post("/api/auth/login", json={"email": settings.ADMIN_EMAIL, "senha": "Emergencia123"})
+    assert r.status_code == 200, r.text
+    monkeypatch.setenv("ADMIN_REDEFINIR_SENHA", settings.ADMIN_SENHA)   # devolve a senha dos outros testes
+    main._senha_emergencia()
+    assert client.post("/api/auth/login", json={"email": settings.ADMIN_EMAIL, "senha": settings.ADMIN_SENHA}).status_code == 200
