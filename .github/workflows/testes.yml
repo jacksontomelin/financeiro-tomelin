@@ -47,3 +47,48 @@ jobs:
           PY
       - name: Sintaxe do app.js
         run: node --check app/static/app.js
+
+  tela:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tomelin
+          POSTGRES_PASSWORD: tomelin
+          POSTGRES_DB: tomelin_tela
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tomelin" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://tomelin:tomelin@localhost:5432/tomelin_tela
+      SECRET_KEY: chave-de-teste-com-mais-de-trinta-e-dois-caracteres
+      ADMIN_SENHA: SenhaDeTeste123
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: pip install -r requirements.txt
+      - name: Sobe o sistema
+        run: |
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > servidor.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:8000/api/health && break; sleep 1; done
+      - name: Instala o navegador
+        run: |
+          cd tests/e2e && npm init -y >/dev/null && npm i playwright@1.55.0 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+      - name: Testes da tela
+        run: |
+          cd tests/e2e && node app.mjs > resultado.txt 2>&1; st=$?
+          cat resultado.txt
+          echo "::notice::$(tail -n 1 resultado.txt | head -c 200) $(grep -c '  ok  ' resultado.txt) passos ok (tela)"
+          grep 'FALHOU\|erro de JS\|console:' resultado.txt | head -20 | while read -r l; do echo "::error title=tela::$l"; done
+          exit $st
+      - name: Log do servidor se falhar
+        if: failure()
+        run: tail -n 60 servidor.log | while read -r l; do echo "::warning title=servidor::$l"; done
