@@ -45,13 +45,15 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
         atraso = _ATRASO.get("ultimo")
         extra = f" · a mensagem levou {atraso} s para chegar (via {_ATRASO.get('via') or 'gateway'})" if atraso \
             else f" · via {_ATRASO.get('via') or 'gateway'}"
+        if atraso and _ATRASO.get("detalhe"):
+            extra += f" [{_ATRASO['detalhe']}]"
         ent["resultado"] = (f"{como} em {seg} s{extra}" if ok
                             else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)")
         return ok
     zap_fila.disparar("Resposta no grupo", tarefa)
 
 
-_ATRASO: dict = {"ultimo": None, "webhook_em": 0.0, "via": None}
+_ATRASO: dict = {"ultimo": None, "webhook_em": 0.0, "via": None, "detalhe": None}
 
 
 def _id_msg(body: dict) -> str:
@@ -112,6 +114,17 @@ def _tratar(body: dict, db: Session, via: str = "gateway"):
         from datetime import timezone as _tz
         seg = (datetime.now(_tz.utc) - ts_msg).total_seconds()
         _ATRASO["ultimo"] = f"{seg:.0f}" if seg >= 3 else None
+        # onde o tempo foi gasto (o gateway manda recebido_em e processamento_ms)
+        partes = []
+        rec = _ts_aware(body.get("recebido_em"))
+        if rec:
+            partes.append(f"WhatsApp→gateway {(rec - ts_msg).total_seconds():.0f} s")
+        if body.get("processamento_ms") is not None:
+            partes.append(f"gateway processando {float(body['processamento_ms']) / 1000:.1f} s")
+        env = _ts_aware(body.get("timestamp"))
+        if env:
+            partes.append(f"gateway→sistema {(datetime.now(_tz.utc) - env).total_seconds():.1f} s")
+        _ATRASO["detalhe"] = " · ".join(partes) if partes else None
     mid = _id_msg(body)
     if mid and not _marcar_vista(mid):
         return {"ok": True, "ignorado": "já respondida pela escuta"}
