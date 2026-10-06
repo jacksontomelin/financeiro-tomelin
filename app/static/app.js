@@ -577,6 +577,7 @@ const NAV = [
   { id: "dashboard",    nome: "Visão geral",          ic: "grid",      sub: "Resumo do mês",                        badge: false },
   { id: "vencimentos",  nome: "Vencimentos",           ic: "clock",     sub: "Contas atrasadas e a vencer",          badge: true  },
   { id: "relatorios",   nome: "Relatórios",            ic: "pie",       sub: "Balancete, patrimônio e projeções",    badge: false },
+  { id: "documentos",   nome: "Documentos emitidos",   ic: "doc",       sub: "PDFs com QR de validação",             badge: false },
   { id: "orcamento",    nome: "Orçamento",             ic: "target",    sub: "Limite de gasto por categoria",        badge: false },
   { sec: "Movimentação" },
   { id: "receber",      nome: "Contas a receber",      ic: "arrowDown", sub: "Receitas previstas e realizadas",      badge: false },
@@ -726,6 +727,7 @@ function _atalhoClick(btn) {
 function abrirMenuMais() {
   const MAIS_ITENS = [
     { id:"relatorios",    ic:"chart",    nome:"Relatórios",         cor:"i-navy" },
+    { id:"documentos",    ic:"doc",      nome:"Documentos",         cor:"i-green" },
     { id:"orcamento",     ic:"target",   nome:"Orçamento",          cor:"i-gold" },
     { id:"metas",         ic:"star",     nome:"Metas financeiras",  cor:"i-gold" },
     { id:"compras",       ic:"receipt",  nome:"Compras e cartões",  cor:"i-navy" },
@@ -800,6 +802,7 @@ async function setView(id, opts = {}) {
     else if (id === "contatos") await viewContatos(v);
     else if (id === "veiculos") await viewVeiculos(v);
     else if (id === "relatorios") await viewRelatorios(v);
+    else if (id === "documentos") await viewDocumentos(v);
     else if (id === "orcamento") await viewOrcamento(v);
     else if (id === "whatsapp") { await viewWhatsapp(v); rodarDiagnosticoWA(); }
     else if (id === "usuarios") await viewUsuarios(v);
@@ -6588,6 +6591,55 @@ function _filtroChips() {
   box.innerHTML = chips.map(([k, ic, t]) => `<button class="filtro-chip" onclick="FILTRO.${k}='';_filtroChips();recarregarTabela()">${icon(ic)}${esc(t)}${icon("x")}</button>`).join("");
 }
 
+/* ── Documentos emitidos ── */
+const _DOC_TIPOS = { recibo: ["Recibo", "receipt", "#1F6F5C", "#3EC28F"], balancete: ["Balancete", "chart", "#082D51", "#4F8BC9"],
+  patrimonio: ["Patrimônio", "bank", "#8A6D1E", "#E2C46E"], imposto_renda: ["Imposto de Renda", "doc", "#14594C", "#2F9E7E"] };
+let _DOC_FILTRO = { tipo: "", busca: "" }, _docTimer;
+async function viewDocumentos(v) {
+  v.innerHTML = `
+    <div class="doc-topo">
+      <div class="search" style="flex:1;min-width:200px"><span>${icon("search")}</span>
+        <input class="search-i" id="doc-busca" placeholder="Buscar por nome, período ou código..." value="${esc(_DOC_FILTRO.busca)}"
+          oninput="clearTimeout(_docTimer);_docTimer=setTimeout(()=>{_DOC_FILTRO.busca=this.value;_docCarregar()},300)"></div>
+      <div class="periodos" style="padding:0">${[["", "Todos"], ...Object.entries(_DOC_TIPOS).map(([k, t]) => [k, t[0]])]
+        .map(([k, r]) => `<button class="periodo${_DOC_FILTRO.tipo === k ? " on" : ""}" onclick="_DOC_FILTRO.tipo='${k}';this.parentElement.querySelectorAll('.periodo').forEach(b=>b.classList.toggle('on',b===this));_docCarregar()">${r}</button>`).join("")}</div>
+    </div>
+    <div class="doc-info">${icon("shield")}<span>Todo PDF que o sistema gera fica guardado aqui com o código do QR. Quem escaneia o QR vê se o documento é autêntico e pode baixar o original.</span></div>
+    <div id="doc-lista" class="doc-lista">${ilusCarregando(70)}</div>`;
+  await _docCarregar();
+}
+async function _docCarregar() {
+  const box = document.getElementById("doc-lista"); if (!box) return;
+  const q = new URLSearchParams({ busca: _DOC_FILTRO.busca, tipo: _DOC_FILTRO.tipo });
+  let d; try { d = await api(`/api/documentos?${q}`); } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!d.itens.length) {
+    box.innerHTML = `<div class="empty" style="padding:40px">${ilus("doc")}<p>${d.total ? "Nada encontrado com esse filtro." : "Nenhum documento emitido ainda. Gere um recibo ou relatório em PDF e ele aparece aqui."}</p></div>`;
+    return;
+  }
+  const quando = iso => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  box.innerHTML = d.itens.map((x, i) => { const [nome, ic, c1, c2] = _DOC_TIPOS[x.tipo] || ["Documento", "doc", "#305C74", "#7E8C9A"]; return `
+    <div class="doc-item" style="--c1:${c1};--c2:${c2};--i:${Math.min(i, 12)}">
+      <span class="doc-ic">${icon(ic)}${x.estilo === "cupom" ? `<em>cupom</em>` : ""}</span>
+      <div class="grow doc-txt"><b>${esc(x.titulo)}</b><small>${esc(x.resumo || nome)}</small>
+        <small class="doc-cod">${quando(x.emitido_em)} · <code>${x.codigo}</code></small></div>
+      ${x.valor != null ? `<span class="doc-val mono-num">${money(x.valor)}</span>` : ""}
+      <div class="doc-bts">
+        <a class="btn btn-ghost btn-sm" href="/verificar/${x.codigo}" target="_blank" rel="noopener" title="Página de validação">${icon("checkCircle")}</a>
+        <a class="btn btn-ghost btn-sm" href="/verificar/${x.codigo}/pdf?baixar=1" title="Baixar o PDF original">${icon("download")}</a>
+        <button class="btn btn-wa btn-sm btn-wa-mini" onclick="_docZap('${x.codigo}', this)" title="Mandar no WhatsApp"><span class="wa-ic">${waDesenho()}</span><span class="wa-ticks">${_WA_TICKS}</span></button>
+      </div>
+    </div>`; }).join("") + (d.total > d.itens.length ? `<div class="sub" style="text-align:center;padding:8px">Mostrando ${d.itens.length} de ${d.total}. Use a busca para achar os mais antigos.</div>` : "");
+}
+async function _docZap(codigo, btn) {
+  return _waBotao(btn, async () => {
+    try {
+      const r = await api(`/api/documentos/${codigo}/whatsapp`, { method: "POST" });
+      if (r.enviado) { toast("Documento enviado no grupo", "wa"); return true; }
+      toast(r.motivo || "Não foi enviado.", "warn"); return false;
+    } catch (e) { toast(e.message, "err"); return false; }
+  });
+}
+
 /* ── Quem paga ── */
 function _quemEscolher(b) {
   b.parentElement.querySelectorAll(".quem-opt").forEach(x => x.classList.toggle("on", x === b));
@@ -7874,7 +7926,7 @@ document.addEventListener("click", (e) => {
 });
 
 Object.assign(window, {
-  abrirFatura, abrirIR, _quemEscolher, _filtroChips, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
+  abrirFatura, abrirIR, _quemEscolher, _filtroChips, _docCarregar, _docZap, _bkAgora, _bkBaixar, waEnviar, abrirZap, _waBotao, btnWA, waDesenho, _fatPagar, _voltarTela,
   _bandEscolher, _bandRemover, _bandArquivo, _recortePrev, _recorteDesenhar, _recorteSalvar,
   exemplosCarregar, exemplosApagar, exemplosZerar,
   _orcEditar, _orcFecharEditor,

@@ -4086,3 +4086,25 @@ html.dark .ir-chip { color: #7FD8B6; }
 .pp-barra { display: flex; height: 7px; border-radius: 4px; background: var(--line-2); overflow: hidden; margin-top: 5px; }
 .pp-barra i { background: var(--c); } .pp-barra em { background: repeating-linear-gradient(45deg, var(--c), var(--c) 3px, transparent 3px, transparent 6px); opacity: .55; }
 .pp-tot { font-weight: 800; font-size: 13.5px; }
+
+/* ── documentos emitidos ── */
+.doc-topo { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.doc-info { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: 14px; margin-bottom: 14px; font-size: 12.5px;
+  color: var(--ink-2); background: linear-gradient(135deg, rgba(47,158,126,.12), rgba(48,92,116,.06)); }
+.doc-info svg { width: 18px; height: 18px; color: #2F9E7E; flex-shrink: 0; }
+.doc-lista { display: flex; flex-direction: column; gap: 8px; }
+.doc-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-sm); animation: telaEntra .4s var(--suave) backwards; animation-delay: calc(var(--i) * 30ms); }
+.doc-ic { position: relative; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: #fff; flex-shrink: 0;
+  background: radial-gradient(120% 100% at 100% 0%, rgba(255,255,255,.3), transparent 55%), linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: 0 8px 16px -8px var(--c1); } .doc-ic svg { width: 21px; height: 21px; }
+.doc-ic em { position: absolute; bottom: -6px; font-style: normal; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: #3A4654; }
+.doc-txt { min-width: 0; } .doc-txt b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-txt small { display: block; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-cod code { font-size: 11px; letter-spacing: .04em; }
+.doc-val { font-weight: 800; font-size: 14px; white-space: nowrap; }
+.doc-bts { display: flex; gap: 4px; flex-shrink: 0; } .doc-bts .btn { padding: 6px 8px; } .doc-bts svg { width: 16px; height: 16px; }
+@media (max-width: 640px) {
+  .doc-item { flex-wrap: wrap; } .doc-txt { flex: 1 1 calc(100% - 60px); }
+  .doc-val { margin-left: 56px; } .doc-bts { margin-left: auto; }
+}
