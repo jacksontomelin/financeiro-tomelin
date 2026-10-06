@@ -364,11 +364,11 @@ function campoLogo(hint) {
       <div id="logo-prev" class="lg-av lg-big"></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:6px">
         <input type="file" accept="image/*" onchange="escolherLogo(this)">
-        <input id="logo-url" placeholder="URL da imagem" oninput="logoURLInput(this.value)">
+        <input id="logo-url" placeholder="ou cole o link da imagem" oninput="logoURLInput(this.value)">
       </div>
       <button class="btn-icon" title="Remover logo" onclick="limparLogo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
     </div>
-    <div class="meta">${hint || "PNG/JPG. A imagem é reduzida e guardada no próprio sistema."}</div>
+    <div class="meta">${hint || "Arquivo ou link: a imagem é baixada e guardada no próprio sistema, sem depender do link depois."}</div>
   </div>`;
 }
 function initLogo(val) {
@@ -1932,7 +1932,7 @@ function formConta(c) {
           <div class="campo"><label>Dia de fechamento</label><input id="c-dia_fechamento" type="number" min="1" max="31" placeholder="Ex.: 3" value="${e.dia_fechamento ?? ""}"></div>
           <div class="campo"><label>Dia de vencimento</label><input id="c-dia_vencimento" type="number" min="1" max="31" placeholder="Ex.: 10" value="${e.dia_vencimento ?? ""}"></div>
         </div>
-        ${campoLogo("Logo do banco, do cartão ou da bandeira (você escolhe a imagem). PNG ou JPG.")}
+        ${campoLogo("Logo do banco ou do cartão: arquivo ou link. A imagem fica guardada no sistema, sem depender do link.")}
       </div></div>
       <div class="modal-f">
         <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
@@ -2389,7 +2389,7 @@ function formContato(c) {
             oninput="this.value=this.value.toUpperCase()"></div>
 
         <!-- Logo e obs -->
-        ${campoLogo("Logo da empresa (PNG ou JPG, fica salvo no sistema)")}
+        ${campoLogo("Logo da empresa: arquivo ou link. A imagem fica guardada no sistema, sem depender do link.")}
         <div class="campo full"><label>Observações</label>
           <textarea id="o-obs" rows="2">${e.obs||""}</textarea></div>
 

@@ -207,7 +207,9 @@ def pagar_fatura(cid: int, dados: PagarFaturaIn, db: Session = Depends(get_db)):
 @router.post("", response_model=schemas.ContaOut)
 def criar(dados: schemas.ContaIn, db: Session = Depends(get_db)):
     _valida_cartao(dados)
-    c = models.Conta(**dados.model_dump())
+    from ..logo_url import guardar_no_payload
+    payload = dados.model_dump(); guardar_no_payload(payload)   # logo por link vira imagem guardada
+    c = models.Conta(**payload)
     db.add(c); db.commit(); db.refresh(c)
     out = schemas.ContaOut.model_validate(c)
     out.saldo_atual = service.saldo_conta(db, c)
@@ -227,7 +229,9 @@ def editar(cid: int, dados: schemas.ContaIn, db: Session = Depends(get_db)):
     c = db.get(models.Conta, cid)
     if not c:
         raise HTTPException(404, "Conta não encontrada.")
-    for k, v in dados.model_dump().items():
+    from ..logo_url import guardar_no_payload
+    payload = dados.model_dump(); guardar_no_payload(payload)
+    for k, v in payload.items():
         setattr(c, k, v)
     db.commit(); db.refresh(c)
     out = schemas.ContaOut.model_validate(c)

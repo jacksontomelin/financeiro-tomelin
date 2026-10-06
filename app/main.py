@@ -187,6 +187,11 @@ async def lifespan(app: FastAPI):
     from .database import SessionLocal as _SL
     from . import cfg as _cfg
     _db = _SL(); _cfg.seed_defaults(_db); _db.close()
+    try:   # logos antigos salvos como link passam a ficar guardados no sistema
+        from . import logo_url as _lg
+        _lg.converter_antigos()
+    except Exception as e:
+        print("aviso: logos antigos não convertidos:", e)
     try:   # primeira vez: marca Saúde, Escola etc. como dedutíveis no IR
         from . import imposto_renda as _ir
         _db = _SL(); _ir.marcar_padrao(_db); _db.close()

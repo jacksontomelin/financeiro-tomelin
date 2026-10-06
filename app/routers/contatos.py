@@ -38,6 +38,8 @@ def _checa_doc(doc: str | None):
 def criar(dados: schemas.ContatoIn, db: Session = Depends(get_db)):
     payload = dados.model_dump()
     payload["documento"] = _checa_doc(payload.get("documento"))
+    from ..logo_url import guardar_no_payload
+    guardar_no_payload(payload)   # logo por link vira imagem guardada no sistema
     c = models.Contato(**payload)
     db.add(c); db.commit(); db.refresh(c)
     return c
@@ -57,6 +59,8 @@ def editar(cid: int, dados: schemas.ContatoIn, db: Session = Depends(get_db)):
         raise HTTPException(404, "Contato não encontrado.")
     payload = dados.model_dump()
     payload["documento"] = _checa_doc(payload.get("documento"))
+    from ..logo_url import guardar_no_payload
+    guardar_no_payload(payload)
     for k, v in payload.items():
         setattr(c, k, v)
     db.commit(); db.refresh(c)
