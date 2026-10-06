@@ -4301,3 +4301,5 @@ html.dark .fat-item.com-forn { background: linear-gradient(100deg, color-mix(in 
 .entrada-barra::after { content: ""; position: absolute; inset: 0; width: 40%; border-radius: 4px; background: linear-gradient(90deg, #2F817A, #E2C46E);
   animation: entradaBarra 1s ease-in-out infinite; }
 @keyframes entradaBarra { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+/* bandeira que já tem fundo colorido: inteira, com cantos arredondados */
+.cc-band.img img.com-fundo { border-radius: 7px; box-shadow: 0 2px 6px rgba(0,0,0,.25); filter: none; }

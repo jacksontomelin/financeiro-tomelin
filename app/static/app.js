@@ -7946,17 +7946,26 @@ function _semFundo(img) {
   if (img.dataset.limpo) return;
   img.dataset.limpo = "1";
   const orig = img.getAttribute("src");
-  if (_SEM_FUNDO.has(orig)) { img.src = _SEM_FUNDO.get(orig); return; }
+  const aplica = r => { if (r === "fundo") img.classList.add("com-fundo"); else if (r && r !== orig) img.src = r; };
+  if (_SEM_FUNDO.has(orig)) return aplica(_SEM_FUNDO.get(orig));
   try {
     const w = img.naturalWidth, h = img.naturalHeight; if (!w || !h) return;
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
     const c = cv.getContext("2d", { willReadFrequently: true }); c.drawImage(img, 0, 0);
     const d = c.getImageData(0, 0, w, h), px = d.data;
-    const a = (x, y) => px[(y * w + x) * 4 + 3];
-    if ([a(0, 0), a(w - 1, 0), a(0, h - 1), a(w - 1, h - 1)].every(v => v < 20)) { _SEM_FUNDO.set(orig, orig); return; }   // já é transparente
-    _fundoTransparente(c, w, h, 66, d);
+    const canto = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2], px[i + 3]]; };
+    const cs = [canto(0, 0), canto(w - 1, 0), canto(0, h - 1), canto(w - 1, h - 1)];
+    if (cs.every(q => q[3] < 20)) { _SEM_FUNDO.set(orig, orig); return; }            // já é transparente
+    // Só tira fundo BRANCO. Bandeira com fundo colorido de propósito (Amex, Hipercard, Elo...)
+    // fica inteira, só com os cantos arredondados: antes o recorte comia o desenho.
+    const branco = cs.filter(q => q[3] > 200 && Math.min(q[0], q[1], q[2]) > 228).length >= 3;
+    if (!branco) { _SEM_FUNDO.set(orig, "fundo"); return aplica("fundo"); }
+    const copia = new Uint8ClampedArray(px);
+    _fundoTransparente(c, w, h, 34, d);
+    let tirou = 0; for (let i = 3; i < px.length; i += 4) if (px[i] === 0 && copia[i] !== 0) tirou++;
+    if (tirou / (w * h) > .9) { _SEM_FUNDO.set(orig, "fundo"); return aplica("fundo"); }  // ia sumir o logo (desenho branco)
     const limpo = cv.toDataURL("image/png");
-    _SEM_FUNDO.set(orig, limpo); img.src = limpo;
+    _SEM_FUNDO.set(orig, limpo); aplica(limpo);
   } catch { /* imagem de outro endereço: fica como está */ }
 }
 function _recorteProcessar() {
