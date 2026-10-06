@@ -4171,3 +4171,17 @@ html.dark .hi-mud b { color: #7FD8B6; } .hi-mud em { color: var(--red); font-sty
 .forn-box .forn-busca > span { display: flex; position: static; color: var(--ink-3); } .forn-box .forn-busca > span svg { width: 17px; height: 17px; }
 .forn-box .forn-busca input { flex: 1; min-width: 0; border: 0 !important; background: transparent !important; box-shadow: none !important;
   padding: 11px 0 !important; outline: none; }
+
+/* ── compra com a cor do logo do fornecedor ── */
+.fat-item.com-forn { margin: 6px 0; padding: 9px 12px; border-bottom: none; border-radius: 14px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--forn) 24%, var(--card)), color-mix(in srgb, var(--forn) 7%, var(--card)) 75%);
+  box-shadow: inset 4px 0 0 var(--forn), 0 6px 14px -12px var(--forn); transition: transform .2s var(--mola); }
+.fat-item.com-forn:hover { transform: translateX(3px); }
+.fat-item.com-forn .fat-logo .lg-av { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--forn); }
+.fat-item.com-forn .fat-parc { background: color-mix(in srgb, var(--forn) 30%, transparent); color: var(--ink); }
+.compra-card.com-forn { --acc: var(--forn); --acc2: var(--forn);
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--forn) 20%, transparent), transparent 65%);
+  box-shadow: inset 0 4px 0 0 var(--forn), 0 10px 24px -18px var(--forn); }
+.compra-card.com-forn .lg-av { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--forn); }
+html.dark .fat-item.com-forn { background: linear-gradient(100deg, color-mix(in srgb, var(--forn) 26%, var(--card)), var(--card) 80%); }
+.compra-card .sub svg, .compra-card .btn svg { width: 15px; height: 15px; vertical-align: -3px; }

@@ -4370,6 +4370,48 @@ function abrirFormCompra(lancamentoExistente, nfeDados) {
   _fornIniciar(d);
 }
 
+/* ── Cor do logo do fornecedor: a compra ganha a cor da loja (amarelo do Mercado Livre...) ── */
+const _COR_LOGO = new Map();
+function _corDoLogo(src) {
+  if (!src) return Promise.resolve(null);
+  if (_COR_LOGO.has(src)) return Promise.resolve(_COR_LOGO.get(src));
+  return new Promise(res => {
+    const img = new Image();
+    if (/^https?:/.test(src) && !src.startsWith(location.origin)) img.crossOrigin = "anonymous";
+    img.onload = () => {
+      let cor = null;
+      try {
+        const n = 48, cv = document.createElement("canvas"); cv.width = n; cv.height = n;
+        const c = cv.getContext("2d", { willReadFrequently: true }); c.drawImage(img, 0, 0, n, n);
+        const px = c.getImageData(0, 0, n, n).data, cestos = {};
+        for (let i = 0; i < px.length; i += 4) {
+          const [r, g, b, a] = [px[i], px[i + 1], px[i + 2], px[i + 3]];
+          if (a < 128) continue;
+          const mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0;
+          if (sat < .28 || mx < 45) continue;                       // ignora branco, preto e cinza
+          let h = 0; const d = mx - mn;
+          if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+          const k = Math.round(((h * 60 + 360) % 360) / 20);       // 18 faixas de cor
+          const q = cestos[k] || (cestos[k] = { n: 0, r: 0, g: 0, b: 0 });
+          const peso = sat * (mx / 255); q.n += peso; q.r += r * peso; q.g += g * peso; q.b += b * peso;
+        }
+        const top = Object.values(cestos).sort((a, b) => b.n - a.n)[0];
+        if (top && top.n > 6) cor = `rgb(${Math.round(top.r / top.n)}, ${Math.round(top.g / top.n)}, ${Math.round(top.b / top.n)})`;
+      } catch { cor = null; }                                       // imagem de outro site sem permissão
+      _COR_LOGO.set(src, cor); res(cor);
+    };
+    img.onerror = () => { _COR_LOGO.set(src, null); res(null); };
+    img.src = src;
+  });
+}
+function _pintarPorLogo(raiz) {
+  (raiz || document).querySelectorAll(".pinta-logo").forEach(async el => {
+    const src = el.querySelector(".lg-av img")?.getAttribute("src");
+    const cor = await _corDoLogo(src);
+    if (cor) { el.style.setProperty("--forn", cor); el.classList.add("com-forn"); }
+  });
+}
+
 /* ── Fornecedor da compra: escolhe dos contatos (com logo) ou cadastra na hora ── */
 let _FORN_NFE = null;
 const _fornLista = () => (State.contatos || []).filter(c => c.tipo !== "cliente").sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
@@ -4577,13 +4619,14 @@ async function viewCompras(v) {
         <div class="sub">Use "Ler Nota Fiscal" em Lançamentos para cadastrar compras com itens e parcelamento.</div>
       </div>` : compras.map(c => _cardCompra(c)).join("")}
   `;
+  _pintarPorLogo(v);
 }
 
 function _cardCompra(c) {
   const pm = c.parcelamento;
   const progresso = pm ? Math.round((pm.parcelas_pagas / pm.total_parcelas) * 100) : 0;
   return `
-    <div class="card card-pad" style="margin-bottom:14px">
+    <div class="card card-pad compra-card${c.contato_logo ? " pinta-logo" : ""}" style="margin-bottom:14px">
       <div style="display:flex;align-items:flex-start;gap:12px;cursor:pointer" onclick="_toggleItensCompra(${c.id})">
         ${c.contato_id ? avatarLogo(c.contato_logo, c.contato_nome, 40) : `<span class="card-ico i-navy">${icon("receipt")}</span>`}
         <div style="flex:1;min-width:0">
@@ -7870,7 +7913,7 @@ async function viewFatura(v) {
   for (const it of f.itens) { const g = it.data || ""; if (!grupos.length || grupos.at(-1).k !== g) grupos.push({ k: g, itens: [] }); grupos.at(-1).itens.push(it); }
   const linha = it => {
     const cat = (State.cats || []).find(c => c.id === it.categoria_id);
-    return `<div class="fat-item${it.pago ? " pago" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
+    return `<div class="fat-item${it.pago ? " pago" : ""}${it.contato_logo ? " pinta-logo" : ""}" style="--cat:${_corOk(cat?.cor, "#7E8C9A")}">
       ${it.contato_nome ? `<span class="fat-ic fat-logo">${avatarLogo(it.contato_logo, it.contato_nome, 34)}</span>` : `<span class="fat-ic">${icon(it.tipo === "parcela" ? "wallet" : (cat?.icone || "receipt"))}</span>`}
       <div class="fat-txt"><b>${esc(it.descricao)}</b><small>${it.parcela ? `<span class="fat-parc">Parcela ${it.parcela}</span>` : "À vista"}${cat ? ` · ${esc(cat.nome)}` : ""}${it.local && it.local !== it.descricao ? ` · ${esc(it.local)}` : ""}</small></div>
       <span class="fat-val mono-num">${money(it.valor)}</span>${it.pago ? `<span class="fat-ok" title="Pago">${icon("check")}</span>` : ""}
@@ -7945,6 +7988,7 @@ async function viewFatura(v) {
       </div>
     </div>`;
   _fatGestos(f.cartao.id, ant, prox);
+  _pintarPorLogo(v);
 }
 async function _fatPagar() {
   const cid = _FAT.cartao.id, mes = _FAT.mes;
