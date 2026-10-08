@@ -91,23 +91,22 @@ def _destino(alvo: str) -> dict:
     return {"numero": alvo}
 
 
-_CLIENTE: httpx.Client | None = None
 
 
-def _cliente() -> httpx.Client:
-    """Conexão reaproveitada com o gateway: não refaz a conexão segura a cada envio."""
-    global _CLIENTE
-    if _CLIENTE is None:
-        _CLIENTE = httpx.Client(timeout=httpx.Timeout(25, connect=8),
-                                limits=httpx.Limits(max_keepalive_connections=4, keepalive_expiry=60))
-    return _CLIENTE
+def _timeout(caminho: str) -> httpx.Timeout:
+    # igual ao Sentinela: texto 10 s, arquivo 60 s
+    return httpx.Timeout(60 if "anexo" in caminho else 10, connect=8)
 
 
 def _req(metodo: str, caminho: str, db=None, **kw):
     c = config(db)
     if not c["url"] or not c["chave"]:
         raise RuntimeError("Gateway não configurado (URL e chave de API).")
-    r = _cliente().request(metodo, c["url"] + caminho, headers=_headers(c), **kw)
+    # Conexão nova a cada chamada, como o Sentinela faz. Reaproveitar a conexão
+    # (keep-alive) podia pegar uma conexão que o gateway já tinha fechado e o
+    # envio falhava ou ficava esperando o tempo limite.
+    with httpx.Client(timeout=_timeout(caminho)) as cli:
+        r = cli.request(metodo, c["url"] + caminho, headers=_headers(c), **kw)
     if r.status_code == 401:
         raise RuntimeError("Chave de API inválida ou revogada no gateway.")
     if r.status_code >= 400:

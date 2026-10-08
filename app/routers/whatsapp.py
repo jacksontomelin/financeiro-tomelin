@@ -31,7 +31,6 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
     """Manda a resposta em segundo plano: o webhook devolve na hora para o gateway
     (que pode estar esperando essa resposta para seguir) e o log mostra quanto levou."""
     import time as _t
-    from .. import zap_fila
     ent = _log(texto_cmd, f"{como}: enviando…", autor)
     t0 = inicio or _t.time()
 
@@ -50,7 +49,16 @@ def _responder(texto_cmd, resp, destino, autor, como="respondido", inicio=None, 
         ent["resultado"] = (f"{como} em {seg} s{extra}" if ok
                             else "FALHOU ao enviar a resposta (veja URL, chave e conexão do gateway)")
         return ok
-    zap_fila.disparar("Resposta no grupo", tarefa)
+    # igual ao Sentinela: manda a resposta ali mesmo (o gateway não espera o
+    # webhook terminar, então não trava nada)
+    from ..database import SessionLocal
+    sdb = SessionLocal()
+    try:
+        tarefa(sdb)
+    except Exception as e:
+        ent["resultado"] = f"FALHOU ao enviar a resposta: {str(e)[:120]}"
+    finally:
+        sdb.close()
 
 
 _ATRASO: dict = {"ultimo": None, "webhook_em": 0.0, "via": None, "detalhe": None}
@@ -370,6 +378,23 @@ def diagnostico(db: Session = Depends(get_db)):
 # Roda a cada 4s e processa mensagens novas caso o webhook não esteja configurado.
 # Quando o webhook está ativo, a escuta é redundante mas inofensiva.
 _ESCUTA = {"ultimo_ts": None, "ultima_leitura": None, "erro": None}
+_ESCUTA_CFG = {"valor": False, "lido": 0.0}
+
+
+def _escuta_ligada() -> bool:
+    """WHATSAPP_ESCUTA do banco, relida a cada 30 s (mudar na tela vale logo)."""
+    import time as _t
+    if _t.time() - _ESCUTA_CFG["lido"] > 30:
+        from ..database import SessionLocal
+        db = SessionLocal()
+        try:
+            _ESCUTA_CFG["valor"] = cfg.get_bool(db, "WHATSAPP_ESCUTA", False)
+        except Exception:
+            pass
+        finally:
+            db.close()
+        _ESCUTA_CFG["lido"] = _t.time()
+    return _ESCUTA_CFG["valor"]
 _ESCUTADOS: "set[str]" = set()  # ids já processados (webhook ou escuta): cada mensagem é respondida uma vez
 import threading as _threading
 _TRAVA_VISTAS = _threading.Lock()
@@ -406,6 +431,8 @@ def _ts_aware(v):
 
 def job_escutar_grupo():
     import time as _t
+    if not _escuta_ligada():
+        return      # desligada: responde só pelo webhook, como o Sentinela
     if _t.time() - _ATRASO["webhook_em"] < 45:
         return      # webhook entregou há pouco: não consulta o gateway à toa; se ele parar, a escuta volta em 45 s
     from ..database import SessionLocal

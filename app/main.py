@@ -252,7 +252,14 @@ async def lifespan(app: FastAPI):
     # garante configurações padrão no banco
     from .database import SessionLocal as _SL
     from . import cfg as _cfg
-    _db = _SL(); _cfg.seed_defaults(_db); _db.close()
+    _db = _SL(); _cfg.seed_defaults(_db)
+    try:   # uma vez: escuta do grupo desligada, para responder só pelo webhook como o Sentinela
+        if not _cfg.get(_db, "_escuta_igual_sentinela", ""):
+            _cfg.set_many(_db, {"WHATSAPP_ESCUTA": "false"})
+            _cfg.set_interno(_db, "_escuta_igual_sentinela", "1")
+    except Exception as e:
+        print("aviso: escuta não ajustada:", e)
+    _db.close()
     try:   # logos antigos salvos como link passam a ficar guardados no sistema
         from . import logo_url as _lg
         _lg.converter_antigos()

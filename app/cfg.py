@@ -17,7 +17,7 @@ DEFS = [
     ("WHATSAPP_ENDPOINT_ENVIAR", "Endpoint de envio da API v1 (padrão /api/v1/enviar)",               "/api/v1/enviar"),
     ("WHATSAPP_TUNNEL_URL",       "URL pública do túnel Cloudflare (gerada automaticamente)",            ""),
     ("WHATSAPP_MEU_NUMERO",      "Seu número com DDA (ex: 5547999990000): só responde comandos seus",   ""),
-    ("WHATSAPP_ESCUTA",          "Ler comandos direto do grupo a cada 4s (não depende de webhook)",   "true"),
+    ("WHATSAPP_ESCUTA",          "Também ler o grupo a cada 5 s (reserva, se o webhook falhar). Desligado = igual ao Sentinela", "false"),
     ("RECIBO_WHATSAPP_AUTO",     "Enviar recibo automático ao dar baixa",                             "true"),
     # ---- Alertas ----
     ("ALERTA_HORA",              "Hora do alerta diário de vencimentos (0-23)",                       "8"),
