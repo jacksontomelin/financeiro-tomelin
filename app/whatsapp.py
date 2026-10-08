@@ -131,6 +131,11 @@ def _texto_menu() -> str:
             else:
                 L.append(f"▪️ *{cmd}*: {desc}")
         L.append("")
+    L.append("💬 *Pode escrever do seu jeito:* \"gastei 50 no mercado\", \"recebi 3000 de salário\", "
+             "\"quanto eu tenho?\", \"o que vence hoje\". Comando pela metade? Eu pergunto o resto.")
+    L.append("🧠 _Quando eu não entender, te dou opções e aprendo com a sua escolha. "
+             "Veja com `o que você aprendeu`._")
+    L.append("")
     L.append("💡 _Detalhes de qualquer um: `ajuda baixa`, `ajuda nf`..._")
     return "\n".join(L)
 
