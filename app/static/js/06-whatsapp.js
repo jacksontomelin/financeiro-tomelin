@@ -63,7 +63,7 @@ async function viewWhatsapp(v) {
         </div>
       </div>
       <div class="wz-top-acoes">
-        ${btnWA("Testar envio", "testarWhatsapp(this)", `class="wz-bt-teste" ${st.ativo && st.grupo ? "" : "disabled"}`)}
+        ${btnWA("Testar", "testarWhatsapp(this)", `class="wz-bt-teste" ${st.ativo && st.grupo ? "" : "disabled"}`)}
         <button class="wz-bt-claro" onclick="_wzAba('vivo');rodarDiagnosticoWA()">${icon("refresh")}<span>Verificar</span></button>
       </div>
     </header>
@@ -168,6 +168,15 @@ async function viewWhatsapp(v) {
   else document.getElementById("wa-diag").innerHTML = `<div class="wz-vazio">${waDesenho(48)}<b>Ainda não conectado</b><span>Abra a aba Configurar e siga os 4 passos.</span></div>`;
 }
 
+/* *negrito* _itálico_ ~riscado~ `código`, como o WhatsApp mostra */
+function _wzFormata(t) {
+  return esc(t)
+    .replace(/\*([^*\n]+)\*/g, "<b>$1</b>")
+    .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?]|$)/g, "$1<i>$2</i>")
+    .replace(/~([^~\n]+)~/g, "<s>$1</s>")
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>");
+}
+
 function _wzComandos(titulo, sub, itens, cor) {
   return `<div class="wz-card wz-cmds ${cor}"><h3>${titulo}</h3><small class="wz-sub">${sub}</small>
     <div class="wz-cmd-lista">${itens.map(([c, d]) =>
@@ -202,14 +211,20 @@ async function rodarDiagnosticoWA() {
   ];
   // mensagens de outros grupos/canais não são desta conversa: viram só um resumo
   const todos = d.ultimos_eventos || [];
+  const fora = e => /veio de outro chat|própria resposta do sistema|arquivo enviado pelo sistema/.test(e.resultado || "");
   const deFora = todos.filter(e => /veio de outro chat/.test(e.resultado || "")).length;
-  const evs = todos.filter(e => !/veio de outro chat/.test(e.resultado || "")).slice(0, 25).reverse();   // mais antigo em cima
+  const ecos = todos.filter(e => /própria resposta|enviado pelo sistema/.test(e.resultado || "")).length;
+  const evs = todos.filter(e => !fora(e)).slice(0, 25).reverse();   // mais antigo em cima
   const corRes = r => /respondido|comprovante|PDF|anexado/i.test(r) ? "ok" : /FALH|erro/i.test(r) ? "erro" : "cinza";
   const bolha = (e) => {
-    const cls = corRes(e.resultado || "");
+    const res = e.resultado || "";
+    const cls = corRes(res);
+    // "respondido em 0,8 s · a mensagem levou 35 s ... [detalhe]" → título curto + detalhe pequeno
+    const [principal, ...resto] = res.split(" · ");
+    const det = resto.join(" · ").replace(/[\[\]]/g, "");
     return `<div class="wz-msg">
-        <div class="wz-in"><span class="wz-in-tx">${esc(e.texto || "(sem texto)")}</span><time>${esc((e.hora || "").slice(-8, -3))}</time></div>
-        <div class="wz-out ${cls}"><span>${esc(e.resultado || "")}</span>${cls === "ok" ? `<i class="wz-tk">${_WZ_IC.ticks}</i>` : ""}</div>
+        <div class="wz-in"><span class="wz-in-tx">${_wzFormata(e.texto || "(sem texto)")}</span><time>${esc((e.hora || "").slice(-8, -3))}</time></div>
+        <div class="wz-out ${cls}"><span><b>${esc(principal)}</b>${det ? `<small>${esc(det)}</small>` : ""}</span>${cls === "ok" ? `<i class="wz-tk">${_WZ_IC.ticks}</i>` : ""}</div>
       </div>`;
   };
   const midias = d.ultimas_midias || [];
@@ -217,7 +232,7 @@ async function rodarDiagnosticoWA() {
   box.innerHTML = `
     <div class="wz-checks">${checks.map(([ok, t, neutro]) => `<span class="wz-chk ${ok ? "ok" : neutro ? "neutro" : "nao"}">${ok ? IC_CHECK_W : "!"}${esc(t)}</span>`).join("")}</div>
     <div class="wz-dia">Hoje</div>
-    ${deFora ? `<div class="wz-sis neutro">${deFora} mensagem(ns) de outros grupos chegaram e foram ignoradas, como deve ser</div>` : ""}
+    ${deFora || ecos ? `<div class="wz-sis neutro">${[deFora ? `${deFora} de outros grupos` : "", ecos ? `${ecos} respostas do próprio sistema` : ""].filter(Boolean).join(" e ")} ignorada(s), como deve ser</div>` : ""}
     ${evs.length ? evs.map(bolha).join("") : `<div class="wz-vazio">${waDesenho(44)}<b>Nenhuma mensagem do grupo ainda</b><span>Mande <code>menu</code> no grupo e toque em atualizar.</span></div>`}
     ${midias.length ? `<div class="wz-dia">Comprovantes</div>${midias.map(m => `
       <div class="wz-msg"><div class="wz-in foto"><span class="wz-foto-ic">${_WZ_IC.foto}</span>
