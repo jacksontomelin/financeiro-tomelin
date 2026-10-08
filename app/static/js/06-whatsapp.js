@@ -44,7 +44,7 @@ async function viewWhatsapp(v) {
     : st.erro_gateway ? ["erro", "Gateway com erro"]
     : !st.ativo ? ["off", "Envio desligado"]
     : st.conectado ? ["on", "Online"] : ["erro", "WhatsApp desconectado"];
-  const grupoNome = st.grupo_nome || (st.grupo ? "Grupo escolhido" : "");
+  const grupoNome = st.grupo_nome || (st.grupo ? "Grupo do WhatsApp" : "");
   const meuNum = _wzFmtNum(st.meu_numero);
 
   const tile = (cls, ic, rot, val, sub) => `
@@ -206,12 +206,13 @@ async function rodarDiagnosticoWA() {
   const checks = [
     [cfg.ativo, "Envio ligado"],
     [!!cfg.url && cfg.chave_configurada, cfg.chave_resumo ? `Chave ${cfg.chave_resumo}` : "Chave de API"],
-    [!!(cfg.grupo && cfg.grupo.includes("@g.us")), "Grupo escolhido"],
+    [!!(cfg.grupo && cfg.grupo.includes("@g.us")), "Grupo configurado"],
     [!!cfg.meu_numero, cfg.meu_numero ? `Comandos de ${_wzFmtNum(cfg.meu_numero)}` : "Qualquer um comanda", true],
   ];
   // mensagens de outros grupos/canais não são desta conversa: viram só um resumo
   const todos = d.ultimos_eventos || [];
-  const fora = e => /veio de outro chat|própria resposta do sistema|arquivo enviado pelo sistema/.test(e.resultado || "");
+  const semTexto = e => /^\[[a-z_]*\] sem texto$/i.test(e.texto || "");
+  const fora = e => semTexto(e) || /veio de outro chat|própria resposta do sistema|arquivo enviado pelo sistema/.test(e.resultado || "");
   const deFora = todos.filter(e => /veio de outro chat/.test(e.resultado || "")).length;
   const ecos = todos.filter(e => /própria resposta|enviado pelo sistema/.test(e.resultado || "")).length;
   const evs = todos.filter(e => !fora(e)).slice(0, 25).reverse();   // mais antigo em cima

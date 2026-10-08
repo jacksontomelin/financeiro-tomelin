@@ -152,8 +152,7 @@ def _tratar(body: dict, db: Session, via: str = "gateway"):
         texto = str(midia.get("legenda") or midia.get("caption") or "").strip()
 
     # ignora eventos sem texto nem arquivo (status, leitura, etc)
-    if not texto and not midia:
-        _log(f"[{evento}] sem texto", "ignorado", "")
+    if not texto and not midia:          # leitura, reação, status...: não é mensagem, não polui o log
         return {"ok": True, "ignorado": f"sem texto (evento={evento})"}
 
     # só o grupo configurado, e exatamente ele. Sem grupo definido, nada é
@@ -240,13 +239,30 @@ def _tratar(body: dict, db: Session, via: str = "gateway"):
 
 
 # ── demais endpoints ────────────────────────────────────────
+def _nome_do_grupo(db, c) -> str:
+    """Nome guardado; se ainda não tem (grupo escolhido antes desta versão), pergunta ao gateway uma vez."""
+    nome = cfg.get(db, "_whatsapp_grupo_nome", "") or ""
+    if nome or not (c["grupo"] and c["url"] and c["chave"]):
+        return nome
+    try:
+        for g in zapapi.grupos("", db) or []:
+            if (g.get("jid") or "") == c["grupo"]:
+                nome = (g.get("nome") or g.get("subject") or "").strip()[:120]
+                break
+    except Exception:
+        return ""
+    if nome:
+        cfg.set_interno(db, "_whatsapp_grupo_nome", nome)
+    return nome
+
+
 @router.get("/status", dependencies=[Depends(usuario_atual)])
 def status(db: Session = Depends(get_db)):
     c = zapapi.config(db)
     info = {
         "ativo": c["ativo"], "gateway": c["url"] or None,
         "chave_configurada": bool(c["chave"]), "grupo": c["grupo"] or None,
-        "grupo_nome": cfg.get(db, "_whatsapp_grupo_nome", "") or "",
+        "grupo_nome": _nome_do_grupo(db, c),
         "chave_resumo": (f"{c['chave'][:4]}…{c['chave'][-4:]}" if len(c["chave"] or "") >= 10 else ""),
         "meu_numero": cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "",
         "endpoint": c["endpoint"],
