@@ -193,7 +193,14 @@ def _parse_valor(s: str) -> Decimal | None:
 
 
 def _sugerir_categoria(db: Session, descricao: str, tipo: str) -> models.Categoria | None:
-    """Sugere categoria pelo texto da descrição."""
+    """Sugere categoria pelo texto da descrição (o que a família ensinou vem primeiro)."""
+    try:
+        from .conversa import categoria_aprendida
+        c = categoria_aprendida(db, descricao, tipo)
+        if c:
+            return c
+    except Exception:
+        pass
     desc = descricao.lower()
     palavras = {
         "mercado": ["mercado", "super", "atacado", "hiper", "feira", "hortifruti"],
@@ -428,8 +435,22 @@ def processar_comando(texto: str, db: Session | None = None,
         db = SessionLocal(); fechar = True
 
     try:
+        # ── Conversa: continua o que estava em andamento, frases aprendidas ──
+        from . import conversa
+        c = conversa.antes(t, db, remetente)
+        if c is not None:
+            tipo_c, conteudo = c
+            if tipo_c == "resposta":
+                return conteudo
+            if tipo_c == "comando_aprendido":
+                pre, cmd = conteudo.split("\x00", 1)
+                r = processar_comando(cmd, db, remetente)
+                return pre + (r or "")
+            t = conteudo                               # a frase virou um comando conhecido
+            t_low = _sem_acento(t.lower())
+
         # ── Menu / ajuda ──────────────────────────────────────────────────────
-        if t_low in ("menu", "ajuda", "help", "0", "oi", "ola", "inicio", "comandos", "comando", "?", "lista", "mais", "mais comandos"):
+        if t_low in ("menu", "ajuda", "help", "0", "inicio", "comandos", "comando", "?", "lista", "mais", "mais comandos"):
             return _texto_menu()
 
         # ── Consultas numéricas ───────────────────────────────────────────────
@@ -457,17 +478,29 @@ def processar_comando(texto: str, db: Session | None = None,
         # ── Cadastro rápido: despesa ──────────────────────────────────────────
         _p = t_low.split()
         _tem_valor = len(_p) >= 2 and _parse_valor(_p[1]) is not None
-        if t_low.startswith("despesa ") or t_low.startswith("gasto ") or (t_low.startswith("d ") and _tem_valor):
-            partes = t.split(None, 1)
-            return _lancar(db, "despesa", partes[0] + " " + partes[1] if len(partes) > 1 else "despesa", remetente)
-
-        # ── Cadastro rápido: receita ──────────────────────────────────────────
-        if t_low.startswith("receita ") or t_low.startswith("recebimento ") or (t_low.startswith("r ") and _tem_valor):
-            partes = t.split(None, 1)
-            return _lancar(db, "receita", partes[0] + " " + partes[1] if len(partes) > 1 else "receita", remetente)
+        for _tipo, _pal in (("despesa", ("despesa", "gasto")), ("receita", ("receita", "recebimento"))):
+            if t_low in _pal:                                   # só a palavra: pergunta o resto
+                return conversa.iniciar_lancamento(db, remetente, _tipo)
+            if any(t_low.startswith(p + " ") for p in _pal) or (t_low.startswith(_tipo[0] + " ") and _tem_valor):
+                partes = t.split(None, 2)
+                val = _parse_valor(partes[1]) if len(partes) > 1 else None
+                if not val or val <= 0:                         # "despesa mercado": pergunta o valor
+                    return conversa.iniciar_lancamento(db, remetente, _tipo, descricao=" ".join(partes[1:]) or None)
+                if len(partes) < 3:                             # "despesa 150": pergunta de quê
+                    return conversa.iniciar_lancamento(db, remetente, _tipo, valor=val)
+                r = _lancar(db, _tipo, t, remetente)
+                m_id = re.search(r"#(\d+):", r)
+                if m_id and _tipo == "despesa":
+                    conversa.oferecer_baixa(remetente, int(m_id.group(1)))
+                    r = r.replace(f"Status: *pendente* · Dê baixa com `baixa {m_id.group(1)}`",
+                                  "Status: *pendente*\n\n💳 Já pagou? Responda *sim* que eu dou baixa.")
+                return r
 
         # ── Dar baixa em lançamento ───────────────────────────────────────────
-        if t_low.startswith("baixa ") or ((t_low.startswith("paguei ") or t_low.startswith("pago ")) and len(_p) >= 2 and _p[1].lstrip("#").isdigit()):
+        if t_low in ("baixa", "dar baixa", "paguei", "pagar conta", "quitar"):
+            return conversa.iniciar_baixa(db, remetente)
+        # "paguei 42" (só o número) dá baixa no #42; "paguei 80 de luz" é uma despesa paga (conversa)
+        if t_low.startswith("baixa ") or ((t_low.startswith("paguei ") or t_low.startswith("pago ")) and len(_p) == 2 and _p[1].lstrip("#").isdigit()):
             partes = t.split(None, 1)
             return _dar_baixa(db, partes[1] if len(partes) > 1 else "")
 
@@ -601,7 +634,11 @@ def processar_comando(texto: str, db: Session | None = None,
             txt = _texto_lembrete_mes_seguinte(db)
             return txt or "📭 Nenhum lançamento previsto para o próximo mês."
 
-        return None  # não é comando → ignora
+        # ── Frases do dia a dia / não entendi ─────────────────────────────────
+        r = conversa.depois(t, db, remetente)
+        if r and r.startswith("\x00"):
+            return processar_comando(r[1:], db, remetente)
+        return r   # None: não é com o sistema → fica quieto
 
     finally:
         if fechar:
