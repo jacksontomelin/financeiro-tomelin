@@ -238,6 +238,8 @@ def status(db: Session = Depends(get_db)):
     info = {
         "ativo": c["ativo"], "gateway": c["url"] or None,
         "chave_configurada": bool(c["chave"]), "grupo": c["grupo"] or None,
+        "grupo_nome": cfg.get(db, "_whatsapp_grupo_nome", "") or "",
+        "chave_resumo": (f"{c['chave'][:4]}…{c['chave'][-4:]}" if len(c["chave"] or "") >= 10 else ""),
         "meu_numero": cfg.get(db, "WHATSAPP_MEU_NUMERO", "") or "",
         "endpoint": c["endpoint"],
         "alerta_hora": cfg.get_int(db, "ALERTA_HORA", 8),
@@ -272,6 +274,7 @@ def definir_grupo(body: dict, me=Depends(usuario_atual), db: Session = Depends(g
     exigir_admin(db, me)
     jid = (body.get("jid") or "").strip()
     cfg.set_many(db, {"WHATSAPP_GRUPO": jid})
+    cfg.set_interno(db, "_whatsapp_grupo_nome", (body.get("nome") or "").strip()[:120])
     return {"ok": True, "grupo": jid}
 
 
